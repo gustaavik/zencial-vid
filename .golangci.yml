@@ -1,0 +1,46 @@
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - gosimple
+    - ineffassign
+    - typecheck
+    - gocritic
+    - gofmt
+    - goimports
+    - misspell
+    - unconvert
+    - unparam
+    - nakedret
+    - prealloc
+    - exportloopref
+    - nolintlint
+
+linters-settings:
+  govet:
+    shadow: true
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - performance
+      - style
+  nakedret:
+    max-func-lines: 30
+  misspell:
+    locale: US
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gocritic
+        - unparam
+    - path: cmd/
+      linters:
+        - unparam

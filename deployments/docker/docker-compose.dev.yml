@@ -1,0 +1,79 @@
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile.dev
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    volumes:
+      - ../..:/app
+    environment:
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8080
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=${DATABASE_USER:-zencial}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-zencial_secret}
+      - DATABASE_NAME=${DATABASE_NAME:-zencial}
+      - DATABASE_SSL_MODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - JWT_SECRET=dev-secret-key-not-for-production
+      - STORAGE_ENDPOINT=http://minio:9000
+      - STORAGE_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - STORAGE_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - STORAGE_BUCKET=${STORAGE_BUCKET:-zencial-videos}
+      - STORAGE_REGION=us-east-1
+      - LOG_LEVEL=debug
+      - LOG_FORMAT=text
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_USER=${DATABASE_USER:-zencial}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-zencial_secret}
+      - POSTGRES_DB=${DATABASE_NAME:-zencial}
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-zencial}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_dev_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio_dev_data:/data
+    command: server /data --console-address ":9001"
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+  minio_dev_data:

@@ -1,0 +1,48 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/bin/
+/api
+/migrate
+
+# Test
+*.test
+*.out
+coverage.html
+
+# Vendor
+/vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Docker
+docker-compose.override.yml
+
+# Generated
+/docs/docs.go
+/docs/swagger.json
+/docs/swagger.yaml
+
+# Temporary
+tmp/
+*.tmp
+*.log
+
+.claude
