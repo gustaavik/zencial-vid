@@ -10,6 +10,8 @@ services:
     environment:
       - SERVER_HOST=0.0.0.0
       - SERVER_PORT=6091
+      - SERVER_READ_TIMEOUT=${SERVER_READ_TIMEOUT:-5m}
+      - SERVER_WRITE_TIMEOUT=${SERVER_WRITE_TIMEOUT:-10m}
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=${DB_USER:-zencial}

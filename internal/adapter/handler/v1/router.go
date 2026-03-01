@@ -116,6 +116,7 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 
 			if uploadHandler != nil {
 				r.Post("/upload", uploadHandler.Upload)
+				r.Post("/upload/init", uploadHandler.InitUpload)
 			}
 
 			r.Route("/content", func(r chi.Router) {

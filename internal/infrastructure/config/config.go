@@ -22,8 +22,8 @@ type Config struct {
 type ServerConfig struct {
 	Host            string        `env:"SERVER_HOST" envDefault:"0.0.0.0"`
 	Port            int           `env:"SERVER_PORT" envDefault:"8080"`
-	ReadTimeout     time.Duration `env:"SERVER_READ_TIMEOUT" envDefault:"10s"`
-	WriteTimeout    time.Duration `env:"SERVER_WRITE_TIMEOUT" envDefault:"30s"`
+	ReadTimeout     time.Duration `env:"SERVER_READ_TIMEOUT" envDefault:"5m"`
+	WriteTimeout    time.Duration `env:"SERVER_WRITE_TIMEOUT" envDefault:"10m"`
 	ShutdownTimeout time.Duration `env:"SERVER_SHUTDOWN_TIMEOUT" envDefault:"15s"`
 }
 

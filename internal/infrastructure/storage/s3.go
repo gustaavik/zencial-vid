@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -12,19 +13,29 @@ import (
 	"github.com/zenfulcode/zencial/internal/infrastructure/config"
 )
 
+// PresignedUpload holds the result of a presigned upload URL generation.
+type PresignedUpload struct {
+	URL       string
+	Key       string
+	PublicURL string
+	ExpiresIn time.Duration
+}
+
 // StorageService defines the interface for file storage.
 type StorageService interface {
 	Upload(ctx context.Context, key string, body io.Reader, contentType string) (url string, err error)
 	Delete(ctx context.Context, key string) error
 	PublicURL(key string) string
+	GeneratePresignedUploadURL(ctx context.Context, key string, contentType string, size int64) (*PresignedUpload, error)
 }
 
 // S3Client implements StorageService using S3-compatible storage (AWS S3 / MinIO).
 type S3Client struct {
-	client   *s3.Client
-	bucket   string
-	endpoint string
-	cdnBase  string
+	client    *s3.Client
+	presigner *s3.PresignClient
+	bucket    string
+	endpoint  string
+	cdnBase   string
 }
 
 // NewS3Client creates a new S3Client from the storage and CDN configuration.
@@ -45,10 +56,11 @@ func NewS3Client(storageCfg config.StorageConfig, cdnBaseURL string) (*S3Client,
 	})
 
 	return &S3Client{
-		client:   client,
-		bucket:   storageCfg.Bucket,
-		endpoint: strings.TrimRight(storageCfg.Endpoint, "/"),
-		cdnBase:  strings.TrimRight(cdnBaseURL, "/"),
+		client:    client,
+		presigner: s3.NewPresignClient(client),
+		bucket:    storageCfg.Bucket,
+		endpoint:  strings.TrimRight(storageCfg.Endpoint, "/"),
+		cdnBase:   strings.TrimRight(cdnBaseURL, "/"),
 	}, nil
 }
 
@@ -126,4 +138,28 @@ func (s *S3Client) PublicURL(key string) string {
 		return s.cdnBase + "/" + key
 	}
 	return s.endpoint + "/" + s.bucket + "/" + key
+}
+
+const presignExpiry = 30 * time.Minute
+
+// GeneratePresignedUploadURL creates a presigned PUT URL for direct client-to-S3 uploads.
+func (s *S3Client) GeneratePresignedUploadURL(ctx context.Context, key string, contentType string, size int64) (*PresignedUpload, error) {
+	input := &s3.PutObjectInput{
+		Bucket:        aws.String(s.bucket),
+		Key:           aws.String(key),
+		ContentType:   aws.String(contentType),
+		ContentLength: aws.Int64(size),
+	}
+
+	resp, err := s.presigner.PresignPutObject(ctx, input, s3.WithPresignExpires(presignExpiry))
+	if err != nil {
+		return nil, fmt.Errorf("presign upload %q: %w", key, err)
+	}
+
+	return &PresignedUpload{
+		URL:       resp.URL,
+		Key:       key,
+		PublicURL: s.PublicURL(key),
+		ExpiresIn: presignExpiry,
+	}, nil
 }
