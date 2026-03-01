@@ -1,5 +1,9 @@
 .PHONY: build run test lint fmt clean migrate-up migrate-down swagger docker-up docker-down help
 
+# Load .env file if it exists
+-include .env
+export
+
 # Variables
 APP_NAME := zencial-api
 MIGRATE_NAME := zencial-migrate

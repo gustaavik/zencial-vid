@@ -21,9 +21,11 @@ CREATE TABLE playback_progress (
     position BIGINT NOT NULL DEFAULT 0,
     duration BIGINT NOT NULL DEFAULT 0,
     completed BOOLEAN NOT NULL DEFAULT FALSE,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (user_id, content_id, COALESCE(episode_id, '00000000-0000-0000-0000-000000000000'))
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX idx_playback_progress_unique
+    ON playback_progress (user_id, content_id, COALESCE(episode_id, '00000000-0000-0000-0000-000000000000'));
 
 CREATE INDEX idx_playback_progress_user ON playback_progress(user_id);
 CREATE INDEX idx_playback_progress_continue ON playback_progress(user_id, updated_at DESC) WHERE completed = FALSE;
