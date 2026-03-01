@@ -106,7 +106,9 @@ func (u *User) SoftDelete() {
 func computeAge(dob time.Time) int {
 	now := time.Now()
 	age := now.Year() - dob.Year()
-	if now.YearDay() < dob.YearDay() {
+	// Compare month and day to handle birthday not yet reached this year.
+	// Using Month/Day avoids leap year issues with YearDay().
+	if now.Month() < dob.Month() || (now.Month() == dob.Month() && now.Day() < dob.Day()) {
 		age--
 	}
 	return age

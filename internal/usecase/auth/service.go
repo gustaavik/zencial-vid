@@ -3,7 +3,6 @@ package auth
 import (
 	"log/slog"
 
-	"github.com/zenfulcode/zencial/internal/adapter/persistence/redis"
 	"github.com/zenfulcode/zencial/internal/domain/event"
 	"github.com/zenfulcode/zencial/internal/domain/repository"
 	"github.com/zenfulcode/zencial/internal/infrastructure/auth"
@@ -14,7 +13,7 @@ type Service struct {
 	userRepo     repository.UserRepository
 	tokenService auth.TokenService
 	hasher       auth.PasswordHasher
-	sessionStore *redis.SessionStore
+	sessionStore repository.SessionStore
 	dispatcher   event.Dispatcher
 	log          *slog.Logger
 }
@@ -24,7 +23,7 @@ func NewService(
 	userRepo repository.UserRepository,
 	tokenService auth.TokenService,
 	hasher auth.PasswordHasher,
-	sessionStore *redis.SessionStore,
+	sessionStore repository.SessionStore,
 	dispatcher event.Dispatcher,
 	log *slog.Logger,
 ) *Service {
