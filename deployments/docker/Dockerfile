@@ -42,6 +42,6 @@ COPY --from=builder /app/migrations /app/migrations
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 
-EXPOSE 8080
+EXPOSE 6091
 
 ENTRYPOINT ["/app/api"]

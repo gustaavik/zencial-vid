@@ -4,27 +4,27 @@ services:
       context: ../..
       dockerfile: deployments/docker/Dockerfile.dev
     ports:
-      - "${SERVER_PORT:-8080}:8080"
+      - "${SERVER_PORT:-6091}:6091"
     volumes:
       - ../..:/app
     environment:
       - SERVER_HOST=0.0.0.0
-      - SERVER_PORT=8080
-      - DATABASE_HOST=postgres
-      - DATABASE_PORT=5432
-      - DATABASE_USER=${DATABASE_USER:-zencial}
-      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-zencial_secret}
-      - DATABASE_NAME=${DATABASE_NAME:-zencial}
-      - DATABASE_SSL_MODE=disable
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - SERVER_PORT=6091
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-zencial}
+      - DB_PASSWORD=${DB_PASSWORD:-zencial_secret}
+      - DB_NAME=${DB_NAME:-zencial}
+      - DB_SSL_MODE=disable
+      - REDIS_ADDR=redis:6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-      - JWT_SECRET=dev-secret-key-not-for-production
-      - STORAGE_ENDPOINT=http://minio:9000
-      - STORAGE_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
-      - STORAGE_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
-      - STORAGE_BUCKET=${STORAGE_BUCKET:-zencial-videos}
-      - STORAGE_REGION=us-east-1
+      - JWT_ACCESS_SECRET=dev-secret-key-not-for-production
+      - JWT_REFRESH_SECRET=dev-refresh-secret-key-not-for-production
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-minioadmin}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-minioadmin}
+      - S3_BUCKET=${S3_BUCKET:-zencial-videos}
+      - S3_REGION=us-east-1
       - LOG_LEVEL=debug
       - LOG_FORMAT=text
     depends_on:
@@ -38,13 +38,13 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     environment:
-      - POSTGRES_USER=${DATABASE_USER:-zencial}
-      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-zencial_secret}
-      - POSTGRES_DB=${DATABASE_NAME:-zencial}
+      - POSTGRES_USER=${DB_USER:-zencial}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-zencial_secret}
+      - POSTGRES_DB=${DB_NAME:-zencial}
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-zencial}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-zencial}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -67,8 +67,8 @@ services:
       - "${MINIO_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
     environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - MINIO_ROOT_USER=${S3_ACCESS_KEY:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${S3_SECRET_KEY:-minioadmin}
     volumes:
       - minio_dev_data:/data
     command: server /data --console-address ":9001"

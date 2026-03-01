@@ -4,20 +4,20 @@ services:
       context: ../..
       dockerfile: deployments/docker/Dockerfile
     ports:
-      - "${SERVER_PORT:-8080}:8080"
+      - "${SERVER_PORT:-6091}:6091"
     environment:
       - SERVER_HOST=0.0.0.0
-      - SERVER_PORT=8080
-      - DATABASE_HOST=postgres
-      - DATABASE_PORT=5432
-      - DATABASE_USER=${DATABASE_USER:-zencial}
-      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-zencial_secret}
-      - DATABASE_NAME=${DATABASE_NAME:-zencial}
-      - DATABASE_SSL_MODE=disable
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - SERVER_PORT=6091
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-zencial}
+      - DB_PASSWORD=${DB_PASSWORD:-zencial_secret}
+      - DB_NAME=${DB_NAME:-zencial}
+      - DB_SSL_MODE=disable
+      - REDIS_ADDR=redis:6379
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:-change-me-in-production}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-change-me-in-production}
       - STORAGE_ENDPOINT=http://minio:9000
       - STORAGE_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
       - STORAGE_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
@@ -39,12 +39,12 @@ services:
     entrypoint: ["/app/migrate"]
     command: ["up"]
     environment:
-      - DATABASE_HOST=postgres
-      - DATABASE_PORT=5432
-      - DATABASE_USER=${DATABASE_USER:-zencial}
-      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-zencial_secret}
-      - DATABASE_NAME=${DATABASE_NAME:-zencial}
-      - DATABASE_SSL_MODE=disable
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-zencial}
+      - DB_PASSWORD=${DB_PASSWORD:-zencial_secret}
+      - DB_NAME=${DB_NAME:-zencial}
+      - DB_SSL_MODE=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -54,13 +54,13 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     environment:
-      - POSTGRES_USER=${DATABASE_USER:-zencial}
-      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-zencial_secret}
-      - POSTGRES_DB=${DATABASE_NAME:-zencial}
+      - POSTGRES_USER=${DB_USER:-zencial}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-zencial_secret}
+      - POSTGRES_DB=${DB_NAME:-zencial}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-zencial}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-zencial}"]
       interval: 5s
       timeout: 5s
       retries: 5

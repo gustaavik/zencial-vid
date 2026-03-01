@@ -72,7 +72,7 @@ swagger:
 
 ## docker-up: Start all services with Docker Compose
 docker-up:
-	docker compose -f deployments/docker/docker-compose.yml up -d
+	docker compose -f deployments/docker/docker-compose.yml --env-file .env up -d
 
 ## docker-down: Stop all Docker Compose services
 docker-down:
@@ -80,7 +80,7 @@ docker-down:
 
 ## docker-dev: Start development environment
 docker-dev:
-	docker compose -f deployments/docker/docker-compose.yml -f deployments/docker/docker-compose.dev.yml up -d
+	docker compose -f deployments/docker/docker-compose.yml -f deployments/docker/docker-compose.dev.yml up -d --build
 
 ## docker-logs: View Docker Compose logs
 docker-logs:
