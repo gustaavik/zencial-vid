@@ -7,6 +7,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/infrastructure/auth"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
+	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
 	cataloguc "github.com/zenfulcode/zencial/internal/usecase/catalog"
 	contentuc "github.com/zenfulcode/zencial/internal/usecase/content"
@@ -26,6 +27,7 @@ type Deps struct {
 	Subscription *subscriptionuc.Service
 	Watchlist    *watchlistuc.Service
 	TokenService auth.TokenService
+	Storage      storage.StorageService
 	Log          *slog.Logger
 }
 
@@ -38,6 +40,11 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 	streamingHandler := NewStreamingHandler(deps.Streaming)
 	subscriptionHandler := NewSubscriptionHandler(deps.Subscription)
 	watchlistHandler := NewWatchlistHandler(deps.Watchlist)
+
+	var uploadHandler *UploadHandler
+	if deps.Storage != nil {
+		uploadHandler = NewUploadHandler(deps.Storage)
+	}
 
 	// Public routes
 	r.Route("/auth", func(r chi.Router) {
@@ -106,6 +113,10 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 		// Admin routes
 		r.Route("/admin", func(r chi.Router) {
 			r.Use(middleware.RequireRole(entity.RoleAdmin))
+
+			if uploadHandler != nil {
+				r.Post("/upload", uploadHandler.Upload)
+			}
 
 			r.Route("/content", func(r chi.Router) {
 				r.Post("/", contentHandler.Create)

@@ -17,6 +17,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/infrastructure/logger"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
 	"github.com/zenfulcode/zencial/internal/infrastructure/server"
+	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
 	cataloguc "github.com/zenfulcode/zencial/internal/usecase/catalog"
 	contentuc "github.com/zenfulcode/zencial/internal/usecase/content"
@@ -97,6 +98,23 @@ func main() {
 	// Event dispatcher
 	dispatcher := messaging.NewEventDispatcher(log)
 
+	// Storage (S3 / MinIO) — optional, gracefully degrades if not configured
+	var storageService storage.StorageService
+	if cfg.Storage.Endpoint != "" {
+		s3Client, err := storage.NewS3Client(cfg.Storage, cfg.CDN.BaseURL)
+		if err != nil {
+			log.Warn("failed to initialize S3 storage, uploads will be disabled", "error", err)
+		} else {
+			if err := s3Client.EnsureBucket(ctx); err != nil {
+				log.Warn("failed to ensure S3 bucket", "error", err)
+			}
+			storageService = s3Client
+			log.Info("S3 storage initialized", "endpoint", cfg.Storage.Endpoint, "bucket", cfg.Storage.Bucket)
+		}
+	} else {
+		log.Info("S3 storage not configured, uploads disabled")
+	}
+
 	// Use cases
 	authService := authuc.NewService(userRepo, tokenService, hasher, sessionStore, dispatcher, log)
 	userService := useruc.NewService(userRepo, log)
@@ -138,6 +156,7 @@ func main() {
 			Subscription: subscriptionService,
 			Watchlist:    watchlistService,
 			TokenService: tokenService,
+			Storage:      storageService,
 			Log:          log,
 		})
 	})
