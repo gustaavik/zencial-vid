@@ -185,6 +185,29 @@ func (h *ContentHandler) Search(w http.ResponseWriter, r *http.Request) {
 	httputil.SuccessWithMeta(w, mapper.ContentsToListResponse(contents), pagination.NewMeta(fs.Pagination.Page, fs.Pagination.PerPage, total))
 }
 
+// AdminGetByID godoc
+// @Summary      Get content by ID (admin)
+// @Description  Get content by ID regardless of status (for admin editing).
+// @Tags         admin
+// @Produce      json
+// @Param        id path string true "Content ID"
+// @Success      200 {object} httputil.Response{data=dto.ContentDetailResponse}
+// @Security     BearerAuth
+// @Router       /admin/content/{id} [get]
+func (h *ContentHandler) AdminGetByID(w http.ResponseWriter, r *http.Request) {
+	id, err := httputil.URLParamUUID(r, "id")
+	if err != nil {
+		httputil.BadRequest(w, "BAD_REQUEST", "invalid content ID")
+		return
+	}
+	content, appErr := h.contentService.GetByID(r.Context(), id)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+	httputil.Success(w, http.StatusOK, mapper.ContentToDetailResponse(content))
+}
+
 // AdminList godoc
 // @Summary      List all content (admin)
 // @Description  List all content regardless of status, with optional filtering and search.

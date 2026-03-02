@@ -38,11 +38,18 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateContentI
 		return nil, apperror.NotFound(apperror.CodeContentNotFound, "content not found", domain.ErrContentNotFound)
 	}
 
-	if input.Title != nil {
+	if input.Title != nil && *input.Title != content.Title {
 		content.Title = *input.Title
-		slug, err := valueobject.NewSlug(*input.Title)
+		baseSlug, err := valueobject.NewSlug(*input.Title)
 		if err == nil {
-			content.Slug = slug
+			exists, existsErr := s.contentRepo.ExistsBySlug(ctx, baseSlug.String())
+			if existsErr != nil {
+				s.log.Error("checking slug existence", "error", existsErr)
+			} else if exists {
+				content.Slug = baseSlug.WithRandomID()
+			} else {
+				content.Slug = baseSlug
+			}
 		}
 	}
 	if input.Description != nil {
