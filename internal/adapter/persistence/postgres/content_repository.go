@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
+	"github.com/zenfulcode/zencial/internal/pkg/filter"
 )
 
 // ContentRepository implements repository.ContentRepository using PostgreSQL.
@@ -106,43 +107,46 @@ func (r *ContentRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *ContentRepository) Search(ctx context.Context, criteria entity.SearchCriteria) ([]entity.Content, int64, error) {
+const contentBaseCondition = "c.status = 'published'"
+
+func (r *ContentRepository) Search(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.Content, int64, error) {
 	db := connFromCtx(ctx, r.pool)
-	query := `SELECT id, type, title, slug, description, rating, release_year, poster_url, status, is_featured, created_at, updated_at
-	          FROM content WHERE status = 'published'`
-	countQuery := `SELECT COUNT(*) FROM content WHERE status = 'published'`
-	args := []interface{}{}
-	argIdx := 1
 
-	if criteria.Query != "" {
-		query += fmt.Sprintf(` AND (title ILIKE $%d OR description ILIKE $%d)`, argIdx, argIdx)
-		countQuery += fmt.Sprintf(` AND (title ILIKE $%d OR description ILIKE $%d)`, argIdx, argIdx)
-		args = append(args, "%"+criteria.Query+"%")
-		argIdx++
-	}
-	if criteria.Type != nil {
-		query += fmt.Sprintf(` AND type = $%d`, argIdx)
-		countQuery += fmt.Sprintf(` AND type = $%d`, argIdx)
-		args = append(args, *criteria.Type)
-		argIdx++
+	// Build count query
+	whereClause, countArgs, nextIdx := filter.CountSQL(fs, contentBaseCondition, 1)
+
+	// Append free-text search condition (uses OR across multiple columns)
+	extraWhere := ""
+	var searchArgs []interface{}
+	if searchQuery != "" {
+		extraWhere = fmt.Sprintf(" AND (c.title ILIKE $%d OR c.description ILIKE $%d)", nextIdx, nextIdx)
+		searchArgs = append(searchArgs, "%"+searchQuery+"%")
 	}
 
+	countAllArgs := append(countArgs, searchArgs...)
+	countQ := `SELECT COUNT(*) FROM content c ` + whereClause + extraWhere
 	var total int64
-	err := db.QueryRow(ctx, countQuery, args...).Scan(&total)
-	if err != nil {
+	if err := db.QueryRow(ctx, countQ, countAllArgs...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("counting content: %w", err)
 	}
 
-	query += ` ORDER BY created_at DESC`
-	query += fmt.Sprintf(` LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
-	perPage := criteria.PerPage
-	if perPage == 0 {
-		perPage = 20
-	}
-	offset := (criteria.Page - 1) * perPage
-	args = append(args, perPage, offset)
+	// Build data query
+	sql := filter.ToSQL(fs, contentBaseCondition, 1)
 
-	rows, err := db.Query(ctx, query, args...)
+	// Re-apply search condition for data query
+	dataExtraWhere := ""
+	var dataSearchArgs []interface{}
+	if searchQuery != "" {
+		dataExtraWhere = fmt.Sprintf(" AND (c.title ILIKE $%d OR c.description ILIKE $%d)", sql.NextArgIdx, sql.NextArgIdx)
+		dataSearchArgs = append(dataSearchArgs, "%"+searchQuery+"%")
+	}
+
+	dataQ := `SELECT c.id, c.type, c.title, c.slug, c.description, c.rating, c.release_year,
+	                 c.poster_url, c.status, c.is_featured, c.created_at, c.updated_at
+	          FROM content c ` + sql.WhereClause + dataExtraWhere + ` ` + sql.OrderClause + ` ` + sql.LimitClause
+	dataAllArgs := append(sql.Args, dataSearchArgs...)
+
+	rows, err := db.Query(ctx, dataQ, dataAllArgs...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("searching content: %w", err)
 	}

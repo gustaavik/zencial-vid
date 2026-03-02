@@ -6,13 +6,31 @@ import (
 
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/mapper"
-	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
+	"github.com/zenfulcode/zencial/internal/pkg/filter"
 	"github.com/zenfulcode/zencial/internal/pkg/httputil"
 	"github.com/zenfulcode/zencial/internal/pkg/pagination"
 	"github.com/zenfulcode/zencial/internal/pkg/validator"
 	contentuc "github.com/zenfulcode/zencial/internal/usecase/content"
 )
+
+// contentFilterCfg defines which URL query params are accepted for content filtering.
+var contentFilterCfg = filter.Config{
+	Columns: map[string]filter.ColumnDef{
+		"type":         {DBColumn: "c.type", AllowedOps: []filter.Op{filter.OpEq, filter.OpIn}, Type: filter.TypeString},
+		"rating":       {DBColumn: "c.rating", AllowedOps: []filter.Op{filter.OpEq, filter.OpIn}, Type: filter.TypeString},
+		"release_year": {DBColumn: "c.release_year", AllowedOps: []filter.Op{filter.OpEq, filter.OpGte, filter.OpLte}, Type: filter.TypeInt},
+		"title":        {DBColumn: "c.title", AllowedOps: []filter.Op{filter.OpLike}, Type: filter.TypeString},
+		"is_featured":  {DBColumn: "c.is_featured", AllowedOps: []filter.Op{filter.OpEq}, Type: filter.TypeBool},
+		"director":     {DBColumn: "c.director", AllowedOps: []filter.Op{filter.OpLike, filter.OpEq}, Type: filter.TypeString},
+	},
+	SortColumns: map[string]filter.SortDef{
+		"title":        {DBColumn: "c.title"},
+		"release_date": {DBColumn: "c.release_year"},
+		"created_at":   {DBColumn: "c.created_at"},
+	},
+	DefaultSort: "c.created_at DESC",
+}
 
 // ContentHandler handles content HTTP requests.
 type ContentHandler struct {
@@ -27,38 +45,39 @@ func NewContentHandler(contentService *contentuc.Service) *ContentHandler {
 
 // List godoc
 // @Summary      List content
-// @Description  List and filter content with pagination
+// @Description  List and filter content with pagination. Supports filters: type, rating, release_year[gte], release_year[lte], title[like], is_featured, director[like].
 // @Tags         content
 // @Produce      json
 // @Param        page query int false "Page number" default(1)
 // @Param        per_page query int false "Items per page" default(20)
-// @Param        type query string false "Content type" Enums(film, series)
-// @Param        sort_by query string false "Sort field" Enums(relevance, release_date, title)
+// @Param        type query string false "Content type (comma-separated for multiple)" Enums(film, series)
+// @Param        rating query string false "Rating (comma-separated for multiple)" Enums(G, PG, PG13, R, NC17)
+// @Param        release_year[gte] query int false "Minimum release year"
+// @Param        release_year[lte] query int false "Maximum release year"
+// @Param        title[like] query string false "Title search (ILIKE)"
+// @Param        is_featured query bool false "Featured content only"
+// @Param        director[like] query string false "Director search (ILIKE)"
+// @Param        q query string false "Free-text search across title and description"
+// @Param        sort_by query string false "Sort field" Enums(title, release_date, created_at)
+// @Param        sort_order query string false "Sort direction" Enums(asc, desc)
 // @Success      200 {object} httputil.Response{data=[]dto.ContentListResponse}
 // @Security     BearerAuth
 // @Router       /content [get]
 func (h *ContentHandler) List(w http.ResponseWriter, r *http.Request) {
-	page := httputil.QueryInt(r, "page", 1)
-	perPage := httputil.QueryInt(r, "per_page", 20)
-	contentType := httputil.QueryString(r, "type", "")
-	sortBy := httputil.QueryString(r, "sort_by", "relevance")
-
-	criteria := entity.SearchCriteria{
-		SortBy:  sortBy,
-		Page:    page,
-		PerPage: perPage,
-	}
-	if contentType != "" {
-		ct := entity.ContentType(contentType)
-		criteria.Type = &ct
+	fs, err := filter.FromRequest(r, contentFilterCfg)
+	if err != nil {
+		httputil.BadRequest(w, "BAD_REQUEST", err.Error())
+		return
 	}
 
-	contents, total, appErr := h.contentService.List(r.Context(), criteria)
+	searchQuery := r.URL.Query().Get("q")
+
+	contents, total, appErr := h.contentService.List(r.Context(), fs, searchQuery)
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return
 	}
-	httputil.SuccessWithMeta(w, mapper.ContentsToListResponse(contents), pagination.NewMeta(page, perPage, total))
+	httputil.SuccessWithMeta(w, mapper.ContentsToListResponse(contents), pagination.NewMeta(fs.Pagination.Page, fs.Pagination.PerPage, total))
 }
 
 // Featured godoc
@@ -150,17 +169,20 @@ func (h *ContentHandler) GetEpisodes(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /search [get]
 func (h *ContentHandler) Search(w http.ResponseWriter, r *http.Request) {
-	query := httputil.QueryString(r, "q", "")
-	page := httputil.QueryInt(r, "page", 1)
-	perPage := httputil.QueryInt(r, "per_page", 20)
+	fs, err := filter.FromRequest(r, contentFilterCfg)
+	if err != nil {
+		httputil.BadRequest(w, "BAD_REQUEST", err.Error())
+		return
+	}
 
-	criteria := entity.SearchCriteria{Query: query, Page: page, PerPage: perPage}
-	contents, total, appErr := h.contentService.Search(r.Context(), criteria)
+	searchQuery := r.URL.Query().Get("q")
+
+	contents, total, appErr := h.contentService.Search(r.Context(), fs, searchQuery)
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return
 	}
-	httputil.SuccessWithMeta(w, mapper.ContentsToListResponse(contents), pagination.NewMeta(page, perPage, total))
+	httputil.SuccessWithMeta(w, mapper.ContentsToListResponse(contents), pagination.NewMeta(fs.Pagination.Page, fs.Pagination.PerPage, total))
 }
 
 // Create godoc

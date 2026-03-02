@@ -26,16 +26,3 @@ type Tag struct {
 	Slug string
 }
 
-// SearchCriteria encapsulates catalog search parameters.
-type SearchCriteria struct {
-	Query     string
-	GenreIDs  []uuid.UUID
-	Type      *ContentType
-	Rating    *string
-	YearFrom  *int
-	YearTo    *int
-	SortBy    string // "relevance", "release_date", "title", "popularity"
-	SortOrder string // "asc", "desc"
-	Page      int
-	PerPage   int
-}

@@ -11,6 +11,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain/repository"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
+	"github.com/zenfulcode/zencial/internal/pkg/filter"
 )
 
 type Service struct {
@@ -35,8 +36,8 @@ func (s *Service) GetBySlug(ctx context.Context, slug string) (*entity.Content, 
 	return content, nil
 }
 
-func (s *Service) List(ctx context.Context, criteria entity.SearchCriteria) ([]entity.Content, int64, *apperror.AppError) {
-	contents, total, err := s.contentRepo.Search(ctx, criteria)
+func (s *Service) List(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.Content, int64, *apperror.AppError) {
+	contents, total, err := s.contentRepo.Search(ctx, fs, searchQuery)
 	if err != nil {
 		s.log.Error("listing content", "error", err)
 		return nil, 0, apperror.Internal(apperror.CodeInternalError, "failed to list content", err)
@@ -44,8 +45,8 @@ func (s *Service) List(ctx context.Context, criteria entity.SearchCriteria) ([]e
 	return contents, total, nil
 }
 
-func (s *Service) Search(ctx context.Context, criteria entity.SearchCriteria) ([]entity.Content, int64, *apperror.AppError) {
-	return s.List(ctx, criteria)
+func (s *Service) Search(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.Content, int64, *apperror.AppError) {
+	return s.List(ctx, fs, searchQuery)
 }
 
 func (s *Service) Featured(ctx context.Context, limit int) ([]entity.Content, *apperror.AppError) {
