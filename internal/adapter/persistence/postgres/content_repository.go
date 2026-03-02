@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -343,4 +344,52 @@ func (r *ContentRepository) GetVideoForContent(ctx context.Context, contentID uu
 	}
 	v.Duration = valueobject.NewDuration(durationSeconds)
 	return v, nil
+}
+
+func (r *ContentRepository) CreateVideoAsset(ctx context.Context, asset *entity.VideoAsset, contentID uuid.UUID) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		INSERT INTO video_assets (id, content_id, storage_key, status, qualities, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, now(), now())
+		ON CONFLICT (content_id) WHERE episode_id IS NULL
+		DO UPDATE SET storage_key = EXCLUDED.storage_key,
+		              status = EXCLUDED.status,
+		              qualities = EXCLUDED.qualities,
+		              updated_at = now()
+	`, asset.ID, contentID, asset.StorageKey, asset.Status, "[]")
+	if err != nil {
+		return fmt.Errorf("creating video asset: %w", err)
+	}
+	return nil
+}
+
+func (r *ContentRepository) GetVideoAssetForContent(ctx context.Context, contentID uuid.UUID) (*entity.VideoAsset, error) {
+	db := connFromCtx(ctx, r.pool)
+	a := &entity.VideoAsset{}
+	var qualitiesJSON []byte
+	err := db.QueryRow(ctx, `
+		SELECT id, storage_key, status, qualities
+		FROM video_assets WHERE content_id = $1 AND episode_id IS NULL
+	`, contentID).Scan(&a.ID, &a.StorageKey, &a.Status, &qualitiesJSON)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("getting video asset: %w", err)
+	}
+	if len(qualitiesJSON) > 0 {
+		_ = json.Unmarshal(qualitiesJSON, &a.Qualities)
+	}
+	return a, nil
+}
+
+func (r *ContentRepository) UpdateVideoAssetStatus(ctx context.Context, assetID uuid.UUID, status entity.VideoAssetStatus) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		UPDATE video_assets SET status = $2, updated_at = now() WHERE id = $1
+	`, assetID, status)
+	if err != nil {
+		return fmt.Errorf("updating video asset status: %w", err)
+	}
+	return nil
 }

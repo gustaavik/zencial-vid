@@ -28,4 +28,9 @@ type ContentRepository interface {
 	CreateVideo(ctx context.Context, video *entity.Video) error
 	UpdateVideo(ctx context.Context, video *entity.Video) error
 	GetVideoForContent(ctx context.Context, contentID uuid.UUID) (*entity.Video, error)
+
+	// Video assets
+	CreateVideoAsset(ctx context.Context, asset *entity.VideoAsset, contentID uuid.UUID) error
+	GetVideoAssetForContent(ctx context.Context, contentID uuid.UUID) (*entity.VideoAsset, error)
+	UpdateVideoAssetStatus(ctx context.Context, assetID uuid.UUID, status entity.VideoAssetStatus) error
 }

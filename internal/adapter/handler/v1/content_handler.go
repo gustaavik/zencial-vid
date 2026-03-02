@@ -316,3 +316,37 @@ func (h *ContentHandler) Archive(w http.ResponseWriter, r *http.Request) {
 	}
 	httputil.Success(w, http.StatusOK, mapper.ContentToDetailResponse(content))
 }
+
+// AttachVideoAsset godoc
+// @Summary      Attach video asset to content (admin)
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Content ID"
+// @Param        body body dto.AttachVideoAssetRequest true "Video asset data"
+// @Success      200 {object} httputil.Response{data=dto.VideoAssetResponse}
+// @Security     BearerAuth
+// @Router       /admin/content/{id}/asset [post]
+func (h *ContentHandler) AttachVideoAsset(w http.ResponseWriter, r *http.Request) {
+	id, err := httputil.URLParamUUID(r, "id")
+	if err != nil {
+		httputil.BadRequest(w, "BAD_REQUEST", "invalid content ID")
+		return
+	}
+	var req dto.AttachVideoAssetRequest
+	if decodeErr := httputil.DecodeJSON(r, &req); decodeErr != nil {
+		httputil.BadRequest(w, "BAD_REQUEST", "invalid request body")
+		return
+	}
+	if errors := h.validator.Validate(req); errors != nil {
+		httputil.ErrorWithDetails(w, apperror.BadRequest("VALIDATION_FAILED", "validation failed", nil), errors)
+		return
+	}
+
+	asset, appErr := h.contentService.AttachVideoAsset(r.Context(), id, req.StorageKey)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+	httputil.Success(w, http.StatusOK, mapper.VideoAssetToResponse(asset))
+}

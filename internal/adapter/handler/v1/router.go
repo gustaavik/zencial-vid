@@ -125,6 +125,7 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 				r.Delete("/{id}", contentHandler.Delete)
 				r.Post("/{id}/publish", contentHandler.Publish)
 				r.Post("/{id}/archive", contentHandler.Archive)
+				r.Post("/{id}/asset", contentHandler.AttachVideoAsset)
 			})
 
 			r.Get("/users", userHandler.AdminListUsers)
