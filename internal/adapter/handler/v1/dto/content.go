@@ -12,6 +12,8 @@ type ContentListResponse struct {
 	PosterURL   string   `json:"poster_url"`
 	Genres      []string `json:"genres"`
 	IsFeatured  bool     `json:"is_featured"`
+	CreatorName string   `json:"creator_name,omitempty"`
+	IsFree      bool     `json:"is_free,omitempty"`
 }
 
 // ContentDetailResponse represents full content details.
@@ -33,12 +35,20 @@ type ContentDetailResponse struct {
 	Cast        []CastMemberResponse `json:"cast"`
 	Film        *FilmResponse        `json:"film,omitempty"`
 	Series      *SeriesResponse      `json:"series,omitempty"`
+	Video       *VideoResponse       `json:"video,omitempty"`
 	CreatedAt   string               `json:"created_at"`
 }
 
 // FilmResponse holds film-specific data.
 type FilmResponse struct {
 	DurationMinutes float64 `json:"duration_minutes"`
+}
+
+// VideoResponse holds video-specific data.
+type VideoResponse struct {
+	DurationMinutes float64 `json:"duration_minutes"`
+	CreatorName     string  `json:"creator_name"`
+	IsFree          bool    `json:"is_free"`
 }
 
 // SeriesResponse holds series-specific data.
@@ -74,16 +84,18 @@ type CastMemberResponse struct {
 
 // CreateContentRequest represents a content creation request.
 type CreateContentRequest struct {
-	Type        string `json:"type" validate:"required,oneof=film series"`
+	Type        string `json:"type" validate:"required,oneof=film series video"`
 	Title       string `json:"title" validate:"required,min=1,max=255"`
 	Description string `json:"description" validate:"required"`
 	Synopsis    string `json:"synopsis"`
-	Rating      string `json:"rating" validate:"required,oneof=G PG PG13 R NC17"`
-	ReleaseYear int    `json:"release_year" validate:"required"`
+	Rating      string `json:"rating" validate:"omitempty,oneof=G PG PG13 R NC17"`
+	ReleaseYear int    `json:"release_year"`
 	PosterURL   string `json:"poster_url" validate:"omitempty,url"`
 	BackdropURL string `json:"backdrop_url" validate:"omitempty,url"`
 	TrailerURL  string `json:"trailer_url" validate:"omitempty,url"`
 	Director    string `json:"director"`
+	CreatorName string `json:"creator_name"`
+	IsFree      *bool  `json:"is_free,omitempty"`
 }
 
 // UpdateContentRequest represents a content update request.
@@ -98,4 +110,6 @@ type UpdateContentRequest struct {
 	TrailerURL  *string `json:"trailer_url,omitempty"`
 	Director    *string `json:"director,omitempty"`
 	IsFeatured  *bool   `json:"is_featured,omitempty"`
+	CreatorName *string `json:"creator_name,omitempty"`
+	IsFree      *bool   `json:"is_free,omitempty"`
 }

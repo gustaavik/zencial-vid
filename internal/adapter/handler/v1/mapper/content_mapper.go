@@ -11,7 +11,7 @@ func ContentToListResponse(c *entity.Content) dto.ContentListResponse {
 	for i, g := range c.Genres {
 		genres[i] = g.Name
 	}
-	return dto.ContentListResponse{
+	resp := dto.ContentListResponse{
 		ID:          c.ID.String(),
 		Type:        string(c.Type),
 		Title:       c.Title,
@@ -23,6 +23,11 @@ func ContentToListResponse(c *entity.Content) dto.ContentListResponse {
 		Genres:      genres,
 		IsFeatured:  c.IsFeatured,
 	}
+	if c.Video != nil {
+		resp.CreatorName = c.Video.CreatorName
+		resp.IsFree = c.Video.IsFree
+	}
+	return resp
 }
 
 // ContentToDetailResponse maps a Content entity to a detail DTO.
@@ -69,6 +74,13 @@ func ContentToDetailResponse(c *entity.Content) dto.ContentDetailResponse {
 	if c.Series != nil {
 		resp.Series = &dto.SeriesResponse{
 			TotalSeasons: c.Series.TotalSeasons,
+		}
+	}
+	if c.Video != nil {
+		resp.Video = &dto.VideoResponse{
+			DurationMinutes: c.Video.Duration.Minutes(),
+			CreatorName:     c.Video.CreatorName,
+			IsFree:          c.Video.IsFree,
 		}
 	}
 

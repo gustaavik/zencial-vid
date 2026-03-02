@@ -13,6 +13,7 @@ type ContentType string
 const (
 	ContentTypeFilm   ContentType = "film"
 	ContentTypeSeries ContentType = "series"
+	ContentTypeVideo  ContentType = "video"
 )
 
 // ContentStatus represents the publication status.
@@ -49,6 +50,7 @@ type Content struct {
 	// Type-specific data (nil when not applicable)
 	Film   *Film
 	Series *Series
+	Video  *Video
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -59,6 +61,15 @@ type Film struct {
 	ContentID uuid.UUID
 	Duration  valueobject.Duration
 	Asset     VideoAsset
+}
+
+// Video holds video-specific data for viewer-submitted content.
+type Video struct {
+	ContentID   uuid.UUID
+	Duration    valueobject.Duration
+	CreatorName string
+	IsFree      bool
+	Asset       VideoAsset
 }
 
 // Series holds series-specific data.
@@ -135,6 +146,8 @@ func (c *Content) IsPlayable() bool {
 		return c.Film != nil && c.Film.Asset.Status == VideoAssetReady
 	case ContentTypeSeries:
 		return c.Series != nil && c.Series.TotalSeasons > 0
+	case ContentTypeVideo:
+		return c.Video != nil && c.Video.Asset.Status == VideoAssetReady
 	}
 	return false
 }

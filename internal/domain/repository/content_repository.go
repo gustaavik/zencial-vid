@@ -23,4 +23,9 @@ type ContentRepository interface {
 	GetSeasonsForContent(ctx context.Context, contentID uuid.UUID) ([]entity.Season, error)
 	GetEpisodesForSeason(ctx context.Context, seasonID uuid.UUID) ([]entity.Episode, error)
 	GetEpisodeByID(ctx context.Context, id uuid.UUID) (*entity.Episode, error)
+
+	// Video-specific
+	CreateVideo(ctx context.Context, video *entity.Video) error
+	UpdateVideo(ctx context.Context, video *entity.Video) error
+	GetVideoForContent(ctx context.Context, contentID uuid.UUID) (*entity.Video, error)
 }

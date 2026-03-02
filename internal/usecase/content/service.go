@@ -33,6 +33,17 @@ func (s *Service) GetBySlug(ctx context.Context, slug string) (*entity.Content, 
 	if content == nil {
 		return nil, apperror.NotFound(apperror.CodeContentNotFound, "content not found", domain.ErrContentNotFound)
 	}
+
+	// Load video-specific data.
+	if content.Type == entity.ContentTypeVideo {
+		video, err := s.contentRepo.GetVideoForContent(ctx, content.ID)
+		if err != nil {
+			s.log.Error("getting video data", "error", err)
+		} else {
+			content.Video = video
+		}
+	}
+
 	return content, nil
 }
 
@@ -105,12 +116,20 @@ type CreateContentInput struct {
 	BackdropURL string
 	TrailerURL  string
 	Director    string
+	CreatorName string
+	IsFree      *bool
 }
 
 func (s *Service) Create(ctx context.Context, input CreateContentInput) (*entity.Content, *apperror.AppError) {
 	slug, err := valueobject.NewSlug(input.Title)
 	if err != nil {
 		return nil, apperror.BadRequest(apperror.CodeValidationFailed, "invalid title for slug", err)
+	}
+
+	// Default rating to G for videos if not provided.
+	rating := valueobject.ContentRating(input.Rating)
+	if input.Rating == "" && input.Type == string(entity.ContentTypeVideo) {
+		rating = valueobject.RatingG
 	}
 
 	now := time.Now()
@@ -121,7 +140,7 @@ func (s *Service) Create(ctx context.Context, input CreateContentInput) (*entity
 		Slug:        slug,
 		Description: input.Description,
 		Synopsis:    input.Synopsis,
-		Rating:      valueobject.ContentRating(input.Rating),
+		Rating:      rating,
 		ReleaseYear: input.ReleaseYear,
 		PosterURL:   input.PosterURL,
 		BackdropURL: input.BackdropURL,
@@ -135,6 +154,24 @@ func (s *Service) Create(ctx context.Context, input CreateContentInput) (*entity
 	if err := s.contentRepo.Create(ctx, content); err != nil {
 		s.log.Error("creating content", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to create content", err)
+	}
+
+	// Create video-specific record.
+	if content.Type == entity.ContentTypeVideo {
+		isFree := false
+		if input.IsFree != nil {
+			isFree = *input.IsFree
+		}
+		video := &entity.Video{
+			ContentID:   content.ID,
+			CreatorName: input.CreatorName,
+			IsFree:      isFree,
+		}
+		if err := s.contentRepo.CreateVideo(ctx, video); err != nil {
+			s.log.Error("creating video record", "error", err)
+			return nil, apperror.Internal(apperror.CodeInternalError, "failed to create video record", err)
+		}
+		content.Video = video
 	}
 
 	return content, nil
@@ -151,6 +188,8 @@ type UpdateContentInput struct {
 	TrailerURL  *string
 	Director    *string
 	IsFeatured  *bool
+	CreatorName *string
+	IsFree      *bool
 }
 
 func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateContentInput) (*entity.Content, *apperror.AppError) {
@@ -203,6 +242,29 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, input UpdateContentI
 		s.log.Error("updating content", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to update content", err)
 	}
+
+	// Update video-specific fields if applicable.
+	if content.Type == entity.ContentTypeVideo && (input.CreatorName != nil || input.IsFree != nil) {
+		video, err := s.contentRepo.GetVideoForContent(ctx, id)
+		if err != nil {
+			s.log.Error("getting video for update", "error", err)
+			return nil, apperror.Internal(apperror.CodeInternalError, "failed to get video record", err)
+		}
+		if video != nil {
+			if input.CreatorName != nil {
+				video.CreatorName = *input.CreatorName
+			}
+			if input.IsFree != nil {
+				video.IsFree = *input.IsFree
+			}
+			if err := s.contentRepo.UpdateVideo(ctx, video); err != nil {
+				s.log.Error("updating video record", "error", err)
+				return nil, apperror.Internal(apperror.CodeInternalError, "failed to update video record", err)
+			}
+			content.Video = video
+		}
+	}
+
 	return content, nil
 }
 

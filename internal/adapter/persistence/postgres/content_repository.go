@@ -302,3 +302,45 @@ func (r *ContentRepository) GetEpisodeByID(ctx context.Context, id uuid.UUID) (*
 	e.Duration = valueobject.NewDuration(durationSeconds)
 	return e, nil
 }
+
+func (r *ContentRepository) CreateVideo(ctx context.Context, video *entity.Video) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		INSERT INTO videos (content_id, duration_seconds, creator_name, is_free)
+		VALUES ($1, $2, $3, $4)
+	`, video.ContentID, video.Duration.Seconds, video.CreatorName, video.IsFree)
+	if err != nil {
+		return fmt.Errorf("creating video: %w", err)
+	}
+	return nil
+}
+
+func (r *ContentRepository) UpdateVideo(ctx context.Context, video *entity.Video) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		UPDATE videos SET duration_seconds=$2, creator_name=$3, is_free=$4
+		WHERE content_id = $1
+	`, video.ContentID, video.Duration.Seconds, video.CreatorName, video.IsFree)
+	if err != nil {
+		return fmt.Errorf("updating video: %w", err)
+	}
+	return nil
+}
+
+func (r *ContentRepository) GetVideoForContent(ctx context.Context, contentID uuid.UUID) (*entity.Video, error) {
+	db := connFromCtx(ctx, r.pool)
+	v := &entity.Video{}
+	var durationSeconds int64
+	err := db.QueryRow(ctx, `
+		SELECT content_id, duration_seconds, creator_name, is_free
+		FROM videos WHERE content_id = $1
+	`, contentID).Scan(&v.ContentID, &durationSeconds, &v.CreatorName, &v.IsFree)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("getting video: %w", err)
+	}
+	v.Duration = valueobject.NewDuration(durationSeconds)
+	return v, nil
+}
