@@ -31,11 +31,12 @@ type StorageService interface {
 
 // S3Client implements StorageService using S3-compatible storage (AWS S3 / MinIO).
 type S3Client struct {
-	client    *s3.Client
-	presigner *s3.PresignClient
-	bucket    string
-	endpoint  string
-	cdnBase   string
+	client         *s3.Client
+	presigner      *s3.PresignClient
+	bucket         string
+	endpoint       string
+	publicEndpoint string
+	cdnBase        string
 }
 
 // NewS3Client creates a new S3Client from the storage and CDN configuration.
@@ -44,6 +45,7 @@ func NewS3Client(storageCfg config.StorageConfig, cdnBaseURL string) (*S3Client,
 		return nil, fmt.Errorf("S3_ENDPOINT is required for storage")
 	}
 
+	// Internal client for server-side operations.
 	client := s3.New(s3.Options{
 		Region:       storageCfg.Region,
 		BaseEndpoint: aws.String(storageCfg.Endpoint),
@@ -55,12 +57,29 @@ func NewS3Client(storageCfg config.StorageConfig, cdnBaseURL string) (*S3Client,
 		UsePathStyle: true, // Required for MinIO
 	})
 
+	// Presign client uses the public endpoint so URLs are reachable from the browser.
+	publicEndpoint := storageCfg.Endpoint
+	if storageCfg.PublicEndpoint != "" {
+		publicEndpoint = storageCfg.PublicEndpoint
+	}
+	presignClient := s3.New(s3.Options{
+		Region:       storageCfg.Region,
+		BaseEndpoint: aws.String(publicEndpoint),
+		Credentials: credentials.NewStaticCredentialsProvider(
+			storageCfg.AccessKey,
+			storageCfg.SecretKey,
+			"",
+		),
+		UsePathStyle: true,
+	})
+
 	return &S3Client{
-		client:    client,
-		presigner: s3.NewPresignClient(client),
-		bucket:    storageCfg.Bucket,
-		endpoint:  strings.TrimRight(storageCfg.Endpoint, "/"),
-		cdnBase:   strings.TrimRight(cdnBaseURL, "/"),
+		client:         client,
+		presigner:      s3.NewPresignClient(presignClient),
+		bucket:         storageCfg.Bucket,
+		endpoint:       strings.TrimRight(storageCfg.Endpoint, "/"),
+		publicEndpoint: strings.TrimRight(publicEndpoint, "/"),
+		cdnBase:        strings.TrimRight(cdnBaseURL, "/"),
 	}, nil
 }
 
@@ -137,7 +156,7 @@ func (s *S3Client) PublicURL(key string) string {
 	if s.cdnBase != "" {
 		return s.cdnBase + "/" + key
 	}
-	return s.endpoint + "/" + s.bucket + "/" + key
+	return s.publicEndpoint + "/" + s.bucket + "/" + key
 }
 
 const presignExpiry = 30 * time.Minute
