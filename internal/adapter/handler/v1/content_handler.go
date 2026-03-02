@@ -185,6 +185,34 @@ func (h *ContentHandler) Search(w http.ResponseWriter, r *http.Request) {
 	httputil.SuccessWithMeta(w, mapper.ContentsToListResponse(contents), pagination.NewMeta(fs.Pagination.Page, fs.Pagination.PerPage, total))
 }
 
+// AdminList godoc
+// @Summary      List all content (admin)
+// @Description  List all content regardless of status, with optional filtering and search.
+// @Tags         admin
+// @Produce      json
+// @Param        page query int false "Page number" default(1)
+// @Param        per_page query int false "Items per page" default(50)
+// @Param        q query string false "Free-text search across title and description"
+// @Success      200 {object} httputil.Response{data=[]dto.ContentListResponse}
+// @Security     BearerAuth
+// @Router       /admin/content [get]
+func (h *ContentHandler) AdminList(w http.ResponseWriter, r *http.Request) {
+	fs, err := filter.FromRequest(r, contentFilterCfg)
+	if err != nil {
+		httputil.BadRequest(w, "BAD_REQUEST", err.Error())
+		return
+	}
+
+	searchQuery := r.URL.Query().Get("q")
+
+	contents, total, appErr := h.contentService.AdminList(r.Context(), fs, searchQuery)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+	httputil.SuccessWithMeta(w, mapper.ContentsToListResponse(contents), pagination.NewMeta(fs.Pagination.Page, fs.Pagination.PerPage, total))
+}
+
 // Create godoc
 // @Summary      Create content (admin)
 // @Tags         admin

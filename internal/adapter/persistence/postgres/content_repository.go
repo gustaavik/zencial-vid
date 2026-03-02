@@ -185,6 +185,69 @@ func (r *ContentRepository) Search(ctx context.Context, fs filter.FilterSet, sea
 	return contents, total, nil
 }
 
+func (r *ContentRepository) AdminSearch(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.Content, int64, error) {
+	db := connFromCtx(ctx, r.pool)
+
+	// Build count query (no status filter for admin)
+	whereClause, countArgs, nextIdx := filter.CountSQL(fs, "", 1)
+
+	extraWhere := ""
+	var searchArgs []interface{}
+	if searchQuery != "" {
+		extraWhere = fmt.Sprintf(" AND (c.title ILIKE $%d OR c.description ILIKE $%d)", nextIdx, nextIdx)
+		if whereClause == "" {
+			extraWhere = fmt.Sprintf(" WHERE (c.title ILIKE $%d OR c.description ILIKE $%d)", nextIdx, nextIdx)
+		}
+		searchArgs = append(searchArgs, "%"+searchQuery+"%")
+	}
+
+	countAllArgs := append(countArgs, searchArgs...)
+	countQ := `SELECT COUNT(*) FROM content c ` + whereClause + extraWhere
+	var total int64
+	if err := db.QueryRow(ctx, countQ, countAllArgs...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("counting admin content: %w", err)
+	}
+
+	// Build data query (no status filter for admin)
+	sql := filter.ToSQL(fs, "", 1)
+
+	dataExtraWhere := ""
+	var dataSearchArgs []interface{}
+	if searchQuery != "" {
+		dataExtraWhere = fmt.Sprintf(" AND (c.title ILIKE $%d OR c.description ILIKE $%d)", sql.NextArgIdx, sql.NextArgIdx)
+		if sql.WhereClause == "" {
+			dataExtraWhere = fmt.Sprintf(" WHERE (c.title ILIKE $%d OR c.description ILIKE $%d)", sql.NextArgIdx, sql.NextArgIdx)
+		}
+		dataSearchArgs = append(dataSearchArgs, "%"+searchQuery+"%")
+	}
+
+	dataQ := `SELECT c.id, c.type, c.title, c.slug, c.description, c.rating, c.release_year,
+	                 c.poster_url, c.status, c.is_featured, c.created_at, c.updated_at
+	          FROM content c ` + sql.WhereClause + dataExtraWhere + ` ` + sql.OrderClause + ` ` + sql.LimitClause
+	dataAllArgs := append(sql.Args, dataSearchArgs...)
+
+	rows, err := db.Query(ctx, dataQ, dataAllArgs...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("admin searching content: %w", err)
+	}
+	defer rows.Close()
+
+	var contents []entity.Content
+	for rows.Next() {
+		var c entity.Content
+		var slug string
+		err := rows.Scan(&c.ID, &c.Type, &c.Title, &slug, &c.Description,
+			&c.Rating, &c.ReleaseYear, &c.PosterURL, &c.Status, &c.IsFeatured,
+			&c.CreatedAt, &c.UpdatedAt)
+		if err != nil {
+			return nil, 0, fmt.Errorf("scanning admin content: %w", err)
+		}
+		c.Slug = valueobject.SlugFromTrusted(slug)
+		contents = append(contents, c)
+	}
+	return contents, total, nil
+}
+
 func (r *ContentRepository) GetFeatured(ctx context.Context, limit int) ([]entity.Content, error) {
 	db := connFromCtx(ctx, r.pool)
 	rows, err := db.Query(ctx, `

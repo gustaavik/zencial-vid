@@ -7,6 +7,7 @@ type ContentListResponse struct {
 	Title       string   `json:"title" example:"The Matrix"`
 	Slug        string   `json:"slug" example:"the-matrix"`
 	Description string   `json:"description"`
+	Status      string   `json:"status" example:"published"`
 	Rating      string   `json:"rating" example:"R"`
 	ReleaseYear int      `json:"release_year" example:"1999"`
 	PosterURL   string   `json:"poster_url"`

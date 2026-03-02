@@ -18,6 +18,7 @@ func ContentToListResponse(c *entity.Content) dto.ContentListResponse {
 		Title:       c.Title,
 		Slug:        c.Slug.String(),
 		Description: c.Description,
+		Status:      string(c.Status),
 		Rating:      string(c.Rating),
 		ReleaseYear: c.ReleaseYear,
 		PosterURL:   c.PosterURL,

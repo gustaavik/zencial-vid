@@ -17,6 +17,7 @@ type ContentRepository interface {
 	Update(ctx context.Context, content *entity.Content) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	Search(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.Content, int64, error)
+	AdminSearch(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.Content, int64, error)
 	GetFeatured(ctx context.Context, limit int) ([]entity.Content, error)
 	GetByGenre(ctx context.Context, genreID uuid.UUID, page, perPage int) ([]entity.Content, int64, error)
 

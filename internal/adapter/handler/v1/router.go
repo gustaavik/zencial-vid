@@ -120,6 +120,7 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 			}
 
 			r.Route("/content", func(r chi.Router) {
+				r.Get("/", contentHandler.AdminList)
 				r.Post("/", contentHandler.Create)
 				r.Put("/{id}", contentHandler.Update)
 				r.Delete("/{id}", contentHandler.Delete)
