@@ -18,6 +18,7 @@ const (
 	// Content
 	CodeContentNotFound    = "CONTENT_NOT_FOUND"
 	CodeContentNotPlayable = "CONTENT_NOT_PLAYABLE"
+	CodeVideoAssetRequired = "VIDEO_ASSET_REQUIRED"
 	CodeEpisodeNotFound    = "EPISODE_NOT_FOUND"
 	CodeSeasonNotFound     = "SEASON_NOT_FOUND"
 
