@@ -2,9 +2,11 @@ package content
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/zenfulcode/zencial/internal/domain"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
@@ -28,9 +30,20 @@ type CreateContentInput struct {
 
 // Create creates new content from the given input.
 func (s *Service) Create(ctx context.Context, input CreateContentInput) (*entity.Content, *apperror.AppError) {
-	slug, err := valueobject.NewSlug(input.Title)
+	baseSlug, err := valueobject.NewSlug(input.Title)
 	if err != nil {
 		return nil, apperror.BadRequest(apperror.CodeValidationFailed, "invalid title for slug", err)
+	}
+
+	// Ensure slug uniqueness by appending a random ID if the base slug is taken.
+	slug := baseSlug
+	exists, err := s.contentRepo.ExistsBySlug(ctx, slug.String())
+	if err != nil {
+		s.log.Error("checking slug existence", "error", err)
+		return nil, apperror.Internal(apperror.CodeInternalError, "failed to check slug", err)
+	}
+	if exists {
+		slug = baseSlug.WithRandomID()
 	}
 
 	// Default rating to G for videos if not provided.
@@ -59,6 +72,9 @@ func (s *Service) Create(ctx context.Context, input CreateContentInput) (*entity
 	}
 
 	if err := s.contentRepo.Create(ctx, content); err != nil {
+		if errors.Is(err, domain.ErrSlugAlreadyExists) {
+			return nil, apperror.Conflict(apperror.CodeSlugConflict, "content with this slug already exists", err)
+		}
 		s.log.Error("creating content", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to create content", err)
 	}

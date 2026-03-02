@@ -15,6 +15,7 @@ var (
 var (
 	ErrContentNotFound    = errors.New("content not found")
 	ErrContentNotPlayable = errors.New("content is not playable")
+	ErrSlugAlreadyExists  = errors.New("slug already exists")
 	ErrEpisodeNotFound    = errors.New("episode not found")
 	ErrSeasonNotFound     = errors.New("season not found")
 )

@@ -8,7 +8,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/zenfulcode/zencial/internal/domain"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 	"github.com/zenfulcode/zencial/internal/pkg/filter"
@@ -35,9 +37,23 @@ func (r *ContentRepository) Create(ctx context.Context, content *entity.Content)
 		content.BackdropURL, content.TrailerURL, content.Director, content.Status,
 		content.IsFeatured, content.CreatedAt, content.UpdatedAt)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "content_slug_key" {
+			return domain.ErrSlugAlreadyExists
+		}
 		return fmt.Errorf("creating content: %w", err)
 	}
 	return nil
+}
+
+func (r *ContentRepository) ExistsBySlug(ctx context.Context, slug string) (bool, error) {
+	db := connFromCtx(ctx, r.pool)
+	var exists bool
+	err := db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM content WHERE slug = $1)`, slug).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("checking slug existence: %w", err)
+	}
+	return exists, nil
 }
 
 func (r *ContentRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Content, error) {

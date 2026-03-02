@@ -13,6 +13,7 @@ type ContentRepository interface {
 	Create(ctx context.Context, content *entity.Content) error
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Content, error)
 	GetBySlug(ctx context.Context, slug string) (*entity.Content, error)
+	ExistsBySlug(ctx context.Context, slug string) (bool, error)
 	Update(ctx context.Context, content *entity.Content) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	Search(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.Content, int64, error)
