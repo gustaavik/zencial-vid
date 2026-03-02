@@ -128,6 +128,48 @@ func TestContent_IsPlayable(t *testing.T) {
 			},
 			expect: false,
 		},
+		{
+			name: "published video with ready asset is playable",
+			setup: func() *Content {
+				c := newTestContent(t, ContentTypeVideo, ContentStatusPublished)
+				c.Video = &Video{
+					ContentID:   c.ID,
+					Duration:    valueobject.NewDuration(300),
+					CreatorName: "Test Creator",
+					IsFree:      true,
+					Asset: VideoAsset{
+						ID:     uuid.New(),
+						Status: VideoAssetReady,
+					},
+				}
+				return c
+			},
+			expect: true,
+		},
+		{
+			name: "published video with pending asset is not playable",
+			setup: func() *Content {
+				c := newTestContent(t, ContentTypeVideo, ContentStatusPublished)
+				c.Video = &Video{
+					ContentID:   c.ID,
+					CreatorName: "Test Creator",
+					Asset: VideoAsset{
+						ID:     uuid.New(),
+						Status: VideoAssetPending,
+					},
+				}
+				return c
+			},
+			expect: false,
+		},
+		{
+			name: "published video with nil Video data is not playable",
+			setup: func() *Content {
+				c := newTestContent(t, ContentTypeVideo, ContentStatusPublished)
+				return c
+			},
+			expect: false,
+		},
 	}
 
 	for _, tt := range tests {

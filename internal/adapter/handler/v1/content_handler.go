@@ -50,7 +50,7 @@ func NewContentHandler(contentService *contentuc.Service) *ContentHandler {
 // @Produce      json
 // @Param        page query int false "Page number" default(1)
 // @Param        per_page query int false "Items per page" default(20)
-// @Param        type query string false "Content type (comma-separated for multiple)" Enums(film, series)
+// @Param        type query string false "Content type (comma-separated for multiple)" Enums(film, series, video)
 // @Param        rating query string false "Rating (comma-separated for multiple)" Enums(G, PG, PG13, R, NC17)
 // @Param        release_year[gte] query int false "Minimum release year"
 // @Param        release_year[lte] query int false "Maximum release year"
@@ -210,6 +210,7 @@ func (h *ContentHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Synopsis: req.Synopsis, Rating: req.Rating, ReleaseYear: req.ReleaseYear,
 		PosterURL: req.PosterURL, BackdropURL: req.BackdropURL,
 		TrailerURL: req.TrailerURL, Director: req.Director,
+		CreatorName: req.CreatorName, IsFree: req.IsFree,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
@@ -245,6 +246,7 @@ func (h *ContentHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Rating: req.Rating, ReleaseYear: req.ReleaseYear, PosterURL: req.PosterURL,
 		BackdropURL: req.BackdropURL, TrailerURL: req.TrailerURL,
 		Director: req.Director, IsFeatured: req.IsFeatured,
+		CreatorName: req.CreatorName, IsFree: req.IsFree,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
