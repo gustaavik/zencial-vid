@@ -1,4 +1,4 @@
--- +migrate Up
+-- +goose Up
 CREATE TABLE IF NOT EXISTS video_assets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     content_id UUID NOT NULL REFERENCES content(id) ON DELETE CASCADE,
@@ -21,5 +21,5 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_video_assets_episode
 CREATE INDEX IF NOT EXISTS idx_video_assets_content_id ON video_assets (content_id);
 CREATE INDEX IF NOT EXISTS idx_video_assets_status ON video_assets (status);
 
--- +migrate Down
+-- +goose Down
 DROP TABLE IF EXISTS video_assets;
