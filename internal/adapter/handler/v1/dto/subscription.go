@@ -34,3 +34,27 @@ type SubscribeRequest struct {
 type ChangePlanRequest struct {
 	PlanID string `json:"plan_id" validate:"required,uuid"`
 }
+
+// AdminSubscriptionResponse represents a subscription with user info for admin views.
+type AdminSubscriptionResponse struct {
+	ID                 string       `json:"id"`
+	UserID             string       `json:"user_id"`
+	UserEmail          string       `json:"user_email"`
+	Plan               PlanResponse `json:"plan"`
+	Status             string       `json:"status" example:"active"`
+	CurrentPeriodStart string       `json:"current_period_start"`
+	CurrentPeriodEnd   string       `json:"current_period_end"`
+	CanceledAt         *string      `json:"canceled_at,omitempty"`
+	CreatedAt          string       `json:"created_at"`
+}
+
+// AdminChangePlanRequest represents an admin plan change request.
+type AdminChangePlanRequest struct {
+	PlanID string `json:"plan_id" validate:"required,uuid"`
+}
+
+// AdminCreateSubscriptionRequest represents an admin request to assign a subscription to a user.
+type AdminCreateSubscriptionRequest struct {
+	UserID string `json:"user_id" validate:"required,uuid"`
+	PlanID string `json:"plan_id" validate:"required,uuid"`
+}

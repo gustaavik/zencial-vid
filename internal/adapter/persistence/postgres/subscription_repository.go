@@ -112,6 +112,48 @@ func (r *SubscriptionRepository) Update(ctx context.Context, sub *entity.Subscri
 	return nil
 }
 
+func (r *SubscriptionRepository) ListSubscriptions(ctx context.Context, page, perPage int) ([]entity.Subscription, int64, error) {
+	db := connFromCtx(ctx, r.pool)
+	offset := (page - 1) * perPage
+
+	rows, err := db.Query(ctx, `
+		SELECT s.id, s.user_id, s.plan_id, s.status, s.external_id, s.current_period_start,
+		       s.current_period_end, s.canceled_at, s.trial_end, s.created_at, s.updated_at,
+		       p.id, p.name, p.tier, p.price_amount, p.price_currency, p.billing_interval,
+		       p.max_quality, p.max_streams, p.downloads_allowed, p.is_active,
+		       u.email,
+		       COUNT(*) OVER() AS total
+		FROM subscriptions s
+		JOIN plans p ON s.plan_id = p.id
+		JOIN users u ON s.user_id = u.id
+		ORDER BY s.created_at DESC
+		LIMIT $1 OFFSET $2
+	`, perPage, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("listing subscriptions: %w", err)
+	}
+	defer rows.Close()
+
+	var subs []entity.Subscription
+	var total int64
+	for rows.Next() {
+		var s entity.Subscription
+		plan := &entity.Plan{}
+		if err := rows.Scan(&s.ID, &s.UserID, &s.PlanID, &s.Status, &s.ExternalID,
+			&s.CurrentPeriodStart, &s.CurrentPeriodEnd, &s.CanceledAt, &s.TrialEnd,
+			&s.CreatedAt, &s.UpdatedAt,
+			&plan.ID, &plan.Name, &plan.Tier, &plan.Price.Amount, &plan.Price.Currency,
+			&plan.BillingInterval, &plan.MaxQuality, &plan.MaxStreams,
+			&plan.DownloadsAllowed, &plan.IsActive,
+			&s.UserEmail, &total); err != nil {
+			return nil, 0, fmt.Errorf("scanning subscription: %w", err)
+		}
+		s.Plan = plan
+		subs = append(subs, s)
+	}
+	return subs, total, nil
+}
+
 func (r *SubscriptionRepository) ListPlans(ctx context.Context) ([]entity.Plan, error) {
 	db := connFromCtx(ctx, r.pool)
 	rows, err := db.Query(ctx, `

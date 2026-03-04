@@ -133,6 +133,15 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 			r.Get("/users", userHandler.AdminListUsers)
 			r.Patch("/users/{id}/status", userHandler.AdminUpdateStatus)
 
+			r.Route("/subscriptions", func(r chi.Router) {
+				r.Get("/", subscriptionHandler.AdminListSubscriptions)
+				r.Post("/", subscriptionHandler.AdminCreateSubscription)
+				r.Get("/user/{userId}", subscriptionHandler.AdminGetUserSubscription)
+				r.Patch("/{id}/plan", subscriptionHandler.AdminChangePlan)
+				r.Post("/{id}/reactivate", subscriptionHandler.AdminReactivateSubscription)
+				r.Post("/{id}/cancel", subscriptionHandler.AdminCancelSubscription)
+			})
+
 			r.Route("/genres", func(r chi.Router) {
 				r.Post("/", catalogHandler.CreateGenre)
 				r.Put("/{id}", catalogHandler.UpdateGenre)
