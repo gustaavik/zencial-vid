@@ -120,7 +120,7 @@ func main() {
 	userService := useruc.NewService(userRepo, log)
 	contentService := contentuc.NewService(contentRepo, catalogRepo, log)
 	catalogService := cataloguc.NewService(catalogRepo, contentRepo, log)
-	streamingService := streaminguc.NewService(streamingRepo, contentRepo, subscriptionRepo, log)
+	streamingService := streaminguc.NewService(streamingRepo, contentRepo, subscriptionRepo, cfg.CDN.BaseURL, log)
 	subscriptionService := subscriptionuc.NewService(subscriptionRepo, log)
 	watchlistService := watchlistuc.NewService(watchlistRepo, contentRepo, log)
 

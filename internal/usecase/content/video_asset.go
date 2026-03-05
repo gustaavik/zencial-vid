@@ -25,10 +25,13 @@ func (s *Service) AttachVideoAsset(ctx context.Context, contentID uuid.UUID, sto
 		return nil, apperror.BadRequest(apperror.CodeValidationFailed, "only film and video content types support video assets", nil)
 	}
 
+	// Default to "ready" — no transcoding pipeline exists yet.
+	// When a processing pipeline is added, this should revert to VideoAssetPending
+	// and transition to VideoAssetReady after transcoding completes.
 	asset := &entity.VideoAsset{
 		ID:         uuid.New(),
 		StorageKey: storageKey,
-		Status:     entity.VideoAssetPending,
+		Status:     entity.VideoAssetReady,
 	}
 
 	if err := s.contentRepo.CreateVideoAsset(ctx, asset, contentID); err != nil {
