@@ -68,6 +68,17 @@ func (r *StreamingRepository) EndSession(ctx context.Context, sessionID uuid.UUI
 	return nil
 }
 
+func (r *StreamingRepository) EndSessionsForContent(ctx context.Context, userID, contentID uuid.UUID) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx,
+		`DELETE FROM stream_sessions WHERE user_id = $1 AND content_id = $2`,
+		userID, contentID)
+	if err != nil {
+		return fmt.Errorf("cleaning up sessions for content: %w", err)
+	}
+	return nil
+}
+
 func (r *StreamingRepository) SaveProgress(ctx context.Context, progress *entity.PlaybackProgress) error {
 	db := connFromCtx(ctx, r.pool)
 	_, err := db.Exec(ctx, `

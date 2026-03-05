@@ -58,6 +58,12 @@ func (s *Service) StartSession(ctx context.Context, input StartSessionInput) (*S
 		return nil, apperror.Forbidden(apperror.CodeNoActiveSubscription, "active subscription required", domain.ErrNoActiveSubscription)
 	}
 
+	// Clean up any existing sessions for the same user + content.
+	// Handles browser refresh / tab close where the frontend cleanup doesn't fire.
+	if err := s.streamingRepo.EndSessionsForContent(ctx, input.UserID, input.ContentID); err != nil {
+		s.log.Warn("failed to clean up previous sessions", "error", err)
+	}
+
 	activeSessions, err := s.streamingRepo.GetActiveSessionsByUser(ctx, input.UserID)
 	if err != nil {
 		s.log.Error("getting active sessions", "error", err)
