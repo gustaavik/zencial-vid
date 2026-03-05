@@ -36,17 +36,17 @@ func NewStreamingHandler(streamingService *streaminguc.Service) *StreamingHandle
 func (h *StreamingHandler) StartSession(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
-		httputil.Unauthorized(w, "UNAUTHORIZED", "authentication required")
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
 
 	var req dto.StartSessionRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid request body")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
 		return
 	}
 	if errors := h.validator.Validate(req); errors != nil {
-		httputil.ErrorWithDetails(w, apperror.BadRequest("VALIDATION_FAILED", "validation failed", nil), errors)
+		httputil.ErrorWithDetails(w, apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil), errors)
 		return
 	}
 
@@ -83,12 +83,12 @@ func (h *StreamingHandler) StartSession(w http.ResponseWriter, r *http.Request) 
 func (h *StreamingHandler) EndSession(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
-		httputil.Unauthorized(w, "UNAUTHORIZED", "authentication required")
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
 	sessionID, err := httputil.URLParamUUID(r, "id")
 	if err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid session ID")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid session ID")
 		return
 	}
 	if appErr := h.streamingService.EndSession(r.Context(), userID, sessionID); appErr != nil {
@@ -109,12 +109,12 @@ func (h *StreamingHandler) EndSession(w http.ResponseWriter, r *http.Request) {
 func (h *StreamingHandler) UpdateProgress(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
-		httputil.Unauthorized(w, "UNAUTHORIZED", "authentication required")
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
 	var req dto.UpdateProgressRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid request body")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
 		return
 	}
 
@@ -146,12 +146,12 @@ func (h *StreamingHandler) UpdateProgress(w http.ResponseWriter, r *http.Request
 func (h *StreamingHandler) GetProgress(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
-		httputil.Unauthorized(w, "UNAUTHORIZED", "authentication required")
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
 	contentID, err := httputil.URLParamUUID(r, "contentId")
 	if err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid content ID")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid content ID")
 		return
 	}
 
@@ -186,7 +186,7 @@ func (h *StreamingHandler) GetProgress(w http.ResponseWriter, r *http.Request) {
 func (h *StreamingHandler) ContinueWatching(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
-		httputil.Unauthorized(w, "UNAUTHORIZED", "authentication required")
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
 	limit := httputil.QueryInt(r, "limit", 20)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
+	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 	"github.com/zenfulcode/zencial/internal/pkg/httputil"
 	"github.com/zenfulcode/zencial/internal/pkg/pagination"
 	watchlistuc "github.com/zenfulcode/zencial/internal/usecase/watchlist"
@@ -32,7 +33,7 @@ func NewWatchlistHandler(watchlistService *watchlistuc.Service) *WatchlistHandle
 func (h *WatchlistHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
-		httputil.Unauthorized(w, "UNAUTHORIZED", "authentication required")
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
 	page := httputil.QueryInt(r, "page", 1)
@@ -56,12 +57,12 @@ func (h *WatchlistHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *WatchlistHandler) Add(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
-		httputil.Unauthorized(w, "UNAUTHORIZED", "authentication required")
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
 	contentID, err := httputil.URLParamUUID(r, "contentId")
 	if err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid content ID")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid content ID")
 		return
 	}
 	if appErr := h.watchlistService.Add(r.Context(), userID, contentID); appErr != nil {
@@ -81,12 +82,12 @@ func (h *WatchlistHandler) Add(w http.ResponseWriter, r *http.Request) {
 func (h *WatchlistHandler) Remove(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
-		httputil.Unauthorized(w, "UNAUTHORIZED", "authentication required")
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
 	contentID, err := httputil.URLParamUUID(r, "contentId")
 	if err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid content ID")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid content ID")
 		return
 	}
 	if appErr := h.watchlistService.Remove(r.Context(), userID, contentID); appErr != nil {
@@ -107,12 +108,12 @@ func (h *WatchlistHandler) Remove(w http.ResponseWriter, r *http.Request) {
 func (h *WatchlistHandler) Status(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
-		httputil.Unauthorized(w, "UNAUTHORIZED", "authentication required")
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
 	contentID, err := httputil.URLParamUUID(r, "contentId")
 	if err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid content ID")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid content ID")
 		return
 	}
 	inWatchlist, appErr := h.watchlistService.Status(r.Context(), userID, contentID)

@@ -49,7 +49,7 @@ func (h *SubscriptionHandler) ListPlans(w http.ResponseWriter, r *http.Request) 
 func (h *SubscriptionHandler) GetCurrent(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
-		httputil.Unauthorized(w, "UNAUTHORIZED", "authentication required")
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
 	sub, appErr := h.subscriptionService.GetCurrent(r.Context(), userID)
@@ -72,16 +72,16 @@ func (h *SubscriptionHandler) GetCurrent(w http.ResponseWriter, r *http.Request)
 func (h *SubscriptionHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
-		httputil.Unauthorized(w, "UNAUTHORIZED", "authentication required")
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
 	var req dto.SubscribeRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid request body")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
 		return
 	}
 	if errors := h.validator.Validate(req); errors != nil {
-		httputil.ErrorWithDetails(w, apperror.BadRequest("VALIDATION_FAILED", "validation failed", nil), errors)
+		httputil.ErrorWithDetails(w, apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil), errors)
 		return
 	}
 
@@ -106,12 +106,12 @@ func (h *SubscriptionHandler) Subscribe(w http.ResponseWriter, r *http.Request) 
 func (h *SubscriptionHandler) ChangePlan(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
-		httputil.Unauthorized(w, "UNAUTHORIZED", "authentication required")
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
 	var req dto.ChangePlanRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid request body")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
 		return
 	}
 
@@ -164,7 +164,7 @@ func (h *SubscriptionHandler) AdminListSubscriptions(w http.ResponseWriter, r *h
 func (h *SubscriptionHandler) AdminGetUserSubscription(w http.ResponseWriter, r *http.Request) {
 	userID, err := httputil.URLParamUUID(r, "userId")
 	if err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid user ID")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid user ID")
 		return
 	}
 
@@ -188,17 +188,17 @@ func (h *SubscriptionHandler) AdminGetUserSubscription(w http.ResponseWriter, r 
 func (h *SubscriptionHandler) AdminChangePlan(w http.ResponseWriter, r *http.Request) {
 	subID, err := httputil.URLParamUUID(r, "id")
 	if err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid subscription ID")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid subscription ID")
 		return
 	}
 
 	var req dto.AdminChangePlanRequest
 	if decodeErr := httputil.DecodeJSON(r, &req); decodeErr != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid request body")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
 		return
 	}
 	if errors := h.validator.Validate(req); errors != nil {
-		httputil.ErrorWithDetails(w, apperror.BadRequest("VALIDATION_FAILED", "validation failed", nil), errors)
+		httputil.ErrorWithDetails(w, apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil), errors)
 		return
 	}
 
@@ -226,11 +226,11 @@ func (h *SubscriptionHandler) AdminChangePlan(w http.ResponseWriter, r *http.Req
 func (h *SubscriptionHandler) AdminCreateSubscription(w http.ResponseWriter, r *http.Request) {
 	var req dto.AdminCreateSubscriptionRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid request body")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
 		return
 	}
 	if errors := h.validator.Validate(req); errors != nil {
-		httputil.ErrorWithDetails(w, apperror.BadRequest("VALIDATION_FAILED", "validation failed", nil), errors)
+		httputil.ErrorWithDetails(w, apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil), errors)
 		return
 	}
 
@@ -257,7 +257,7 @@ func (h *SubscriptionHandler) AdminCreateSubscription(w http.ResponseWriter, r *
 func (h *SubscriptionHandler) AdminReactivateSubscription(w http.ResponseWriter, r *http.Request) {
 	subID, err := httputil.URLParamUUID(r, "id")
 	if err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid subscription ID")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid subscription ID")
 		return
 	}
 
@@ -279,7 +279,7 @@ func (h *SubscriptionHandler) AdminReactivateSubscription(w http.ResponseWriter,
 func (h *SubscriptionHandler) AdminCancelSubscription(w http.ResponseWriter, r *http.Request) {
 	subID, err := httputil.URLParamUUID(r, "id")
 	if err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid subscription ID")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid subscription ID")
 		return
 	}
 
@@ -299,7 +299,7 @@ func (h *SubscriptionHandler) AdminCancelSubscription(w http.ResponseWriter, r *
 func (h *SubscriptionHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
-		httputil.Unauthorized(w, "UNAUTHORIZED", "authentication required")
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
 	if appErr := h.subscriptionService.Cancel(r.Context(), userID); appErr != nil {

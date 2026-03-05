@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/infrastructure/auth"
+	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 	"github.com/zenfulcode/zencial/internal/pkg/httputil"
 )
 
@@ -22,19 +23,19 @@ func Authenticate(tokenService auth.TokenService) func(http.Handler) http.Handle
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			header := r.Header.Get("Authorization")
 			if header == "" {
-				httputil.Unauthorized(w, "UNAUTHORIZED", "missing authorization header")
+				httputil.Unauthorized(w, apperror.CodeUnauthorized, "missing authorization header")
 				return
 			}
 
 			parts := strings.SplitN(header, " ", 2)
 			if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") {
-				httputil.Unauthorized(w, "UNAUTHORIZED", "invalid authorization format")
+				httputil.Unauthorized(w, apperror.CodeUnauthorized, "invalid authorization format")
 				return
 			}
 
 			claims, err := tokenService.ValidateAccessToken(parts[1])
 			if err != nil {
-				httputil.Unauthorized(w, "INVALID_TOKEN", "invalid or expired token")
+				httputil.Unauthorized(w, apperror.CodeInvalidToken, "invalid or expired token")
 				return
 			}
 
