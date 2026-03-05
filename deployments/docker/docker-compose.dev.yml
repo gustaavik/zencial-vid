@@ -28,6 +28,7 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY:-minioadmin}
       - S3_BUCKET=${S3_BUCKET:-zencial-videos}
       - S3_REGION=eu-west-1
+      - CDN_BASE_URL=http://localhost:9000/zencial-videos
       - LOG_LEVEL=debug
       - LOG_FORMAT=text
     depends_on:
