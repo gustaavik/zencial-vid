@@ -19,9 +19,3 @@ type Category struct {
 	SortOrder   int
 }
 
-// Tag represents a content tag for fine-grained classification.
-type Tag struct {
-	ID   uuid.UUID
-	Name string
-	Slug string
-}

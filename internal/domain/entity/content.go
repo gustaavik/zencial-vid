@@ -44,7 +44,6 @@ type Content struct {
 
 	// Relationships (loaded selectively)
 	Genres []Genre
-	Tags   []Tag
 	Cast   []CastMember
 
 	// Type-specific data (nil when not applicable)
