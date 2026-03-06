@@ -47,3 +47,33 @@ func SubscriptionToResponse(s *entity.Subscription) dto.SubscriptionResponse {
 	}
 	return resp
 }
+
+// AdminSubscriptionToResponse maps a Subscription entity to an admin DTO.
+func AdminSubscriptionToResponse(s *entity.Subscription) dto.AdminSubscriptionResponse {
+	resp := dto.AdminSubscriptionResponse{
+		ID:                 s.ID.String(),
+		UserID:             s.UserID.String(),
+		UserEmail:          s.UserEmail,
+		Status:             string(s.Status),
+		CurrentPeriodStart: s.CurrentPeriodStart.Format("2006-01-02T15:04:05Z"),
+		CurrentPeriodEnd:   s.CurrentPeriodEnd.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:          s.CreatedAt.Format("2006-01-02T15:04:05Z"),
+	}
+	if s.Plan != nil {
+		resp.Plan = PlanToResponse(s.Plan)
+	}
+	if s.CanceledAt != nil {
+		ca := s.CanceledAt.Format("2006-01-02T15:04:05Z")
+		resp.CanceledAt = &ca
+	}
+	return resp
+}
+
+// AdminSubscriptionsToResponse maps a slice of Subscription entities to admin DTOs.
+func AdminSubscriptionsToResponse(subs []entity.Subscription) []dto.AdminSubscriptionResponse {
+	result := make([]dto.AdminSubscriptionResponse, len(subs))
+	for i := range subs {
+		result[i] = AdminSubscriptionToResponse(&subs[i])
+	}
+	return result
+}

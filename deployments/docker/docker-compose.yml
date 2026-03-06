@@ -8,6 +8,8 @@ services:
     environment:
       - SERVER_HOST=0.0.0.0
       - SERVER_PORT=6091
+      - SERVER_READ_TIMEOUT=${SERVER_READ_TIMEOUT:-5m}
+      - SERVER_WRITE_TIMEOUT=${SERVER_WRITE_TIMEOUT:-10m}
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=${DB_USER:-zencial}
@@ -19,10 +21,12 @@ services:
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:-change-me-in-production}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-change-me-in-production}
       - S3_ENDPOINT=http://minio:9000
+      - S3_PUBLIC_ENDPOINT=http://localhost:${MINIO_PORT:-9000}
       - S3_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
       - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
       - S3_BUCKET=${S3_BUCKET:-zencial-videos}
-      - S3_REGION=us-east-1
+      - S3_REGION=eu-west-1
+      - CDN_BASE_URL=http://localhost:9000/zencial-videos
       - LOG_LEVEL=info
       - LOG_FORMAT=json
     depends_on:
@@ -47,6 +51,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:-zencial_secret}
       - DB_NAME=${DB_NAME:-zencial}
       - DB_SSL_MODE=disable
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:-change-me-in-production}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-change-me-in-production}
     depends_on:
       postgres:
         condition: service_healthy

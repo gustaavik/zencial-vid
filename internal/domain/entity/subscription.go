@@ -24,7 +24,7 @@ type Plan struct {
 	Price            valueobject.Money
 	BillingInterval  string // "monthly", "yearly"
 	MaxQuality       valueobject.VideoQuality
-	MaxStreams        int
+	MaxStreams       int
 	DownloadsAllowed bool
 	IsActive         bool
 	CreatedAt        time.Time
@@ -55,6 +55,9 @@ type Subscription struct {
 	TrialEnd           *time.Time
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+
+	// Transient fields (populated by specific queries, not persisted)
+	UserEmail string
 }
 
 // IsAccessible returns whether the subscription grants content access.
@@ -82,5 +85,15 @@ func (s *Subscription) Cancel() {
 	now := time.Now()
 	s.Status = SubscriptionCanceled
 	s.CanceledAt = &now
+	s.UpdatedAt = now
+}
+
+// Reactivate restores a canceled subscription to active.
+func (s *Subscription) Reactivate() {
+	now := time.Now()
+	s.Status = SubscriptionActive
+	s.CanceledAt = nil
+	s.CurrentPeriodStart = now
+	s.CurrentPeriodEnd = now.AddDate(0, 1, 0)
 	s.UpdatedAt = now
 }

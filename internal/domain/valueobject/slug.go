@@ -6,6 +6,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/google/uuid"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -41,6 +42,13 @@ func (s Slug) String() string {
 // IsZero reports whether the slug is empty.
 func (s Slug) IsZero() bool {
 	return s.value == ""
+}
+
+// WithRandomID returns a new Slug with a short random identifier appended (e.g. "my-slug-a3f8b2c1").
+func (s Slug) WithRandomID() Slug {
+	id := uuid.New()
+	short := strings.ReplaceAll(id.String()[:8], "-", "")
+	return Slug{value: fmt.Sprintf("%s-%s", s.value, short)}
 }
 
 func generateSlug(input string) string {

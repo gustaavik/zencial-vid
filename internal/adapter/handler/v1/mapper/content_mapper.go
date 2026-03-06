@@ -1,6 +1,7 @@
 package mapper
 
 import (
+	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 )
@@ -17,6 +18,7 @@ func ContentToListResponse(c *entity.Content) dto.ContentListResponse {
 		Title:       c.Title,
 		Slug:        c.Slug.String(),
 		Description: c.Description,
+		Status:      string(c.Status),
 		Rating:      string(c.Rating),
 		ReleaseYear: c.ReleaseYear,
 		PosterURL:   c.PosterURL,
@@ -67,9 +69,13 @@ func ContentToDetailResponse(c *entity.Content) dto.ContentDetailResponse {
 	}
 
 	if c.Film != nil {
-		resp.Film = &dto.FilmResponse{
+		film := &dto.FilmResponse{
 			DurationMinutes: c.Film.Duration.Minutes(),
 		}
+		if c.Film.Asset.ID != uuid.Nil {
+			film.Asset = VideoAssetToResponse(&c.Film.Asset)
+		}
+		resp.Film = film
 	}
 	if c.Series != nil {
 		resp.Series = &dto.SeriesResponse{
@@ -77,11 +83,15 @@ func ContentToDetailResponse(c *entity.Content) dto.ContentDetailResponse {
 		}
 	}
 	if c.Video != nil {
-		resp.Video = &dto.VideoResponse{
+		video := &dto.VideoResponse{
 			DurationMinutes: c.Video.Duration.Minutes(),
 			CreatorName:     c.Video.CreatorName,
 			IsFree:          c.Video.IsFree,
 		}
+		if c.Video.Asset.ID != uuid.Nil {
+			video.Asset = VideoAssetToResponse(&c.Video.Asset)
+		}
+		resp.Video = video
 	}
 
 	return resp
@@ -180,4 +190,23 @@ func EpisodesToResponse(episodes []entity.Episode) []dto.EpisodeResponse {
 		result[i] = EpisodeToResponse(&episodes[i])
 	}
 	return result
+}
+
+// VideoAssetToResponse maps a VideoAsset entity to a DTO.
+func VideoAssetToResponse(a *entity.VideoAsset) *dto.VideoAssetResponse {
+	qualities := make([]dto.VideoRenditionResponse, len(a.Qualities))
+	for i, q := range a.Qualities {
+		qualities[i] = dto.VideoRenditionResponse{
+			Quality:    string(q.Quality),
+			URL:        q.URL,
+			Bitrate:    q.Bitrate,
+			Resolution: q.Resolution,
+		}
+	}
+	return &dto.VideoAssetResponse{
+		ID:         a.ID.String(),
+		StorageKey: a.StorageKey,
+		Status:     string(a.Status),
+		Qualities:  qualities,
+	}
 }

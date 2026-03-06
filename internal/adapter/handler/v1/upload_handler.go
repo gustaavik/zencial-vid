@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
+	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 	"github.com/zenfulcode/zencial/internal/pkg/httputil"
 )
 
@@ -71,16 +72,16 @@ type InitUploadResponse struct {
 func (h *UploadHandler) InitUpload(w http.ResponseWriter, r *http.Request) {
 	var req InitUploadRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.BadRequest(w, "INVALID_REQUEST", "Invalid JSON body")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "Invalid JSON body")
 		return
 	}
 
 	if req.Filename == "" {
-		httputil.BadRequest(w, "INVALID_REQUEST", "filename is required")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "filename is required")
 		return
 	}
 	if req.Size <= 0 {
-		httputil.BadRequest(w, "INVALID_REQUEST", "size must be greater than zero")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "size must be greater than zero")
 		return
 	}
 	if req.Size > maxUploadSize {

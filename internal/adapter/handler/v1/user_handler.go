@@ -41,7 +41,7 @@ func NewUserHandler(userService *useruc.Service) *UserHandler {
 func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
-		httputil.Unauthorized(w, "UNAUTHORIZED", "authentication required")
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
 
@@ -69,19 +69,19 @@ func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
-		httputil.Unauthorized(w, "UNAUTHORIZED", "authentication required")
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
 
 	var req dto.UpdateProfileRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid request body")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
 		return
 	}
 
 	if errors := h.validator.Validate(req); errors != nil {
 		httputil.ErrorWithDetails(w,
-			apperror.BadRequest("VALIDATION_FAILED", "validation failed", nil),
+			apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil),
 			errors,
 		)
 		return
@@ -97,7 +97,7 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	if req.DateOfBirth != nil {
 		dob, err := time.Parse("2006-01-02", *req.DateOfBirth)
 		if err != nil {
-			httputil.BadRequest(w, "VALIDATION_FAILED", "invalid date_of_birth format, expected YYYY-MM-DD")
+			httputil.BadRequest(w, apperror.CodeValidationFailed, "invalid date_of_birth format, expected YYYY-MM-DD")
 			return
 		}
 		input.DateOfBirth = &dob
@@ -124,7 +124,7 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) DeleteMe(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
-		httputil.Unauthorized(w, "UNAUTHORIZED", "authentication required")
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
 
@@ -178,17 +178,17 @@ func (h *UserHandler) AdminListUsers(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) AdminUpdateStatus(w http.ResponseWriter, r *http.Request) {
 	id, err := httputil.URLParamUUID(r, "id")
 	if err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid user ID")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid user ID")
 		return
 	}
 
 	var req dto.UpdateStatusRequest
 	if decodeErr := httputil.DecodeJSON(r, &req); decodeErr != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid request body")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
 		return
 	}
 	if errors := h.validator.Validate(req); errors != nil {
-		httputil.ErrorWithDetails(w, apperror.BadRequest("VALIDATION_FAILED", "validation failed", nil), errors)
+		httputil.ErrorWithDetails(w, apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil), errors)
 		return
 	}
 

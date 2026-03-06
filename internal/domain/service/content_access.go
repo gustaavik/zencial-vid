@@ -27,6 +27,11 @@ func (s *ContentAccessService) CanAccess(user *entity.User, content *entity.Cont
 		return false, "content is restricted by age rating"
 	}
 
+	// Free videos can be watched without a subscription
+	if content.Type == entity.ContentTypeVideo && content.Video != nil && content.Video.IsFree {
+		return true, ""
+	}
+
 	if subscription == nil || !subscription.IsAccessible() {
 		return false, "active subscription required"
 	}

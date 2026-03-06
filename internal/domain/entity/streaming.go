@@ -39,9 +39,9 @@ type PlaybackProgress struct {
 	UserID    uuid.UUID
 	ContentID uuid.UUID
 	EpisodeID *uuid.UUID
-	Position  int64   // Seconds from start
-	Duration  int64   // Total duration in seconds
-	Completed bool    // True if watched >= 90%
+	Position  int64 // Seconds from start
+	Duration  int64 // Total duration in seconds
+	Completed bool  // True if watched >= 90%
 	UpdatedAt time.Time
 }
 

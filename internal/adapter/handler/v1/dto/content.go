@@ -7,6 +7,7 @@ type ContentListResponse struct {
 	Title       string   `json:"title" example:"The Matrix"`
 	Slug        string   `json:"slug" example:"the-matrix"`
 	Description string   `json:"description"`
+	Status      string   `json:"status" example:"published"`
 	Rating      string   `json:"rating" example:"R"`
 	ReleaseYear int      `json:"release_year" example:"1999"`
 	PosterURL   string   `json:"poster_url"`
@@ -39,16 +40,39 @@ type ContentDetailResponse struct {
 	CreatedAt   string               `json:"created_at"`
 }
 
+// VideoAssetResponse represents a video asset.
+type VideoAssetResponse struct {
+	ID         string                   `json:"id"`
+	StorageKey string                   `json:"storage_key"`
+	Status     string                   `json:"status"`
+	Qualities  []VideoRenditionResponse `json:"qualities"`
+}
+
+// VideoRenditionResponse represents a single quality rendition.
+type VideoRenditionResponse struct {
+	Quality    string `json:"quality"`
+	URL        string `json:"url"`
+	Bitrate    int    `json:"bitrate"`
+	Resolution string `json:"resolution"`
+}
+
 // FilmResponse holds film-specific data.
 type FilmResponse struct {
-	DurationMinutes float64 `json:"duration_minutes"`
+	DurationMinutes float64             `json:"duration_minutes"`
+	Asset           *VideoAssetResponse `json:"asset,omitempty"`
 }
 
 // VideoResponse holds video-specific data.
 type VideoResponse struct {
-	DurationMinutes float64 `json:"duration_minutes"`
-	CreatorName     string  `json:"creator_name"`
-	IsFree          bool    `json:"is_free"`
+	DurationMinutes float64             `json:"duration_minutes"`
+	CreatorName     string              `json:"creator_name"`
+	IsFree          bool                `json:"is_free"`
+	Asset           *VideoAssetResponse `json:"asset,omitempty"`
+}
+
+// AttachVideoAssetRequest represents a request to attach a video asset to content.
+type AttachVideoAssetRequest struct {
+	StorageKey string `json:"storage_key" validate:"required"`
 }
 
 // SeriesResponse holds series-specific data.

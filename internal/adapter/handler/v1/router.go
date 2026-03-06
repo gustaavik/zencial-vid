@@ -120,15 +120,27 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 			}
 
 			r.Route("/content", func(r chi.Router) {
+				r.Get("/", contentHandler.AdminList)
 				r.Post("/", contentHandler.Create)
+				r.Get("/{id}", contentHandler.AdminGetByID)
 				r.Put("/{id}", contentHandler.Update)
 				r.Delete("/{id}", contentHandler.Delete)
 				r.Post("/{id}/publish", contentHandler.Publish)
 				r.Post("/{id}/archive", contentHandler.Archive)
+				r.Post("/{id}/asset", contentHandler.AttachVideoAsset)
 			})
 
 			r.Get("/users", userHandler.AdminListUsers)
 			r.Patch("/users/{id}/status", userHandler.AdminUpdateStatus)
+
+			r.Route("/subscriptions", func(r chi.Router) {
+				r.Get("/", subscriptionHandler.AdminListSubscriptions)
+				r.Post("/", subscriptionHandler.AdminCreateSubscription)
+				r.Get("/user/{userId}", subscriptionHandler.AdminGetUserSubscription)
+				r.Patch("/{id}/plan", subscriptionHandler.AdminChangePlan)
+				r.Post("/{id}/reactivate", subscriptionHandler.AdminReactivateSubscription)
+				r.Post("/{id}/cancel", subscriptionHandler.AdminCancelSubscription)
+			})
 
 			r.Route("/genres", func(r chi.Router) {
 				r.Post("/", catalogHandler.CreateGenre)

@@ -14,6 +14,7 @@ type SubscriptionRepository interface {
 	GetByUserID(ctx context.Context, userID uuid.UUID) (*entity.Subscription, error)
 	GetActiveByUserID(ctx context.Context, userID uuid.UUID) (*entity.Subscription, error)
 	Update(ctx context.Context, sub *entity.Subscription) error
+	ListSubscriptions(ctx context.Context, page, perPage int) ([]entity.Subscription, int64, error)
 
 	// Plans
 	ListPlans(ctx context.Context) ([]entity.Plan, error)

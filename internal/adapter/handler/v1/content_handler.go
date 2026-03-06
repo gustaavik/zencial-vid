@@ -50,7 +50,7 @@ func NewContentHandler(contentService *contentuc.Service) *ContentHandler {
 // @Produce      json
 // @Param        page query int false "Page number" default(1)
 // @Param        per_page query int false "Items per page" default(20)
-// @Param        type query string false "Content type (comma-separated for multiple)" Enums(film, series)
+// @Param        type query string false "Content type (comma-separated for multiple)" Enums(film, series, video)
 // @Param        rating query string false "Rating (comma-separated for multiple)" Enums(G, PG, PG13, R, NC17)
 // @Param        release_year[gte] query int false "Minimum release year"
 // @Param        release_year[lte] query int false "Maximum release year"
@@ -185,6 +185,57 @@ func (h *ContentHandler) Search(w http.ResponseWriter, r *http.Request) {
 	httputil.SuccessWithMeta(w, mapper.ContentsToListResponse(contents), pagination.NewMeta(fs.Pagination.Page, fs.Pagination.PerPage, total))
 }
 
+// AdminGetByID godoc
+// @Summary      Get content by ID (admin)
+// @Description  Get content by ID regardless of status (for admin editing).
+// @Tags         admin
+// @Produce      json
+// @Param        id path string true "Content ID"
+// @Success      200 {object} httputil.Response{data=dto.ContentDetailResponse}
+// @Security     BearerAuth
+// @Router       /admin/content/{id} [get]
+func (h *ContentHandler) AdminGetByID(w http.ResponseWriter, r *http.Request) {
+	id, err := httputil.URLParamUUID(r, "id")
+	if err != nil {
+		httputil.BadRequest(w, "BAD_REQUEST", "invalid content ID")
+		return
+	}
+	content, appErr := h.contentService.GetByID(r.Context(), id)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+	httputil.Success(w, http.StatusOK, mapper.ContentToDetailResponse(content))
+}
+
+// AdminList godoc
+// @Summary      List all content (admin)
+// @Description  List all content regardless of status, with optional filtering and search.
+// @Tags         admin
+// @Produce      json
+// @Param        page query int false "Page number" default(1)
+// @Param        per_page query int false "Items per page" default(50)
+// @Param        q query string false "Free-text search across title and description"
+// @Success      200 {object} httputil.Response{data=[]dto.ContentListResponse}
+// @Security     BearerAuth
+// @Router       /admin/content [get]
+func (h *ContentHandler) AdminList(w http.ResponseWriter, r *http.Request) {
+	fs, err := filter.FromRequest(r, contentFilterCfg)
+	if err != nil {
+		httputil.BadRequest(w, "BAD_REQUEST", err.Error())
+		return
+	}
+
+	searchQuery := r.URL.Query().Get("q")
+
+	contents, total, appErr := h.contentService.AdminList(r.Context(), fs, searchQuery)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+	httputil.SuccessWithMeta(w, mapper.ContentsToListResponse(contents), pagination.NewMeta(fs.Pagination.Page, fs.Pagination.PerPage, total))
+}
+
 // Create godoc
 // @Summary      Create content (admin)
 // @Tags         admin
@@ -210,6 +261,7 @@ func (h *ContentHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Synopsis: req.Synopsis, Rating: req.Rating, ReleaseYear: req.ReleaseYear,
 		PosterURL: req.PosterURL, BackdropURL: req.BackdropURL,
 		TrailerURL: req.TrailerURL, Director: req.Director,
+		CreatorName: req.CreatorName, IsFree: req.IsFree,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
@@ -245,6 +297,7 @@ func (h *ContentHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Rating: req.Rating, ReleaseYear: req.ReleaseYear, PosterURL: req.PosterURL,
 		BackdropURL: req.BackdropURL, TrailerURL: req.TrailerURL,
 		Director: req.Director, IsFeatured: req.IsFeatured,
+		CreatorName: req.CreatorName, IsFree: req.IsFree,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
@@ -313,4 +366,38 @@ func (h *ContentHandler) Archive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.Success(w, http.StatusOK, mapper.ContentToDetailResponse(content))
+}
+
+// AttachVideoAsset godoc
+// @Summary      Attach video asset to content (admin)
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Content ID"
+// @Param        body body dto.AttachVideoAssetRequest true "Video asset data"
+// @Success      200 {object} httputil.Response{data=dto.VideoAssetResponse}
+// @Security     BearerAuth
+// @Router       /admin/content/{id}/asset [post]
+func (h *ContentHandler) AttachVideoAsset(w http.ResponseWriter, r *http.Request) {
+	id, err := httputil.URLParamUUID(r, "id")
+	if err != nil {
+		httputil.BadRequest(w, "BAD_REQUEST", "invalid content ID")
+		return
+	}
+	var req dto.AttachVideoAssetRequest
+	if decodeErr := httputil.DecodeJSON(r, &req); decodeErr != nil {
+		httputil.BadRequest(w, "BAD_REQUEST", "invalid request body")
+		return
+	}
+	if errors := h.validator.Validate(req); errors != nil {
+		httputil.ErrorWithDetails(w, apperror.BadRequest("VALIDATION_FAILED", "validation failed", nil), errors)
+		return
+	}
+
+	asset, appErr := h.contentService.AttachVideoAsset(r.Context(), id, req.StorageKey)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+	httputil.Success(w, http.StatusOK, mapper.VideoAssetToResponse(asset))
 }

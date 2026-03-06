@@ -13,6 +13,7 @@ type StreamingRepository interface {
 	CreateSession(ctx context.Context, session *entity.StreamSession) error
 	GetActiveSessionsByUser(ctx context.Context, userID uuid.UUID) ([]entity.StreamSession, error)
 	EndSession(ctx context.Context, sessionID uuid.UUID) error
+	EndSessionsForContent(ctx context.Context, userID, contentID uuid.UUID) error
 
 	// Progress
 	SaveProgress(ctx context.Context, progress *entity.PlaybackProgress) error

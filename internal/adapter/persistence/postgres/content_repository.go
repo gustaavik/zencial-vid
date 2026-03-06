@@ -2,12 +2,15 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/zenfulcode/zencial/internal/domain"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 	"github.com/zenfulcode/zencial/internal/pkg/filter"
@@ -34,9 +37,23 @@ func (r *ContentRepository) Create(ctx context.Context, content *entity.Content)
 		content.BackdropURL, content.TrailerURL, content.Director, content.Status,
 		content.IsFeatured, content.CreatedAt, content.UpdatedAt)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "content_slug_key" {
+			return domain.ErrSlugAlreadyExists
+		}
 		return fmt.Errorf("creating content: %w", err)
 	}
 	return nil
+}
+
+func (r *ContentRepository) ExistsBySlug(ctx context.Context, slug string) (bool, error) {
+	db := connFromCtx(ctx, r.pool)
+	var exists bool
+	err := db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM content WHERE slug = $1)`, slug).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("checking slug existence: %w", err)
+	}
+	return exists, nil
 }
 
 func (r *ContentRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Content, error) {
@@ -161,6 +178,69 @@ func (r *ContentRepository) Search(ctx context.Context, fs filter.FilterSet, sea
 			&c.CreatedAt, &c.UpdatedAt)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning content: %w", err)
+		}
+		c.Slug = valueobject.SlugFromTrusted(slug)
+		contents = append(contents, c)
+	}
+	return contents, total, nil
+}
+
+func (r *ContentRepository) AdminSearch(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.Content, int64, error) {
+	db := connFromCtx(ctx, r.pool)
+
+	// Build count query (no status filter for admin)
+	whereClause, countArgs, nextIdx := filter.CountSQL(fs, "", 1)
+
+	extraWhere := ""
+	var searchArgs []interface{}
+	if searchQuery != "" {
+		extraWhere = fmt.Sprintf(" AND (c.title ILIKE $%d OR c.description ILIKE $%d)", nextIdx, nextIdx)
+		if whereClause == "" {
+			extraWhere = fmt.Sprintf(" WHERE (c.title ILIKE $%d OR c.description ILIKE $%d)", nextIdx, nextIdx)
+		}
+		searchArgs = append(searchArgs, "%"+searchQuery+"%")
+	}
+
+	countAllArgs := append(countArgs, searchArgs...)
+	countQ := `SELECT COUNT(*) FROM content c ` + whereClause + extraWhere
+	var total int64
+	if err := db.QueryRow(ctx, countQ, countAllArgs...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("counting admin content: %w", err)
+	}
+
+	// Build data query (no status filter for admin)
+	sql := filter.ToSQL(fs, "", 1)
+
+	dataExtraWhere := ""
+	var dataSearchArgs []interface{}
+	if searchQuery != "" {
+		dataExtraWhere = fmt.Sprintf(" AND (c.title ILIKE $%d OR c.description ILIKE $%d)", sql.NextArgIdx, sql.NextArgIdx)
+		if sql.WhereClause == "" {
+			dataExtraWhere = fmt.Sprintf(" WHERE (c.title ILIKE $%d OR c.description ILIKE $%d)", sql.NextArgIdx, sql.NextArgIdx)
+		}
+		dataSearchArgs = append(dataSearchArgs, "%"+searchQuery+"%")
+	}
+
+	dataQ := `SELECT c.id, c.type, c.title, c.slug, c.description, c.rating, c.release_year,
+	                 c.poster_url, c.status, c.is_featured, c.created_at, c.updated_at
+	          FROM content c ` + sql.WhereClause + dataExtraWhere + ` ` + sql.OrderClause + ` ` + sql.LimitClause
+	dataAllArgs := append(sql.Args, dataSearchArgs...)
+
+	rows, err := db.Query(ctx, dataQ, dataAllArgs...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("admin searching content: %w", err)
+	}
+	defer rows.Close()
+
+	var contents []entity.Content
+	for rows.Next() {
+		var c entity.Content
+		var slug string
+		err := rows.Scan(&c.ID, &c.Type, &c.Title, &slug, &c.Description,
+			&c.Rating, &c.ReleaseYear, &c.PosterURL, &c.Status, &c.IsFeatured,
+			&c.CreatedAt, &c.UpdatedAt)
+		if err != nil {
+			return nil, 0, fmt.Errorf("scanning admin content: %w", err)
 		}
 		c.Slug = valueobject.SlugFromTrusted(slug)
 		contents = append(contents, c)
@@ -343,4 +423,52 @@ func (r *ContentRepository) GetVideoForContent(ctx context.Context, contentID uu
 	}
 	v.Duration = valueobject.NewDuration(durationSeconds)
 	return v, nil
+}
+
+func (r *ContentRepository) CreateVideoAsset(ctx context.Context, asset *entity.VideoAsset, contentID uuid.UUID) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		INSERT INTO video_assets (id, content_id, storage_key, status, qualities, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, now(), now())
+		ON CONFLICT (content_id) WHERE episode_id IS NULL
+		DO UPDATE SET storage_key = EXCLUDED.storage_key,
+		              status = EXCLUDED.status,
+		              qualities = EXCLUDED.qualities,
+		              updated_at = now()
+	`, asset.ID, contentID, asset.StorageKey, asset.Status, "[]")
+	if err != nil {
+		return fmt.Errorf("creating video asset: %w", err)
+	}
+	return nil
+}
+
+func (r *ContentRepository) GetVideoAssetForContent(ctx context.Context, contentID uuid.UUID) (*entity.VideoAsset, error) {
+	db := connFromCtx(ctx, r.pool)
+	a := &entity.VideoAsset{}
+	var qualitiesJSON []byte
+	err := db.QueryRow(ctx, `
+		SELECT id, storage_key, status, qualities
+		FROM video_assets WHERE content_id = $1 AND episode_id IS NULL
+	`, contentID).Scan(&a.ID, &a.StorageKey, &a.Status, &qualitiesJSON)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("getting video asset: %w", err)
+	}
+	if len(qualitiesJSON) > 0 {
+		_ = json.Unmarshal(qualitiesJSON, &a.Qualities)
+	}
+	return a, nil
+}
+
+func (r *ContentRepository) UpdateVideoAssetStatus(ctx context.Context, assetID uuid.UUID, status entity.VideoAssetStatus) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		UPDATE video_assets SET status = $2, updated_at = now() WHERE id = $1
+	`, assetID, status)
+	if err != nil {
+		return fmt.Errorf("updating video asset status: %w", err)
+	}
+	return nil
 }

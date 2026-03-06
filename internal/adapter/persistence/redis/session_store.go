@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"github.com/zenfulcode/zencial/internal/domain"
 )
 
 // SessionStore manages refresh token storage in Redis.
@@ -36,7 +37,7 @@ func (s *SessionStore) StoreRefreshToken(ctx context.Context, token string, user
 func (s *SessionStore) GetUserIDByRefreshToken(ctx context.Context, token string) (uuid.UUID, error) {
 	val, err := s.client.Get(ctx, refreshTokenKey(token)).Result()
 	if err == redis.Nil {
-		return uuid.Nil, fmt.Errorf("refresh token not found")
+		return uuid.Nil, domain.ErrRefreshTokenNotFound
 	}
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("getting refresh token: %w", err)

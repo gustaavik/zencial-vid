@@ -66,11 +66,12 @@ type JWTConfig struct {
 }
 
 type StorageConfig struct {
-	Endpoint  string `env:"S3_ENDPOINT"`
-	Bucket    string `env:"S3_BUCKET" envDefault:"zencial-videos"`
-	Region    string `env:"S3_REGION" envDefault:"us-east-1"`
-	AccessKey string `env:"S3_ACCESS_KEY"`
-	SecretKey string `env:"S3_SECRET_KEY"`
+	Endpoint       string `env:"S3_ENDPOINT"`
+	PublicEndpoint string `env:"S3_PUBLIC_ENDPOINT"` // Externally reachable endpoint for presigned URLs (defaults to Endpoint)
+	Bucket         string `env:"S3_BUCKET" envDefault:"zencial-videos"`
+	Region         string `env:"S3_REGION" envDefault:"eu-west-1"`
+	AccessKey      string `env:"S3_ACCESS_KEY"`
+	SecretKey      string `env:"S3_SECRET_KEY"`
 }
 
 type CDNConfig struct {

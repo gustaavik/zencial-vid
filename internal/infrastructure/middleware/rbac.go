@@ -14,7 +14,7 @@ func RequireRole(role entity.UserRole) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			userRole, ok := GetUserRole(r.Context())
 			if !ok {
-				httputil.Unauthorized(w, "UNAUTHORIZED", "authentication required")
+				httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 				return
 			}
 			if userRole != role {

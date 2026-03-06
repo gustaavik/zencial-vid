@@ -15,14 +15,14 @@ import (
 // --- Mock UserRepository ---
 
 type mockUserRepo struct {
-	createFn       func(ctx context.Context, user *entity.User) error
-	getByIDFn      func(ctx context.Context, id uuid.UUID) (*entity.User, error)
-	getByEmailFn   func(ctx context.Context, email valueobject.Email) (*entity.User, error)
-	updateFn       func(ctx context.Context, user *entity.User) error
-	deleteFn       func(ctx context.Context, id uuid.UUID) error
+	createFn        func(ctx context.Context, user *entity.User) error
+	getByIDFn       func(ctx context.Context, id uuid.UUID) (*entity.User, error)
+	getByEmailFn    func(ctx context.Context, email valueobject.Email) (*entity.User, error)
+	updateFn        func(ctx context.Context, user *entity.User) error
+	deleteFn        func(ctx context.Context, id uuid.UUID) error
 	existsByEmailFn func(ctx context.Context, email valueobject.Email) (bool, error)
-	listFn         func(ctx context.Context, page, perPage int) ([]entity.User, int64, error)
-	updateStatusFn func(ctx context.Context, id uuid.UUID, status entity.UserStatus) error
+	listFn          func(ctx context.Context, page, perPage int) ([]entity.User, int64, error)
+	updateStatusFn  func(ctx context.Context, id uuid.UUID, status entity.UserStatus) error
 }
 
 func (m *mockUserRepo) Create(ctx context.Context, user *entity.User) error {
