@@ -40,7 +40,7 @@ func (s *Service) ListCategories(ctx context.Context) ([]entity.Category, *apper
 	return categories, nil
 }
 
-func (s *Service) ContentByGenre(ctx context.Context, genreSlug string, page, perPage int) ([]entity.Content, int64, *apperror.AppError) {
+func (s *Service) ContentByGenre(ctx context.Context, genreSlug string, page, perPage int) ([]entity.ContentSummary, int64, *apperror.AppError) {
 	genre, err := s.catalogRepo.GetGenreBySlug(ctx, genreSlug)
 	if err != nil {
 		s.log.Error("getting genre by slug", "error", err)

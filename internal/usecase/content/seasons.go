@@ -10,11 +10,15 @@ import (
 
 // GetSeasons returns all seasons for a series identified by slug.
 func (s *Service) GetSeasons(ctx context.Context, slug string) ([]entity.Season, *apperror.AppError) {
-	content, appErr := s.GetBySlug(ctx, slug)
-	if appErr != nil {
-		return nil, appErr
+	series, err := s.contentRepo.GetSeriesBySlug(ctx, slug)
+	if err != nil {
+		s.log.Error("getting series by slug for seasons", "error", err)
+		return nil, apperror.Internal(apperror.CodeInternalError, "failed to get series", err)
 	}
-	seasons, err := s.contentRepo.GetSeasonsForContent(ctx, content.ID)
+	if series == nil {
+		return nil, apperror.NotFound(apperror.CodeContentNotFound, "series not found", domain.ErrContentNotFound)
+	}
+	seasons, err := s.contentRepo.GetSeasonsForSeries(ctx, series.ID)
 	if err != nil {
 		s.log.Error("getting seasons", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to get seasons", err)
@@ -24,11 +28,15 @@ func (s *Service) GetSeasons(ctx context.Context, slug string) ([]entity.Season,
 
 // GetEpisodes returns all episodes for a given season of a series.
 func (s *Service) GetEpisodes(ctx context.Context, slug string, seasonNumber int) ([]entity.Episode, *apperror.AppError) {
-	content, appErr := s.GetBySlug(ctx, slug)
-	if appErr != nil {
-		return nil, appErr
+	series, err := s.contentRepo.GetSeriesBySlug(ctx, slug)
+	if err != nil {
+		s.log.Error("getting series by slug for episodes", "error", err)
+		return nil, apperror.Internal(apperror.CodeInternalError, "failed to get series", err)
 	}
-	seasons, err := s.contentRepo.GetSeasonsForContent(ctx, content.ID)
+	if series == nil {
+		return nil, apperror.NotFound(apperror.CodeContentNotFound, "series not found", domain.ErrContentNotFound)
+	}
+	seasons, err := s.contentRepo.GetSeasonsForSeries(ctx, series.ID)
 	if err != nil {
 		s.log.Error("getting seasons for episodes", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to get seasons", err)

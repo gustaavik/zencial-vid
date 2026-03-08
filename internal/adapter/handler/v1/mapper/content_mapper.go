@@ -1,17 +1,13 @@
 package mapper
 
 import (
-	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
+	contentuc "github.com/zenfulcode/zencial/internal/usecase/content"
 )
 
-// ContentToListResponse maps a Content entity to a list DTO.
-func ContentToListResponse(c *entity.Content) dto.ContentListResponse {
-	genres := make([]string, len(c.Genres))
-	for i, g := range c.Genres {
-		genres[i] = g.Name
-	}
+// ContentSummaryToListResponse maps a ContentSummary to a list DTO.
+func ContentSummaryToListResponse(c *entity.ContentSummary) dto.ContentListResponse {
 	resp := dto.ContentListResponse{
 		ID:          c.ID.String(),
 		Type:        string(c.Type),
@@ -20,27 +16,47 @@ func ContentToListResponse(c *entity.Content) dto.ContentListResponse {
 		Description: c.Description,
 		Status:      string(c.Status),
 		Rating:      string(c.Rating),
-		ReleaseYear: c.ReleaseYear,
 		PosterURL:   c.PosterURL,
-		Genres:      genres,
 		IsFeatured:  c.IsFeatured,
+		IsFree:      c.IsFree(),
+		CreatorName: c.CreatorName,
+		CreatedAt:   c.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:   c.UpdatedAt.Format("2006-01-02T15:04:05Z"),
 	}
-	if c.Video != nil {
-		resp.CreatorName = c.Video.CreatorName
-		resp.IsFree = c.Video.IsFree
+	if c.Genre != nil {
+		g := GenreToResponse(c.Genre)
+		resp.Genre = &g
 	}
 	return resp
 }
 
-// ContentToDetailResponse maps a Content entity to a detail DTO.
-func ContentToDetailResponse(c *entity.Content) dto.ContentDetailResponse {
-	genres := make([]dto.GenreResponse, len(c.Genres))
-	for i, g := range c.Genres {
-		genres[i] = GenreToResponse(&g)
+// ContentSummariesToListResponse maps a slice of ContentSummary to list DTOs.
+func ContentSummariesToListResponse(summaries []entity.ContentSummary) []dto.ContentListResponse {
+	result := make([]dto.ContentListResponse, len(summaries))
+	for i := range summaries {
+		result[i] = ContentSummaryToListResponse(&summaries[i])
 	}
+	return result
+}
 
-	cast := make([]dto.CastMemberResponse, len(c.Cast))
-	for i, m := range c.Cast {
+// ContentDetailToResponse maps a ContentDetail discriminated union to a detail DTO.
+func ContentDetailToResponse(d *contentuc.ContentDetail) dto.ContentDetailResponse {
+	switch d.Type {
+	case entity.ContentTypeFilm:
+		return FilmToDetailResponse(d.Film)
+	case entity.ContentTypeVideo:
+		return VideoToDetailResponse(d.Video)
+	case entity.ContentTypeSeries:
+		return SeriesToDetailResponse(d.Series)
+	default:
+		return dto.ContentDetailResponse{}
+	}
+}
+
+// FilmToDetailResponse maps a Film entity to a detail DTO.
+func FilmToDetailResponse(f *entity.Film) dto.ContentDetailResponse {
+	cast := make([]dto.CastMemberResponse, len(f.CastMembers))
+	for i, m := range f.CastMembers {
 		cast[i] = dto.CastMemberResponse{
 			Name:      m.Name,
 			Role:      m.Role,
@@ -48,62 +64,79 @@ func ContentToDetailResponse(c *entity.Content) dto.ContentDetailResponse {
 			ImageURL:  m.ImageURL,
 		}
 	}
-
 	resp := dto.ContentDetailResponse{
-		ID:          c.ID.String(),
-		Type:        string(c.Type),
-		Title:       c.Title,
-		Slug:        c.Slug.String(),
-		Description: c.Description,
-		Synopsis:    c.Synopsis,
-		Rating:      string(c.Rating),
-		ReleaseYear: c.ReleaseYear,
-		PosterURL:   c.PosterURL,
-		BackdropURL: c.BackdropURL,
-		TrailerURL:  c.TrailerURL,
-		Director:    c.Director,
-		IsFeatured:  c.IsFeatured,
-		Genres:      genres,
+		ID:          f.ID.String(),
+		Type:        string(f.Type),
+		Title:       f.Title,
+		Slug:        f.Slug.String(),
+		Description: f.Description,
+		Synopsis:    f.Synopsis,
+		Rating:      string(f.Rating),
+		PosterURL:   f.PosterURL,
+		BackdropURL: f.BackdropURL,
+		TrailerURL:  f.TrailerURL,
+		Director:    f.Director,
+		ReleaseYear: f.ReleaseYear,
+		IsFeatured:  f.IsFeatured,
+		IsFree:      f.IsFree(),
 		Cast:        cast,
-		CreatedAt:   c.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedAt:   f.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:   f.UpdatedAt.Format("2006-01-02T15:04:05Z"),
 	}
-
-	if c.Film != nil {
-		film := &dto.FilmResponse{
-			DurationMinutes: c.Film.Duration.Minutes(),
-		}
-		if c.Film.Asset.ID != uuid.Nil {
-			film.Asset = VideoAssetToResponse(&c.Film.Asset)
-		}
-		resp.Film = film
+	if f.Genre != nil {
+		g := GenreToResponse(f.Genre)
+		resp.Genre = &g
 	}
-	if c.Series != nil {
-		resp.Series = &dto.SeriesResponse{
-			TotalSeasons: c.Series.TotalSeasons,
-		}
+	if f.Asset != nil {
+		resp.Asset = VideoAssetToResponse(f.Asset)
 	}
-	if c.Video != nil {
-		video := &dto.VideoResponse{
-			DurationMinutes: c.Video.Duration.Minutes(),
-			CreatorName:     c.Video.CreatorName,
-			IsFree:          c.Video.IsFree,
-		}
-		if c.Video.Asset.ID != uuid.Nil {
-			video.Asset = VideoAssetToResponse(&c.Video.Asset)
-		}
-		resp.Video = video
-	}
-
 	return resp
 }
 
-// ContentsToListResponse maps a slice of Content entities to list DTOs.
-func ContentsToListResponse(contents []entity.Content) []dto.ContentListResponse {
-	result := make([]dto.ContentListResponse, len(contents))
-	for i := range contents {
-		result[i] = ContentToListResponse(&contents[i])
+// VideoToDetailResponse maps a Video entity to a detail DTO.
+func VideoToDetailResponse(v *entity.Video) dto.ContentDetailResponse {
+	resp := dto.ContentDetailResponse{
+		ID:          v.ID.String(),
+		Type:        string(v.Type),
+		Title:       v.Title,
+		Slug:        v.Slug.String(),
+		Description: v.Description,
+		Synopsis:    v.Synopsis,
+		Rating:      string(v.Rating),
+		PosterURL:   v.PosterURL,
+		IsFeatured:  v.IsFeatured,
+		IsFree:      v.IsFree(),
+		CreatorName: v.CreatorName,
+		CreatedAt:   v.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:   v.UpdatedAt.Format("2006-01-02T15:04:05Z"),
 	}
-	return result
+	if v.Genre != nil {
+		g := GenreToResponse(v.Genre)
+		resp.Genre = &g
+	}
+	if v.Asset != nil {
+		resp.Asset = VideoAssetToResponse(v.Asset)
+	}
+	return resp
+}
+
+// SeriesToDetailResponse maps a Series entity to a detail DTO.
+func SeriesToDetailResponse(s *entity.Series) dto.ContentDetailResponse {
+	return dto.ContentDetailResponse{
+		ID:           s.ID.String(),
+		Type:         string(entity.ContentTypeSeries),
+		Title:        s.Title,
+		Slug:         s.Slug.String(),
+		Description:  s.Description,
+		Synopsis:     s.Synopsis,
+		PosterURL:    s.PosterURL,
+		BackdropURL:  s.BackdropURL,
+		TrailerURL:   s.TrailerURL,
+		IsFeatured:   s.IsFeatured,
+		TotalSeasons: s.TotalSeasons,
+		CreatedAt:    s.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:    s.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+	}
 }
 
 // GenreToResponse maps a Genre entity to a DTO.

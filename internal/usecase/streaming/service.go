@@ -2,6 +2,7 @@ package streaming
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -73,16 +74,12 @@ func (s *Service) StartSession(ctx context.Context, input StartSessionInput) (*S
 		return nil, apperror.Conflict(apperror.CodeMaxStreamsReached, "maximum concurrent streams reached", domain.ErrMaxStreamsReached)
 	}
 
-	content, err := s.contentRepo.GetByID(ctx, input.ContentID)
-	if err != nil || content == nil {
-		return nil, apperror.NotFound(apperror.CodeContentNotFound, "content not found", domain.ErrContentNotFound)
+	base, manifestURL, appErr := s.loadForStreaming(ctx, input.ContentID, input.EpisodeID)
+	if appErr != nil {
+		return nil, appErr
 	}
 
-	// GetByID only loads the base Content row; we need Film/Video/Asset
-	// sub-entities populated for IsPlayable() and resolveManifestURL().
-	s.loadContentExtras(ctx, content)
-
-	if !content.IsPlayable() {
+	if !base.IsPlayable() {
 		return nil, apperror.BadRequest(apperror.CodeContentNotPlayable, "content is not available for playback", domain.ErrContentNotPlayable)
 	}
 
@@ -92,42 +89,83 @@ func (s *Service) StartSession(ctx context.Context, input StartSessionInput) (*S
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to create session", err)
 	}
 
-	manifestURL := s.resolveManifestURL(content, input.EpisodeID)
-
 	return &StartSessionOutput{
 		Session:     session,
 		ManifestURL: manifestURL,
 	}, nil
 }
 
-// resolveManifestURL builds the HLS manifest URL from the content asset.
-// It prefers explicit rendition URLs, then falls back to constructing one
-// from the CDN base URL and the asset storage key.
-func (s *Service) resolveManifestURL(content *entity.Content, episodeID *uuid.UUID) string {
-	// For episodes, find the matching episode asset
-	if episodeID != nil && content.Series != nil {
-		for _, season := range content.Series.Seasons {
-			for _, ep := range season.Episodes {
-				if ep.ID == *episodeID {
-					return s.assetToURL(ep.Asset)
-				}
-			}
+// loadForStreaming fetches the BaseContent and resolves the manifest URL for a content item.
+func (s *Service) loadForStreaming(ctx context.Context, contentID uuid.UUID, episodeID *uuid.UUID) (*entity.BaseContent, string, *apperror.AppError) {
+	ct, err := s.contentRepo.GetTypeByID(ctx, contentID)
+	if err != nil {
+		if errors.Is(err, domain.ErrContentNotFound) {
+			return nil, "", apperror.NotFound(apperror.CodeContentNotFound, "content not found", err)
 		}
+		s.log.Error("getting content type for streaming", "error", err)
+		return nil, "", apperror.Internal(apperror.CodeInternalError, "failed to get content", err)
 	}
 
-	switch content.Type {
+	switch ct {
 	case entity.ContentTypeFilm:
-		if content.Film != nil {
-			return s.assetToURL(content.Film.Asset)
+		film, err := s.contentRepo.GetFilmByID(ctx, contentID)
+		if err != nil || film == nil {
+			return nil, "", apperror.NotFound(apperror.CodeContentNotFound, "film not found", domain.ErrContentNotFound)
 		}
-	case entity.ContentTypeVideo:
-		if content.Video != nil {
-			return s.assetToURL(content.Video.Asset)
+		url := ""
+		if film.Asset != nil {
+			url = s.assetToURL(*film.Asset)
 		}
-	}
+		return &film.BaseContent, url, nil
 
-	// No asset URL could be resolved
-	return ""
+	case entity.ContentTypeVideo:
+		video, err := s.contentRepo.GetVideoByID(ctx, contentID)
+		if err != nil || video == nil {
+			return nil, "", apperror.NotFound(apperror.CodeContentNotFound, "video not found", domain.ErrContentNotFound)
+		}
+		url := ""
+		if video.Asset != nil {
+			url = s.assetToURL(*video.Asset)
+		}
+		return &video.BaseContent, url, nil
+
+	case entity.ContentTypeSeries:
+		series, err := s.contentRepo.GetSeriesByID(ctx, contentID)
+		if err != nil || series == nil {
+			return nil, "", apperror.NotFound(apperror.CodeContentNotFound, "series not found", domain.ErrContentNotFound)
+		}
+		if !series.IsPublished() {
+			return nil, "", apperror.BadRequest(apperror.CodeContentNotPlayable, "content is not available for playback", domain.ErrContentNotPlayable)
+		}
+		url := s.resolveEpisodeURL(ctx, contentID, episodeID)
+		if url == "" {
+			return nil, "", apperror.BadRequest(apperror.CodeContentNotPlayable, "episode not available for playback", domain.ErrContentNotPlayable)
+		}
+		// Synthesise a BaseContent with a ready asset so the IsPlayable() check in StartSession passes.
+		base := &entity.BaseContent{
+			ID:     series.ID,
+			Type:   entity.ContentTypeSeries,
+			Status: series.Status,
+			Asset:  &entity.VideoAsset{Status: entity.VideoAssetReady},
+		}
+		return base, url, nil
+
+	default:
+		return nil, "", apperror.Internal(apperror.CodeInternalError, "unknown content type", nil)
+	}
+}
+
+// resolveEpisodeURL finds the asset URL for a specific episode.
+func (s *Service) resolveEpisodeURL(ctx context.Context, seriesID uuid.UUID, episodeID *uuid.UUID) string {
+	if episodeID == nil {
+		return ""
+	}
+	ep, err := s.contentRepo.GetEpisodeByID(ctx, *episodeID)
+	if err != nil || ep == nil {
+		s.log.Warn("episode not found for manifest URL", "episodeID", episodeID)
+		return ""
+	}
+	return s.assetToURL(ep.Asset)
 }
 
 // assetToURL returns the best available URL for a video asset.
@@ -153,36 +191,6 @@ func (s *Service) assetToURL(asset entity.VideoAsset) string {
 		return s.cdnBaseURL + "/" + asset.StorageKey
 	}
 	return ""
-}
-
-// loadContentExtras populates the Film/Video/Asset sub-entities on a Content
-// that was loaded with the base repository GetByID (which only returns the row
-// from the content table). Mirrors content.Service.loadContentExtras.
-func (s *Service) loadContentExtras(ctx context.Context, content *entity.Content) {
-	if content.Type == entity.ContentTypeVideo {
-		video, err := s.contentRepo.GetVideoForContent(ctx, content.ID)
-		if err != nil {
-			s.log.Error("loading video data for streaming", "error", err)
-		} else {
-			content.Video = video
-		}
-	}
-
-	if content.Type == entity.ContentTypeFilm || content.Type == entity.ContentTypeVideo {
-		asset, err := s.contentRepo.GetVideoAssetForContent(ctx, content.ID)
-		if err != nil {
-			s.log.Error("loading video asset for streaming", "error", err)
-		} else if asset != nil {
-			if content.Type == entity.ContentTypeFilm {
-				if content.Film == nil {
-					content.Film = &entity.Film{ContentID: content.ID}
-				}
-				content.Film.Asset = *asset
-			} else if content.Video != nil {
-				content.Video.Asset = *asset
-			}
-		}
-	}
 }
 
 func (s *Service) EndSession(ctx context.Context, userID, sessionID uuid.UUID) *apperror.AppError {

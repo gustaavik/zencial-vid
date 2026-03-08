@@ -59,7 +59,7 @@ func (h *CatalogHandler) ContentByGenre(w http.ResponseWriter, r *http.Request) 
 		httputil.Error(w, appErr)
 		return
 	}
-	httputil.SuccessWithMeta(w, mapper.ContentsToListResponse(contents), pagination.NewMeta(page, perPage, total))
+	httputil.SuccessWithMeta(w, mapper.ContentSummariesToListResponse(contents), pagination.NewMeta(page, perPage, total))
 }
 
 // ListCategories godoc

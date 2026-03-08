@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -26,303 +27,490 @@ func NewContentRepository(pool *pgxpool.Pool) *ContentRepository {
 	return &ContentRepository{pool: pool}
 }
 
-func (r *ContentRepository) Create(ctx context.Context, content *entity.Content) error {
+// ─── Film ────────────────────────────────────────────────────────────────────
+
+func (r *ContentRepository) CreateFilm(ctx context.Context, film *entity.Film) error {
 	db := connFromCtx(ctx, r.pool)
 	_, err := db.Exec(ctx, `
 		INSERT INTO content (id, type, title, slug, description, synopsis, rating, release_year,
-		                     poster_url, backdrop_url, trailer_url, director, status, is_featured, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-	`, content.ID, content.Type, content.Title, content.Slug.String(), content.Description,
-		content.Synopsis, content.Rating, content.ReleaseYear, content.PosterURL,
-		content.BackdropURL, content.TrailerURL, content.Director, content.Status,
-		content.IsFeatured, content.CreatedAt, content.UpdatedAt)
+		                     poster_url, backdrop_url, trailer_url, director, status, is_featured,
+		                     genre_id, plan_id, created_at, updated_at)
+		VALUES ($1, 'film', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+	`, film.ID, film.Title, film.Slug.String(), film.Description, film.Synopsis,
+		film.Rating, film.ReleaseYear, film.PosterURL, film.BackdropURL,
+		film.TrailerURL, film.Director, film.Status, film.IsFeatured,
+		genreID(film.Genre), planID(film.Plan),
+		film.CreatedAt, film.UpdatedAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "content_slug_key" {
 			return domain.ErrSlugAlreadyExists
 		}
-		return fmt.Errorf("creating content: %w", err)
+		return fmt.Errorf("creating film content row: %w", err)
+	}
+	_, err = db.Exec(ctx, `
+		INSERT INTO films (content_id, duration_seconds) VALUES ($1, $2)
+		ON CONFLICT (content_id) DO UPDATE SET duration_seconds = EXCLUDED.duration_seconds
+	`, film.ID, film.Duration.Seconds)
+	if err != nil {
+		return fmt.Errorf("creating film row: %w", err)
 	}
 	return nil
 }
+
+func (r *ContentRepository) GetFilmByID(ctx context.Context, id uuid.UUID) (*entity.Film, error) {
+	return r.loadFilm(ctx, `WHERE c.id = $1`, id)
+}
+
+func (r *ContentRepository) GetFilmBySlug(ctx context.Context, slug string) (*entity.Film, error) {
+	return r.loadFilm(ctx, `WHERE c.slug = $1 AND c.status = 'published'`, slug)
+}
+
+func (r *ContentRepository) UpdateFilm(ctx context.Context, film *entity.Film) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		UPDATE content SET title=$2, slug=$3, description=$4, synopsis=$5, rating=$6,
+		       release_year=$7, poster_url=$8, backdrop_url=$9, trailer_url=$10,
+		       director=$11, status=$12, is_featured=$13, genre_id=$14, plan_id=$15, updated_at=$16
+		WHERE id = $1
+	`, film.ID, film.Title, film.Slug.String(), film.Description, film.Synopsis,
+		film.Rating, film.ReleaseYear, film.PosterURL, film.BackdropURL,
+		film.TrailerURL, film.Director, film.Status, film.IsFeatured,
+		genreID(film.Genre), planID(film.Plan), film.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("updating film content row: %w", err)
+	}
+	_, err = db.Exec(ctx, `
+		UPDATE films SET duration_seconds=$2 WHERE content_id = $1
+	`, film.ID, film.Duration.Seconds)
+	if err != nil {
+		return fmt.Errorf("updating film row: %w", err)
+	}
+	return nil
+}
+
+func (r *ContentRepository) loadFilm(ctx context.Context, where string, args ...any) (*entity.Film, error) {
+	db := connFromCtx(ctx, r.pool)
+	var (
+		f          entity.Film
+		slug       string
+		durSec     int64
+		genreIDVal *uuid.UUID
+		genreName  *string
+		genreSlug  *string
+		planIDVal  *uuid.UUID
+		planName   *string
+		planTier   *string
+	)
+	err := db.QueryRow(ctx, `
+		SELECT c.id, c.title, c.slug, c.description, c.synopsis, c.rating,
+		       c.release_year, c.poster_url, c.backdrop_url, c.trailer_url, c.director,
+		       c.status, c.is_featured, c.created_at, c.updated_at,
+		       COALESCE(f.duration_seconds, 0),
+		       c.genre_id, g.name, g.slug,
+		       c.plan_id, p.name, p.tier
+		FROM content c
+		LEFT JOIN films  f ON f.content_id = c.id
+		LEFT JOIN genres g ON g.id = c.genre_id
+		LEFT JOIN plans  p ON p.id = c.plan_id
+		`+where, args...).Scan(
+		&f.ID, &f.Title, &slug, &f.Description, &f.Synopsis, &f.Rating,
+		&f.ReleaseYear, &f.PosterURL, &f.BackdropURL, &f.TrailerURL, &f.Director,
+		&f.Status, &f.IsFeatured, &f.CreatedAt, &f.UpdatedAt,
+		&durSec,
+		&genreIDVal, &genreName, &genreSlug,
+		&planIDVal, &planName, &planTier,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("loading film: %w", err)
+	}
+	f.Slug = valueobject.SlugFromTrusted(slug)
+	f.Duration = valueobject.NewDuration(durSec)
+	f.Type = entity.ContentTypeFilm
+	if genreIDVal != nil {
+		f.Genre = &entity.Genre{ID: *genreIDVal, Name: *genreName, Slug: *genreSlug}
+	}
+	if planIDVal != nil {
+		f.Plan = &entity.Plan{ID: *planIDVal, Name: *planName, Tier: entity.PlanTier(*planTier)}
+	}
+	return &f, nil
+}
+
+// ─── Video ───────────────────────────────────────────────────────────────────
+
+func (r *ContentRepository) CreateVideo(ctx context.Context, video *entity.Video) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		INSERT INTO content (id, type, title, slug, description, synopsis, rating,
+		                     poster_url, status, is_featured, genre_id, plan_id, created_at, updated_at)
+		VALUES ($1, 'video', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	`, video.ID, video.Title, video.Slug.String(), video.Description, video.Synopsis,
+		video.Rating, video.PosterURL, video.Status, video.IsFeatured,
+		genreID(video.Genre), planID(video.Plan),
+		video.CreatedAt, video.UpdatedAt)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "content_slug_key" {
+			return domain.ErrSlugAlreadyExists
+		}
+		return fmt.Errorf("creating video content row: %w", err)
+	}
+	uploadedAt := video.UploadedAt
+	if uploadedAt.IsZero() {
+		uploadedAt = time.Now()
+	}
+	_, err = db.Exec(ctx, `
+		INSERT INTO videos (content_id, duration_seconds, creator_name, uploaded_at)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (content_id) DO UPDATE
+		  SET duration_seconds = EXCLUDED.duration_seconds,
+		      creator_name     = EXCLUDED.creator_name,
+		      uploaded_at      = EXCLUDED.uploaded_at
+	`, video.ID, video.Duration.Seconds, video.CreatorName, uploadedAt)
+	if err != nil {
+		return fmt.Errorf("creating video row: %w", err)
+	}
+	return nil
+}
+
+func (r *ContentRepository) GetVideoByID(ctx context.Context, id uuid.UUID) (*entity.Video, error) {
+	return r.loadVideo(ctx, `WHERE c.id = $1`, id)
+}
+
+func (r *ContentRepository) GetVideoBySlug(ctx context.Context, slug string) (*entity.Video, error) {
+	return r.loadVideo(ctx, `WHERE c.slug = $1 AND c.status = 'published'`, slug)
+}
+
+func (r *ContentRepository) UpdateVideo(ctx context.Context, video *entity.Video) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		UPDATE content SET title=$2, slug=$3, description=$4, synopsis=$5, rating=$6,
+		       poster_url=$7, status=$8, is_featured=$9, genre_id=$10, plan_id=$11, updated_at=$12
+		WHERE id = $1
+	`, video.ID, video.Title, video.Slug.String(), video.Description, video.Synopsis,
+		video.Rating, video.PosterURL, video.Status, video.IsFeatured,
+		genreID(video.Genre), planID(video.Plan), video.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("updating video content row: %w", err)
+	}
+	_, err = db.Exec(ctx, `
+		UPDATE videos SET duration_seconds=$2, creator_name=$3 WHERE content_id = $1
+	`, video.ID, video.Duration.Seconds, video.CreatorName)
+	if err != nil {
+		return fmt.Errorf("updating video row: %w", err)
+	}
+	return nil
+}
+
+func (r *ContentRepository) loadVideo(ctx context.Context, where string, args ...any) (*entity.Video, error) {
+	db := connFromCtx(ctx, r.pool)
+	var (
+		v           entity.Video
+		slug        string
+		durSec      int64
+		uploadedAt  time.Time
+		genreIDVal  *uuid.UUID
+		genreName   *string
+		genreSlug   *string
+		planIDVal   *uuid.UUID
+		planName    *string
+		planTier    *string
+	)
+	err := db.QueryRow(ctx, `
+		SELECT c.id, c.title, c.slug, c.description, c.synopsis, c.rating,
+		       c.poster_url, c.status, c.is_featured, c.created_at, c.updated_at,
+		       COALESCE(v.duration_seconds, 0), COALESCE(v.creator_name, ''),
+		       COALESCE(v.uploaded_at, c.created_at),
+		       c.genre_id, g.name, g.slug,
+		       c.plan_id, p.name, p.tier
+		FROM content c
+		LEFT JOIN videos v ON v.content_id = c.id
+		LEFT JOIN genres g ON g.id = c.genre_id
+		LEFT JOIN plans  p ON p.id = c.plan_id
+		`+where, args...).Scan(
+		&v.ID, &v.Title, &slug, &v.Description, &v.Synopsis, &v.Rating,
+		&v.PosterURL, &v.Status, &v.IsFeatured, &v.CreatedAt, &v.UpdatedAt,
+		&durSec, &v.CreatorName, &uploadedAt,
+		&genreIDVal, &genreName, &genreSlug,
+		&planIDVal, &planName, &planTier,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("loading video: %w", err)
+	}
+	v.Slug = valueobject.SlugFromTrusted(slug)
+	v.Duration = valueobject.NewDuration(durSec)
+	v.UploadedAt = uploadedAt
+	v.Type = entity.ContentTypeVideo
+	if genreIDVal != nil {
+		v.Genre = &entity.Genre{ID: *genreIDVal, Name: *genreName, Slug: *genreSlug}
+	}
+	if planIDVal != nil {
+		v.Plan = &entity.Plan{ID: *planIDVal, Name: *planName, Tier: entity.PlanTier(*planTier)}
+	}
+	return &v, nil
+}
+
+// ─── Series ──────────────────────────────────────────────────────────────────
+
+func (r *ContentRepository) CreateSeries(ctx context.Context, series *entity.Series) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		INSERT INTO content (id, type, title, slug, description, synopsis,
+		                     poster_url, backdrop_url, trailer_url, status, is_featured,
+		                     created_at, updated_at)
+		VALUES ($1, 'series', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+	`, series.ID, series.Title, series.Slug.String(), series.Description, series.Synopsis,
+		series.PosterURL, series.BackdropURL, series.TrailerURL,
+		series.Status, series.IsFeatured, series.CreatedAt, series.UpdatedAt)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "content_slug_key" {
+			return domain.ErrSlugAlreadyExists
+		}
+		return fmt.Errorf("creating series content row: %w", err)
+	}
+	return nil
+}
+
+func (r *ContentRepository) GetSeriesByID(ctx context.Context, id uuid.UUID) (*entity.Series, error) {
+	return r.loadSeries(ctx, `WHERE c.id = $1`, id)
+}
+
+func (r *ContentRepository) GetSeriesBySlug(ctx context.Context, slug string) (*entity.Series, error) {
+	return r.loadSeries(ctx, `WHERE c.slug = $1 AND c.status = 'published'`, slug)
+}
+
+func (r *ContentRepository) UpdateSeries(ctx context.Context, series *entity.Series) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		UPDATE content SET title=$2, slug=$3, description=$4, synopsis=$5,
+		       poster_url=$6, backdrop_url=$7, trailer_url=$8,
+		       status=$9, is_featured=$10, updated_at=$11
+		WHERE id = $1
+	`, series.ID, series.Title, series.Slug.String(), series.Description, series.Synopsis,
+		series.PosterURL, series.BackdropURL, series.TrailerURL,
+		series.Status, series.IsFeatured, series.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("updating series: %w", err)
+	}
+	return nil
+}
+
+func (r *ContentRepository) loadSeries(ctx context.Context, where string, args ...any) (*entity.Series, error) {
+	db := connFromCtx(ctx, r.pool)
+	s := &entity.Series{}
+	var slug string
+	var totalSeasons int
+	err := db.QueryRow(ctx, `
+		SELECT c.id, c.title, c.slug, c.description, c.synopsis,
+		       COALESCE(c.poster_url, ''), COALESCE(c.backdrop_url, ''), COALESCE(c.trailer_url, ''),
+		       c.status, c.is_featured, c.created_at, c.updated_at,
+		       COUNT(DISTINCT se.id) AS total_seasons
+		FROM content c
+		LEFT JOIN seasons se ON se.content_id = c.id
+		`+where+`
+		GROUP BY c.id`, args...).Scan(
+		&s.ID, &s.Title, &slug, &s.Description, &s.Synopsis,
+		&s.PosterURL, &s.BackdropURL, &s.TrailerURL,
+		&s.Status, &s.IsFeatured, &s.CreatedAt, &s.UpdatedAt,
+		&totalSeasons,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("loading series: %w", err)
+	}
+	s.Slug = valueobject.SlugFromTrusted(slug)
+	s.TotalSeasons = totalSeasons
+	return s, nil
+}
+
+// ─── Shared ──────────────────────────────────────────────────────────────────
 
 func (r *ContentRepository) ExistsBySlug(ctx context.Context, slug string) (bool, error) {
 	db := connFromCtx(ctx, r.pool)
 	var exists bool
 	err := db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM content WHERE slug = $1)`, slug).Scan(&exists)
-	if err != nil {
-		return false, fmt.Errorf("checking slug existence: %w", err)
-	}
-	return exists, nil
+	return exists, err
 }
 
-func (r *ContentRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Content, error) {
+func (r *ContentRepository) GetTypeByID(ctx context.Context, id uuid.UUID) (entity.ContentType, error) {
 	db := connFromCtx(ctx, r.pool)
-	c := &entity.Content{}
-	var slug string
-	err := db.QueryRow(ctx, `
-		SELECT id, type, title, slug, description, synopsis, rating, release_year,
-		       poster_url, backdrop_url, trailer_url, director, status, is_featured, created_at, updated_at
-		FROM content WHERE id = $1
-	`, id).Scan(&c.ID, &c.Type, &c.Title, &slug, &c.Description, &c.Synopsis,
-		&c.Rating, &c.ReleaseYear, &c.PosterURL, &c.BackdropURL, &c.TrailerURL,
-		&c.Director, &c.Status, &c.IsFeatured, &c.CreatedAt, &c.UpdatedAt)
+	var ct entity.ContentType
+	err := db.QueryRow(ctx, `SELECT type FROM content WHERE id = $1`, id).Scan(&ct)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
+			return "", nil
 		}
-		return nil, fmt.Errorf("getting content by id: %w", err)
+		return "", fmt.Errorf("getting content type: %w", err)
 	}
-	c.Slug = valueobject.SlugFromTrusted(slug)
-	return c, nil
-}
-
-func (r *ContentRepository) GetBySlug(ctx context.Context, slug string) (*entity.Content, error) {
-	db := connFromCtx(ctx, r.pool)
-	c := &entity.Content{}
-	var slugStr string
-	err := db.QueryRow(ctx, `
-		SELECT id, type, title, slug, description, synopsis, rating, release_year,
-		       poster_url, backdrop_url, trailer_url, director, status, is_featured, created_at, updated_at
-		FROM content WHERE slug = $1 AND status = 'published'
-	`, slug).Scan(&c.ID, &c.Type, &c.Title, &slugStr, &c.Description, &c.Synopsis,
-		&c.Rating, &c.ReleaseYear, &c.PosterURL, &c.BackdropURL, &c.TrailerURL,
-		&c.Director, &c.Status, &c.IsFeatured, &c.CreatedAt, &c.UpdatedAt)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("getting content by slug: %w", err)
-	}
-	c.Slug = valueobject.SlugFromTrusted(slugStr)
-	return c, nil
-}
-
-func (r *ContentRepository) Update(ctx context.Context, content *entity.Content) error {
-	db := connFromCtx(ctx, r.pool)
-	_, err := db.Exec(ctx, `
-		UPDATE content SET title=$2, slug=$3, description=$4, synopsis=$5, rating=$6,
-		       release_year=$7, poster_url=$8, backdrop_url=$9, trailer_url=$10,
-		       director=$11, status=$12, is_featured=$13, updated_at=$14
-		WHERE id = $1
-	`, content.ID, content.Title, content.Slug.String(), content.Description,
-		content.Synopsis, content.Rating, content.ReleaseYear, content.PosterURL,
-		content.BackdropURL, content.TrailerURL, content.Director, content.Status,
-		content.IsFeatured, content.UpdatedAt)
-	if err != nil {
-		return fmt.Errorf("updating content: %w", err)
-	}
-	return nil
+	return ct, nil
 }
 
 func (r *ContentRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	db := connFromCtx(ctx, r.pool)
 	_, err := db.Exec(ctx, `DELETE FROM content WHERE id = $1`, id)
-	if err != nil {
-		return fmt.Errorf("deleting content: %w", err)
-	}
-	return nil
+	return err
 }
 
-const contentBaseCondition = "c.status = 'published'"
+func (r *ContentRepository) SetStatus(ctx context.Context, id uuid.UUID, status entity.ContentStatus) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx, `UPDATE content SET status=$2, updated_at=now() WHERE id=$1`, id, status)
+	return err
+}
 
-func (r *ContentRepository) Search(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.Content, int64, error) {
+// ─── List / Search ────────────────────────────────────────────────────────────
+
+const summarySelect = `
+	SELECT c.id, c.type, c.title, c.slug, c.description, c.rating,
+	       COALESCE(c.poster_url, ''), c.status, c.is_featured, c.created_at, c.updated_at,
+	       c.genre_id, g.name, g.slug,
+	       c.plan_id, p.name, p.tier,
+	       COALESCE(v.creator_name, '')
+	FROM content c
+	LEFT JOIN genres g ON g.id = c.genre_id
+	LEFT JOIN plans  p ON p.id = c.plan_id
+	LEFT JOIN videos v ON v.content_id = c.id AND c.type = 'video'
+`
+
+func scanSummaryRow(rows pgx.Rows) (entity.ContentSummary, error) {
+	var (
+		s          entity.ContentSummary
+		slug       string
+		genreIDVal *uuid.UUID
+		genreName  *string
+		genreSlug  *string
+		planIDVal  *uuid.UUID
+		planName   *string
+		planTier   *string
+	)
+	err := rows.Scan(
+		&s.ID, &s.Type, &s.Title, &slug, &s.Description, &s.Rating,
+		&s.PosterURL, &s.Status, &s.IsFeatured, &s.CreatedAt, &s.UpdatedAt,
+		&genreIDVal, &genreName, &genreSlug,
+		&planIDVal, &planName, &planTier,
+		&s.CreatorName,
+	)
+	if err != nil {
+		return s, err
+	}
+	s.Slug = valueobject.SlugFromTrusted(slug)
+	if genreIDVal != nil {
+		s.Genre = &entity.Genre{ID: *genreIDVal, Name: *genreName, Slug: *genreSlug}
+	}
+	if planIDVal != nil {
+		s.Plan = &entity.Plan{ID: *planIDVal, Name: *planName, Tier: entity.PlanTier(*planTier)}
+	}
+	return s, nil
+}
+
+func (r *ContentRepository) Search(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.ContentSummary, int64, error) {
 	db := connFromCtx(ctx, r.pool)
 
-	// Build count query
-	whereClause, countArgs, nextIdx := filter.CountSQL(fs, contentBaseCondition, 1)
+	whereClause, countArgs, nextIdx := filter.CountSQL(fs, "c.status = 'published'", 1)
+	extraWhere, searchArgs := searchCondition(searchQuery, nextIdx)
 
-	// Append free-text search condition (uses OR across multiple columns)
-	extraWhere := ""
-	var searchArgs []interface{}
-	if searchQuery != "" {
-		extraWhere = fmt.Sprintf(" AND (c.title ILIKE $%d OR c.description ILIKE $%d)", nextIdx, nextIdx)
-		searchArgs = append(searchArgs, "%"+searchQuery+"%")
-	}
-
-	countAllArgs := append(countArgs, searchArgs...)
-	countQ := `SELECT COUNT(*) FROM content c ` + whereClause + extraWhere
 	var total int64
-	if err := db.QueryRow(ctx, countQ, countAllArgs...).Scan(&total); err != nil {
+	if err := db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM content c `+whereClause+extraWhere,
+		append(countArgs, searchArgs...)...,
+	).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("counting content: %w", err)
 	}
 
-	// Build data query
-	sql := filter.ToSQL(fs, contentBaseCondition, 1)
+	sql := filter.ToSQL(fs, "c.status = 'published'", 1)
+	dataExtraWhere, dataSearchArgs := searchCondition(searchQuery, sql.NextArgIdx)
 
-	// Re-apply search condition for data query
-	dataExtraWhere := ""
-	var dataSearchArgs []interface{}
-	if searchQuery != "" {
-		dataExtraWhere = fmt.Sprintf(" AND (c.title ILIKE $%d OR c.description ILIKE $%d)", sql.NextArgIdx, sql.NextArgIdx)
-		dataSearchArgs = append(dataSearchArgs, "%"+searchQuery+"%")
-	}
-
-	dataQ := `SELECT c.id, c.type, c.title, c.slug, c.description, c.rating, c.release_year,
-	                 c.poster_url, c.status, c.is_featured, c.created_at, c.updated_at
-	          FROM content c ` + sql.WhereClause + dataExtraWhere + ` ` + sql.OrderClause + ` ` + sql.LimitClause
-	dataAllArgs := append(sql.Args, dataSearchArgs...)
-
-	rows, err := db.Query(ctx, dataQ, dataAllArgs...)
+	rows, err := db.Query(ctx,
+		summarySelect+sql.WhereClause+dataExtraWhere+" "+sql.OrderClause+" "+sql.LimitClause,
+		append(sql.Args, dataSearchArgs...)...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("searching content: %w", err)
 	}
 	defer rows.Close()
-
-	var contents []entity.Content
-	for rows.Next() {
-		var c entity.Content
-		var slug string
-		err := rows.Scan(&c.ID, &c.Type, &c.Title, &slug, &c.Description,
-			&c.Rating, &c.ReleaseYear, &c.PosterURL, &c.Status, &c.IsFeatured,
-			&c.CreatedAt, &c.UpdatedAt)
-		if err != nil {
-			return nil, 0, fmt.Errorf("scanning content: %w", err)
-		}
-		c.Slug = valueobject.SlugFromTrusted(slug)
-		contents = append(contents, c)
-	}
-	return contents, total, nil
+	summaries, err := collectSummaries(rows)
+	return summaries, total, err
 }
 
-func (r *ContentRepository) AdminSearch(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.Content, int64, error) {
+func (r *ContentRepository) AdminSearch(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.ContentSummary, int64, error) {
 	db := connFromCtx(ctx, r.pool)
 
-	// Build count query (no status filter for admin)
 	whereClause, countArgs, nextIdx := filter.CountSQL(fs, "", 1)
+	extraWhere, searchArgs := searchConditionAdmin(searchQuery, nextIdx, whereClause == "")
 
-	extraWhere := ""
-	var searchArgs []interface{}
-	if searchQuery != "" {
-		extraWhere = fmt.Sprintf(" AND (c.title ILIKE $%d OR c.description ILIKE $%d)", nextIdx, nextIdx)
-		if whereClause == "" {
-			extraWhere = fmt.Sprintf(" WHERE (c.title ILIKE $%d OR c.description ILIKE $%d)", nextIdx, nextIdx)
-		}
-		searchArgs = append(searchArgs, "%"+searchQuery+"%")
-	}
-
-	countAllArgs := append(countArgs, searchArgs...)
-	countQ := `SELECT COUNT(*) FROM content c ` + whereClause + extraWhere
 	var total int64
-	if err := db.QueryRow(ctx, countQ, countAllArgs...).Scan(&total); err != nil {
+	if err := db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM content c `+whereClause+extraWhere,
+		append(countArgs, searchArgs...)...,
+	).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("counting admin content: %w", err)
 	}
 
-	// Build data query (no status filter for admin)
 	sql := filter.ToSQL(fs, "", 1)
+	dataExtraWhere, dataSearchArgs := searchConditionAdmin(searchQuery, sql.NextArgIdx, sql.WhereClause == "")
 
-	dataExtraWhere := ""
-	var dataSearchArgs []interface{}
-	if searchQuery != "" {
-		dataExtraWhere = fmt.Sprintf(" AND (c.title ILIKE $%d OR c.description ILIKE $%d)", sql.NextArgIdx, sql.NextArgIdx)
-		if sql.WhereClause == "" {
-			dataExtraWhere = fmt.Sprintf(" WHERE (c.title ILIKE $%d OR c.description ILIKE $%d)", sql.NextArgIdx, sql.NextArgIdx)
-		}
-		dataSearchArgs = append(dataSearchArgs, "%"+searchQuery+"%")
-	}
-
-	dataQ := `SELECT c.id, c.type, c.title, c.slug, c.description, c.rating, c.release_year,
-	                 c.poster_url, c.status, c.is_featured, c.created_at, c.updated_at
-	          FROM content c ` + sql.WhereClause + dataExtraWhere + ` ` + sql.OrderClause + ` ` + sql.LimitClause
-	dataAllArgs := append(sql.Args, dataSearchArgs...)
-
-	rows, err := db.Query(ctx, dataQ, dataAllArgs...)
+	rows, err := db.Query(ctx,
+		summarySelect+sql.WhereClause+dataExtraWhere+" "+sql.OrderClause+" "+sql.LimitClause,
+		append(sql.Args, dataSearchArgs...)...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("admin searching content: %w", err)
 	}
 	defer rows.Close()
-
-	var contents []entity.Content
-	for rows.Next() {
-		var c entity.Content
-		var slug string
-		err := rows.Scan(&c.ID, &c.Type, &c.Title, &slug, &c.Description,
-			&c.Rating, &c.ReleaseYear, &c.PosterURL, &c.Status, &c.IsFeatured,
-			&c.CreatedAt, &c.UpdatedAt)
-		if err != nil {
-			return nil, 0, fmt.Errorf("scanning admin content: %w", err)
-		}
-		c.Slug = valueobject.SlugFromTrusted(slug)
-		contents = append(contents, c)
-	}
-	return contents, total, nil
+	summaries, err := collectSummaries(rows)
+	return summaries, total, err
 }
 
-func (r *ContentRepository) GetFeatured(ctx context.Context, limit int) ([]entity.Content, error) {
+func (r *ContentRepository) GetFeatured(ctx context.Context, limit int) ([]entity.ContentSummary, error) {
 	db := connFromCtx(ctx, r.pool)
-	rows, err := db.Query(ctx, `
-		SELECT id, type, title, slug, description, rating, release_year, poster_url, status, is_featured, created_at, updated_at
-		FROM content WHERE status = 'published' AND is_featured = true
-		ORDER BY updated_at DESC LIMIT $1
-	`, limit)
+	rows, err := db.Query(ctx,
+		summarySelect+`WHERE c.status = 'published' AND c.is_featured = true
+		ORDER BY c.updated_at DESC LIMIT $1`, limit)
 	if err != nil {
 		return nil, fmt.Errorf("getting featured content: %w", err)
 	}
 	defer rows.Close()
-
-	var contents []entity.Content
-	for rows.Next() {
-		var c entity.Content
-		var slug string
-		if err := rows.Scan(&c.ID, &c.Type, &c.Title, &slug, &c.Description,
-			&c.Rating, &c.ReleaseYear, &c.PosterURL, &c.Status, &c.IsFeatured,
-			&c.CreatedAt, &c.UpdatedAt); err != nil {
-			return nil, fmt.Errorf("scanning featured content: %w", err)
-		}
-		c.Slug = valueobject.SlugFromTrusted(slug)
-		contents = append(contents, c)
-	}
-	return contents, nil
+	return collectSummaries(rows)
 }
 
-func (r *ContentRepository) GetByGenre(ctx context.Context, genreID uuid.UUID, page, perPage int) ([]entity.Content, int64, error) {
+func (r *ContentRepository) GetByGenre(ctx context.Context, genreID uuid.UUID, page, perPage int) ([]entity.ContentSummary, int64, error) {
 	db := connFromCtx(ctx, r.pool)
 	offset := (page - 1) * perPage
 
 	var total int64
-	err := db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM content c
-		JOIN content_genres cg ON c.id = cg.content_id
-		WHERE cg.genre_id = $1 AND c.status = 'published'
-	`, genreID).Scan(&total)
-	if err != nil {
+	if err := db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM content c WHERE c.genre_id = $1 AND c.status = 'published'`,
+		genreID).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("counting genre content: %w", err)
 	}
 
-	rows, err := db.Query(ctx, `
-		SELECT c.id, c.type, c.title, c.slug, c.description, c.rating, c.release_year,
-		       c.poster_url, c.status, c.is_featured, c.created_at, c.updated_at
-		FROM content c
-		JOIN content_genres cg ON c.id = cg.content_id
-		WHERE cg.genre_id = $1 AND c.status = 'published'
-		ORDER BY c.created_at DESC LIMIT $2 OFFSET $3
-	`, genreID, perPage, offset)
+	rows, err := db.Query(ctx,
+		summarySelect+`WHERE c.genre_id = $1 AND c.status = 'published'
+		ORDER BY c.created_at DESC LIMIT $2 OFFSET $3`,
+		genreID, perPage, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("getting genre content: %w", err)
 	}
 	defer rows.Close()
-
-	var contents []entity.Content
-	for rows.Next() {
-		var c entity.Content
-		var slug string
-		if err := rows.Scan(&c.ID, &c.Type, &c.Title, &slug, &c.Description,
-			&c.Rating, &c.ReleaseYear, &c.PosterURL, &c.Status, &c.IsFeatured,
-			&c.CreatedAt, &c.UpdatedAt); err != nil {
-			return nil, 0, fmt.Errorf("scanning genre content: %w", err)
-		}
-		c.Slug = valueobject.SlugFromTrusted(slug)
-		contents = append(contents, c)
-	}
-	return contents, total, nil
+	summaries, err := collectSummaries(rows)
+	return summaries, total, err
 }
 
-func (r *ContentRepository) GetSeasonsForContent(ctx context.Context, contentID uuid.UUID) ([]entity.Season, error) {
+// ─── Seasons / Episodes ───────────────────────────────────────────────────────
+
+func (r *ContentRepository) GetSeasonsForSeries(ctx context.Context, seriesID uuid.UUID) ([]entity.Season, error) {
 	db := connFromCtx(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id, content_id, number, title, created_at
+		SELECT id, content_id, number, title,
+		       COALESCE(trailer_url, ''), COALESCE(backdrop_url, ''), created_at
 		FROM seasons WHERE content_id = $1 ORDER BY number
-	`, contentID)
+	`, seriesID)
 	if err != nil {
 		return nil, fmt.Errorf("getting seasons: %w", err)
 	}
@@ -331,7 +519,8 @@ func (r *ContentRepository) GetSeasonsForContent(ctx context.Context, contentID 
 	var seasons []entity.Season
 	for rows.Next() {
 		var s entity.Season
-		if err := rows.Scan(&s.ID, &s.ContentID, &s.Number, &s.Title, &s.CreatedAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.SeriesID, &s.Number, &s.Title,
+			&s.TrailerURL, &s.BackdropURL, &s.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scanning season: %w", err)
 		}
 		seasons = append(seasons, s)
@@ -342,88 +531,41 @@ func (r *ContentRepository) GetSeasonsForContent(ctx context.Context, contentID 
 func (r *ContentRepository) GetEpisodesForSeason(ctx context.Context, seasonID uuid.UUID) ([]entity.Episode, error) {
 	db := connFromCtx(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id, season_id, number, title, synopsis, duration_seconds, air_date, created_at
+		SELECT id, season_id, COALESCE(series_id, '00000000-0000-0000-0000-000000000000'::uuid),
+		       number, title, synopsis, duration_seconds, air_date, created_at,
+		       COALESCE(director, ''), '[]'::jsonb
 		FROM episodes WHERE season_id = $1 ORDER BY number
 	`, seasonID)
 	if err != nil {
 		return nil, fmt.Errorf("getting episodes: %w", err)
 	}
 	defer rows.Close()
-
-	var episodes []entity.Episode
-	for rows.Next() {
-		var e entity.Episode
-		var durationSeconds int64
-		if err := rows.Scan(&e.ID, &e.SeasonID, &e.Number, &e.Title, &e.Synopsis,
-			&durationSeconds, &e.AirDate, &e.CreatedAt); err != nil {
-			return nil, fmt.Errorf("scanning episode: %w", err)
-		}
-		e.Duration = valueobject.NewDuration(durationSeconds)
-		episodes = append(episodes, e)
-	}
-	return episodes, nil
+	return collectEpisodes(rows)
 }
 
 func (r *ContentRepository) GetEpisodeByID(ctx context.Context, id uuid.UUID) (*entity.Episode, error) {
 	db := connFromCtx(ctx, r.pool)
-	e := &entity.Episode{}
-	var durationSeconds int64
-	err := db.QueryRow(ctx, `
-		SELECT id, season_id, number, title, synopsis, duration_seconds, air_date, created_at
+	rows, err := db.Query(ctx, `
+		SELECT id, season_id, COALESCE(series_id, '00000000-0000-0000-0000-000000000000'::uuid),
+		       number, title, synopsis, duration_seconds, air_date, created_at,
+		       COALESCE(director, ''), '[]'::jsonb
 		FROM episodes WHERE id = $1
-	`, id).Scan(&e.ID, &e.SeasonID, &e.Number, &e.Title, &e.Synopsis,
-		&durationSeconds, &e.AirDate, &e.CreatedAt)
+	`, id)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
 		return nil, fmt.Errorf("getting episode: %w", err)
 	}
-	e.Duration = valueobject.NewDuration(durationSeconds)
-	return e, nil
+	defer rows.Close()
+	episodes, err := collectEpisodes(rows)
+	if err != nil {
+		return nil, err
+	}
+	if len(episodes) == 0 {
+		return nil, nil
+	}
+	return &episodes[0], nil
 }
 
-func (r *ContentRepository) CreateVideo(ctx context.Context, video *entity.Video) error {
-	db := connFromCtx(ctx, r.pool)
-	_, err := db.Exec(ctx, `
-		INSERT INTO videos (content_id, duration_seconds, creator_name, is_free)
-		VALUES ($1, $2, $3, $4)
-	`, video.ContentID, video.Duration.Seconds, video.CreatorName, video.IsFree)
-	if err != nil {
-		return fmt.Errorf("creating video: %w", err)
-	}
-	return nil
-}
-
-func (r *ContentRepository) UpdateVideo(ctx context.Context, video *entity.Video) error {
-	db := connFromCtx(ctx, r.pool)
-	_, err := db.Exec(ctx, `
-		UPDATE videos SET duration_seconds=$2, creator_name=$3, is_free=$4
-		WHERE content_id = $1
-	`, video.ContentID, video.Duration.Seconds, video.CreatorName, video.IsFree)
-	if err != nil {
-		return fmt.Errorf("updating video: %w", err)
-	}
-	return nil
-}
-
-func (r *ContentRepository) GetVideoForContent(ctx context.Context, contentID uuid.UUID) (*entity.Video, error) {
-	db := connFromCtx(ctx, r.pool)
-	v := &entity.Video{}
-	var durationSeconds int64
-	err := db.QueryRow(ctx, `
-		SELECT content_id, duration_seconds, creator_name, is_free
-		FROM videos WHERE content_id = $1
-	`, contentID).Scan(&v.ContentID, &durationSeconds, &v.CreatorName, &v.IsFree)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("getting video: %w", err)
-	}
-	v.Duration = valueobject.NewDuration(durationSeconds)
-	return v, nil
-}
+// ─── Video Assets ─────────────────────────────────────────────────────────────
 
 func (r *ContentRepository) CreateVideoAsset(ctx context.Context, asset *entity.VideoAsset, contentID uuid.UUID) error {
 	db := connFromCtx(ctx, r.pool)
@@ -432,14 +574,11 @@ func (r *ContentRepository) CreateVideoAsset(ctx context.Context, asset *entity.
 		VALUES ($1, $2, $3, $4, $5, now(), now())
 		ON CONFLICT (content_id) WHERE episode_id IS NULL
 		DO UPDATE SET storage_key = EXCLUDED.storage_key,
-		              status = EXCLUDED.status,
-		              qualities = EXCLUDED.qualities,
-		              updated_at = now()
+		              status      = EXCLUDED.status,
+		              qualities   = EXCLUDED.qualities,
+		              updated_at  = now()
 	`, asset.ID, contentID, asset.StorageKey, asset.Status, "[]")
-	if err != nil {
-		return fmt.Errorf("creating video asset: %w", err)
-	}
-	return nil
+	return err
 }
 
 func (r *ContentRepository) GetVideoAssetForContent(ctx context.Context, contentID uuid.UUID) (*entity.VideoAsset, error) {
@@ -467,8 +606,72 @@ func (r *ContentRepository) UpdateVideoAssetStatus(ctx context.Context, assetID 
 	_, err := db.Exec(ctx, `
 		UPDATE video_assets SET status = $2, updated_at = now() WHERE id = $1
 	`, assetID, status)
-	if err != nil {
-		return fmt.Errorf("updating video asset status: %w", err)
+	return err
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+func genreID(g *entity.Genre) *uuid.UUID {
+	if g == nil {
+		return nil
 	}
-	return nil
+	return &g.ID
+}
+
+func planID(p *entity.Plan) *uuid.UUID {
+	if p == nil {
+		return nil
+	}
+	return &p.ID
+}
+
+func searchCondition(q string, nextIdx int) (string, []any) {
+	if q == "" {
+		return "", nil
+	}
+	return fmt.Sprintf(" AND (c.title ILIKE $%d OR c.description ILIKE $%d)", nextIdx, nextIdx),
+		[]any{"%" + q + "%"}
+}
+
+func searchConditionAdmin(q string, nextIdx int, noWhere bool) (string, []any) {
+	if q == "" {
+		return "", nil
+	}
+	keyword := "AND"
+	if noWhere {
+		keyword = "WHERE"
+	}
+	return fmt.Sprintf(" %s (c.title ILIKE $%d OR c.description ILIKE $%d)", keyword, nextIdx, nextIdx),
+		[]any{"%" + q + "%"}
+}
+
+func collectSummaries(rows pgx.Rows) ([]entity.ContentSummary, error) {
+	var summaries []entity.ContentSummary
+	for rows.Next() {
+		s, err := scanSummaryRow(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scanning content summary: %w", err)
+		}
+		summaries = append(summaries, s)
+	}
+	return summaries, nil
+}
+
+func collectEpisodes(rows pgx.Rows) ([]entity.Episode, error) {
+	var episodes []entity.Episode
+	for rows.Next() {
+		var e entity.Episode
+		var durSec int64
+		var castJSON []byte
+		if err := rows.Scan(&e.ID, &e.SeasonID, &e.SeriesID, &e.Number, &e.Title, &e.Synopsis,
+			&durSec, &e.AirDate, &e.CreatedAt, &e.Director, &castJSON); err != nil {
+			return nil, fmt.Errorf("scanning episode: %w", err)
+		}
+		e.Duration = valueobject.NewDuration(durSec)
+		if len(castJSON) > 0 {
+			_ = json.Unmarshal(castJSON, &e.CastMembers)
+		}
+		episodes = append(episodes, e)
+	}
+	return episodes, nil
 }

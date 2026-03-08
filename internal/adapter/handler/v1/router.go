@@ -121,7 +121,6 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 
 			r.Route("/content", func(r chi.Router) {
 				r.Get("/", contentHandler.AdminList)
-				r.Post("/", contentHandler.Create)
 				r.Get("/{id}", contentHandler.AdminGetByID)
 				r.Put("/{id}", contentHandler.Update)
 				r.Delete("/{id}", contentHandler.Delete)
@@ -129,6 +128,10 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 				r.Post("/{id}/archive", contentHandler.Archive)
 				r.Post("/{id}/asset", contentHandler.AttachVideoAsset)
 			})
+
+			r.Post("/films", contentHandler.CreateFilm)
+			r.Post("/videos", contentHandler.CreateVideo)
+			r.Post("/series", contentHandler.CreateSeries)
 
 			r.Get("/users", userHandler.AdminListUsers)
 			r.Patch("/users/{id}/status", userHandler.AdminUpdateStatus)

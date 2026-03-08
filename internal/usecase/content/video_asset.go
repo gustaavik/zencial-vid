@@ -2,6 +2,7 @@ package content
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/domain"
@@ -10,18 +11,19 @@ import (
 )
 
 // AttachVideoAsset creates and links a video asset to the given content.
+// Only Film and Video content types support video assets.
 func (s *Service) AttachVideoAsset(ctx context.Context, contentID uuid.UUID, storageKey string) (*entity.VideoAsset, *apperror.AppError) {
-	content, err := s.contentRepo.GetByID(ctx, contentID)
+	ct, err := s.contentRepo.GetTypeByID(ctx, contentID)
 	if err != nil {
+		if errors.Is(err, domain.ErrContentNotFound) {
+			return nil, apperror.NotFound(apperror.CodeContentNotFound, "content not found", err)
+		}
 		s.log.Error("getting content for asset attach", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to get content", err)
 	}
-	if content == nil {
-		return nil, apperror.NotFound(apperror.CodeContentNotFound, "content not found", domain.ErrContentNotFound)
-	}
 
 	// Only film and video types support video assets.
-	if content.Type != entity.ContentTypeFilm && content.Type != entity.ContentTypeVideo {
+	if ct != entity.ContentTypeFilm && ct != entity.ContentTypeVideo {
 		return nil, apperror.BadRequest(apperror.CodeValidationFailed, "only film and video content types support video assets", nil)
 	}
 
