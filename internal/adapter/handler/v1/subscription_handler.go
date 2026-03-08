@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/mapper"
+	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 	"github.com/zenfulcode/zencial/internal/pkg/httputil"
@@ -284,6 +285,126 @@ func (h *SubscriptionHandler) AdminCancelSubscription(w http.ResponseWriter, r *
 	}
 
 	if appErr := h.subscriptionService.AdminCancelSubscription(r.Context(), subID); appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// AdminListAllPlans godoc
+// @Summary      List all subscription plans including inactive (admin)
+// @Tags         admin
+// @Produce      json
+// @Success      200 {object} httputil.Response{data=[]dto.PlanResponse}
+// @Security     BearerAuth
+// @Router       /admin/plans [get]
+func (h *SubscriptionHandler) AdminListAllPlans(w http.ResponseWriter, r *http.Request) {
+	plans, appErr := h.subscriptionService.AdminListAllPlans(r.Context())
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+	httputil.Success(w, http.StatusOK, mapper.PlansToResponse(plans))
+}
+
+// AdminCreatePlan godoc
+// @Summary      Create a subscription plan (admin)
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        body body dto.CreatePlanRequest true "Plan data"
+// @Success      201 {object} httputil.Response{data=dto.PlanResponse}
+// @Security     BearerAuth
+// @Router       /admin/plans [post]
+func (h *SubscriptionHandler) AdminCreatePlan(w http.ResponseWriter, r *http.Request) {
+	var req dto.CreatePlanRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
+		return
+	}
+	if errors := h.validator.Validate(req); errors != nil {
+		httputil.ErrorWithDetails(w, apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil), errors)
+		return
+	}
+
+	plan, appErr := h.subscriptionService.AdminCreatePlan(r.Context(), subscriptionuc.CreatePlanInput{
+		Name:             req.Name,
+		Tier:             req.Tier,
+		PriceAmount:      req.PriceAmount,
+		PriceCurrency:    req.PriceCurrency,
+		BillingInterval:  req.BillingInterval,
+		MaxQuality:       valueobject.VideoQuality(req.MaxQuality),
+		MaxStreams:       req.MaxStreams,
+		DownloadsAllowed: req.DownloadsAllowed,
+	})
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+	httputil.Success(w, http.StatusCreated, mapper.PlanToResponse(plan))
+}
+
+// AdminUpdatePlan godoc
+// @Summary      Update a subscription plan (admin)
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Plan ID"
+// @Param        body body dto.UpdatePlanRequest true "Plan data"
+// @Success      200 {object} httputil.Response{data=dto.PlanResponse}
+// @Security     BearerAuth
+// @Router       /admin/plans/{id} [put]
+func (h *SubscriptionHandler) AdminUpdatePlan(w http.ResponseWriter, r *http.Request) {
+	planID, err := httputil.URLParamUUID(r, "id")
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid plan ID")
+		return
+	}
+
+	var req dto.UpdatePlanRequest
+	if decodeErr := httputil.DecodeJSON(r, &req); decodeErr != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
+		return
+	}
+	if errors := h.validator.Validate(req); errors != nil {
+		httputil.ErrorWithDetails(w, apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil), errors)
+		return
+	}
+
+	plan, appErr := h.subscriptionService.AdminUpdatePlan(r.Context(), subscriptionuc.UpdatePlanInput{
+		ID:               planID,
+		Name:             req.Name,
+		Tier:             req.Tier,
+		PriceAmount:      req.PriceAmount,
+		PriceCurrency:    req.PriceCurrency,
+		BillingInterval:  req.BillingInterval,
+		MaxQuality:       valueobject.VideoQuality(req.MaxQuality),
+		MaxStreams:       req.MaxStreams,
+		DownloadsAllowed: req.DownloadsAllowed,
+		IsActive:         req.IsActive,
+	})
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+	httputil.Success(w, http.StatusOK, mapper.PlanToResponse(plan))
+}
+
+// AdminDeactivatePlan godoc
+// @Summary      Deactivate a subscription plan (admin)
+// @Tags         admin
+// @Param        id path string true "Plan ID"
+// @Success      204
+// @Security     BearerAuth
+// @Router       /admin/plans/{id} [delete]
+func (h *SubscriptionHandler) AdminDeactivatePlan(w http.ResponseWriter, r *http.Request) {
+	planID, err := httputil.URLParamUUID(r, "id")
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid plan ID")
+		return
+	}
+
+	if appErr := h.subscriptionService.AdminDeactivatePlan(r.Context(), planID); appErr != nil {
 		httputil.Error(w, appErr)
 		return
 	}

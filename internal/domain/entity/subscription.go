@@ -7,14 +7,8 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 )
 
-// PlanTier represents a subscription plan level.
+// PlanTier represents a subscription plan level label (free-form string).
 type PlanTier string
-
-const (
-	PlanBasic    PlanTier = "basic"
-	PlanStandard PlanTier = "standard"
-	PlanPremium  PlanTier = "premium"
-)
 
 // Plan represents a subscription plan.
 type Plan struct {

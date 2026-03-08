@@ -1,3 +1,4 @@
+-- +goose Up
 -- Migration 010: typed entities
 -- Adds genre_id and plan_id FKs to content rows (Film and Video),
 -- uploaded_at to videos, trailer_url/backdrop_url to seasons,
@@ -32,3 +33,12 @@ WHERE e.season_id = s.id
 -- Drop the many-to-many genre join table (replaced by content.genre_id).
 -- NOTE: existing genre assignments will be lost; reassign via API.
 DROP TABLE IF EXISTS content_genres;
+
+-- +goose Down
+ALTER TABLE content DROP COLUMN IF EXISTS genre_id;
+ALTER TABLE content DROP COLUMN IF EXISTS plan_id;
+ALTER TABLE videos DROP COLUMN IF EXISTS uploaded_at;
+ALTER TABLE seasons DROP COLUMN IF EXISTS trailer_url;
+ALTER TABLE seasons DROP COLUMN IF EXISTS backdrop_url;
+ALTER TABLE episodes DROP COLUMN IF EXISTS series_id;
+ALTER TABLE episodes DROP COLUMN IF EXISTS director;

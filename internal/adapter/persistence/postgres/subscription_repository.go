@@ -179,6 +179,70 @@ func (r *SubscriptionRepository) ListPlans(ctx context.Context) ([]entity.Plan, 
 	return plans, nil
 }
 
+func (r *SubscriptionRepository) ListAllPlans(ctx context.Context) ([]entity.Plan, error) {
+	db := connFromCtx(ctx, r.pool)
+	rows, err := db.Query(ctx, `
+		SELECT id, name, tier, price_amount, price_currency, billing_interval,
+		       max_quality, max_streams, downloads_allowed, is_active, created_at
+		FROM plans ORDER BY price_amount
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("listing all plans: %w", err)
+	}
+	defer rows.Close()
+
+	var plans []entity.Plan
+	for rows.Next() {
+		var p entity.Plan
+		if err := rows.Scan(&p.ID, &p.Name, &p.Tier, &p.Price.Amount, &p.Price.Currency,
+			&p.BillingInterval, &p.MaxQuality, &p.MaxStreams, &p.DownloadsAllowed,
+			&p.IsActive, &p.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scanning plan: %w", err)
+		}
+		plans = append(plans, p)
+	}
+	return plans, nil
+}
+
+func (r *SubscriptionRepository) CreatePlan(ctx context.Context, plan *entity.Plan) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		INSERT INTO plans (id, name, tier, price_amount, price_currency, billing_interval,
+		                   max_quality, max_streams, downloads_allowed, is_active, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	`, plan.ID, plan.Name, plan.Tier, plan.Price.Amount, plan.Price.Currency,
+		plan.BillingInterval, plan.MaxQuality, plan.MaxStreams, plan.DownloadsAllowed,
+		plan.IsActive, plan.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("creating plan: %w", err)
+	}
+	return nil
+}
+
+func (r *SubscriptionRepository) UpdatePlan(ctx context.Context, plan *entity.Plan) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		UPDATE plans SET name=$2, tier=$3, price_amount=$4, price_currency=$5,
+		       billing_interval=$6, max_quality=$7, max_streams=$8,
+		       downloads_allowed=$9, is_active=$10
+		WHERE id=$1
+	`, plan.ID, plan.Name, plan.Tier, plan.Price.Amount, plan.Price.Currency,
+		plan.BillingInterval, plan.MaxQuality, plan.MaxStreams, plan.DownloadsAllowed, plan.IsActive)
+	if err != nil {
+		return fmt.Errorf("updating plan: %w", err)
+	}
+	return nil
+}
+
+func (r *SubscriptionRepository) DeactivatePlan(ctx context.Context, id uuid.UUID) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx, `UPDATE plans SET is_active=false WHERE id=$1`, id)
+	if err != nil {
+		return fmt.Errorf("deactivating plan: %w", err)
+	}
+	return nil
+}
+
 func (r *SubscriptionRepository) GetPlanByID(ctx context.Context, id uuid.UUID) (*entity.Plan, error) {
 	db := connFromCtx(ctx, r.pool)
 	p := &entity.Plan{}

@@ -14,7 +14,7 @@ func newTestPlan(name string, amount int64) *entity.Plan {
 	return &entity.Plan{
 		ID:              uuid.New(),
 		Name:            name,
-		Tier:            entity.PlanBasic,
+		Tier:            "basic",
 		Price:           valueobject.NewMoney(amount, "USD"),
 		BillingInterval: "monthly",
 		MaxQuality:      valueobject.QualityHD,

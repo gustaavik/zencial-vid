@@ -150,6 +150,13 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 				r.Put("/{id}", catalogHandler.UpdateGenre)
 				r.Delete("/{id}", catalogHandler.DeleteGenre)
 			})
+
+			r.Route("/plans", func(r chi.Router) {
+				r.Get("/", subscriptionHandler.AdminListAllPlans)
+				r.Post("/", subscriptionHandler.AdminCreatePlan)
+				r.Put("/{id}", subscriptionHandler.AdminUpdatePlan)
+				r.Delete("/{id}", subscriptionHandler.AdminDeactivatePlan)
+			})
 		})
 	})
 }

@@ -35,7 +35,7 @@ func playableContent() *entity.BaseContent {
 // playableContentWithPlan returns playable content that requires a subscription plan.
 func playableContentWithPlan() *entity.BaseContent {
 	c := playableContent()
-	c.Plan = &entity.Plan{ID: uuid.New(), Name: "Basic", Tier: entity.PlanBasic}
+	c.Plan = &entity.Plan{ID: uuid.New(), Name: "Basic", Tier: "basic"}
 	return c
 }
 

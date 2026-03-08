@@ -170,7 +170,7 @@ func TestBaseContent_IsFree(t *testing.T) {
 	f := newTestFilm(t, ContentStatusPublished)
 	assert.True(t, f.IsFree(), "film with no plan should be free")
 
-	f.Plan = &Plan{ID: uuid.New(), Name: "Premium", Tier: PlanPremium}
+	f.Plan = &Plan{ID: uuid.New(), Name: "Premium", Tier: "premium"}
 	assert.False(t, f.IsFree(), "film with plan should not be free")
 }
 
