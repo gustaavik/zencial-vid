@@ -17,6 +17,7 @@ func PlanToResponse(p *entity.Plan) dto.PlanResponse {
 		MaxQuality:       string(p.MaxQuality),
 		MaxStreams:       p.MaxStreams,
 		DownloadsAllowed: p.DownloadsAllowed,
+		IsActive:         p.IsActive,
 	}
 }
 

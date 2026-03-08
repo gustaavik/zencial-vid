@@ -8,8 +8,8 @@ import (
 	"github.com/zenfulcode/zencial/internal/pkg/filter"
 )
 
-// List returns paginated content with optional filtering and search.
-func (s *Service) List(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.Content, int64, *apperror.AppError) {
+// List returns paginated content summaries with optional filtering and search.
+func (s *Service) List(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.ContentSummary, int64, *apperror.AppError) {
 	contents, total, err := s.contentRepo.Search(ctx, fs, searchQuery)
 	if err != nil {
 		s.log.Error("listing content", "error", err)
@@ -19,12 +19,12 @@ func (s *Service) List(ctx context.Context, fs filter.FilterSet, searchQuery str
 }
 
 // Search performs a content search (delegates to List).
-func (s *Service) Search(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.Content, int64, *apperror.AppError) {
+func (s *Service) Search(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.ContentSummary, int64, *apperror.AppError) {
 	return s.List(ctx, fs, searchQuery)
 }
 
-// AdminList returns paginated content for admin without status filtering.
-func (s *Service) AdminList(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.Content, int64, *apperror.AppError) {
+// AdminList returns paginated content summaries for admin without status filtering.
+func (s *Service) AdminList(ctx context.Context, fs filter.FilterSet, searchQuery string) ([]entity.ContentSummary, int64, *apperror.AppError) {
 	contents, total, err := s.contentRepo.AdminSearch(ctx, fs, searchQuery)
 	if err != nil {
 		s.log.Error("admin listing content", "error", err)
@@ -33,8 +33,8 @@ func (s *Service) AdminList(ctx context.Context, fs filter.FilterSet, searchQuer
 	return contents, total, nil
 }
 
-// Featured returns featured content up to the given limit.
-func (s *Service) Featured(ctx context.Context, limit int) ([]entity.Content, *apperror.AppError) {
+// Featured returns featured content summaries up to the given limit.
+func (s *Service) Featured(ctx context.Context, limit int) ([]entity.ContentSummary, *apperror.AppError) {
 	contents, err := s.contentRepo.GetFeatured(ctx, limit)
 	if err != nil {
 		s.log.Error("getting featured content", "error", err)

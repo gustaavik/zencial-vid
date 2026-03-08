@@ -25,35 +25,22 @@ type CreateContentInput struct {
 	TrailerURL  string
 	Director    string
 	CreatorName string
-	IsFree      *bool
 }
 
-// Create creates new content from the given input.
-func (s *Service) Create(ctx context.Context, input CreateContentInput) (*entity.Content, *apperror.AppError) {
-	baseSlug, err := valueobject.NewSlug(input.Title)
-	if err != nil {
-		return nil, apperror.BadRequest(apperror.CodeValidationFailed, "invalid title for slug", err)
+// Create creates new content from the given input, dispatching to the correct typed creator.
+func (s *Service) Create(ctx context.Context, input CreateContentInput) (*ContentDetail, *apperror.AppError) {
+	slug, appErr := s.uniqueSlug(ctx, input.Title)
+	if appErr != nil {
+		return nil, appErr
 	}
 
-	// Ensure slug uniqueness by appending a random ID if the base slug is taken.
-	slug := baseSlug
-	exists, err := s.contentRepo.ExistsBySlug(ctx, slug.String())
-	if err != nil {
-		s.log.Error("checking slug existence", "error", err)
-		return nil, apperror.Internal(apperror.CodeInternalError, "failed to check slug", err)
-	}
-	if exists {
-		slug = baseSlug.WithRandomID()
-	}
-
-	// Default rating to G for videos if not provided.
 	rating := valueobject.ContentRating(input.Rating)
 	if input.Rating == "" && input.Type == string(entity.ContentTypeVideo) {
 		rating = valueobject.RatingG
 	}
 
 	now := time.Now()
-	content := &entity.Content{
+	base := entity.BaseContent{
 		ID:          uuid.New(),
 		Type:        entity.ContentType(input.Type),
 		Title:       input.Title,
@@ -61,41 +48,86 @@ func (s *Service) Create(ctx context.Context, input CreateContentInput) (*entity
 		Description: input.Description,
 		Synopsis:    input.Synopsis,
 		Rating:      rating,
-		ReleaseYear: input.ReleaseYear,
 		PosterURL:   input.PosterURL,
-		BackdropURL: input.BackdropURL,
-		TrailerURL:  input.TrailerURL,
-		Director:    input.Director,
 		Status:      entity.ContentStatusDraft,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
 
-	if err := s.contentRepo.Create(ctx, content); err != nil {
-		if errors.Is(err, domain.ErrSlugAlreadyExists) {
-			return nil, apperror.Conflict(apperror.CodeSlugConflict, "content with this slug already exists", err)
+	switch entity.ContentType(input.Type) {
+	case entity.ContentTypeFilm:
+		film := &entity.Film{
+			BaseContent: base,
+			BackdropURL: input.BackdropURL,
+			TrailerURL:  input.TrailerURL,
+			ReleaseYear: input.ReleaseYear,
+			Director:    input.Director,
 		}
-		s.log.Error("creating content", "error", err)
-		return nil, apperror.Internal(apperror.CodeInternalError, "failed to create content", err)
-	}
+		if err := s.contentRepo.CreateFilm(ctx, film); err != nil {
+			if errors.Is(err, domain.ErrSlugAlreadyExists) {
+				return nil, apperror.Conflict(apperror.CodeSlugConflict, "content with this slug already exists", err)
+			}
+			s.log.Error("creating film", "error", err)
+			return nil, apperror.Internal(apperror.CodeInternalError, "failed to create film", err)
+		}
+		return &ContentDetail{Type: entity.ContentTypeFilm, Film: film}, nil
 
-	// Create video-specific record.
-	if content.Type == entity.ContentTypeVideo {
-		isFree := false
-		if input.IsFree != nil {
-			isFree = *input.IsFree
-		}
+	case entity.ContentTypeVideo:
 		video := &entity.Video{
-			ContentID:   content.ID,
+			BaseContent: base,
 			CreatorName: input.CreatorName,
-			IsFree:      isFree,
+			UploadedAt:  now,
 		}
 		if err := s.contentRepo.CreateVideo(ctx, video); err != nil {
-			s.log.Error("creating video record", "error", err)
-			return nil, apperror.Internal(apperror.CodeInternalError, "failed to create video record", err)
+			if errors.Is(err, domain.ErrSlugAlreadyExists) {
+				return nil, apperror.Conflict(apperror.CodeSlugConflict, "content with this slug already exists", err)
+			}
+			s.log.Error("creating video", "error", err)
+			return nil, apperror.Internal(apperror.CodeInternalError, "failed to create video", err)
 		}
-		content.Video = video
-	}
+		return &ContentDetail{Type: entity.ContentTypeVideo, Video: video}, nil
 
-	return content, nil
+	case entity.ContentTypeSeries:
+		series := &entity.Series{
+			ID:          base.ID,
+			Title:       input.Title,
+			Slug:        slug,
+			Description: input.Description,
+			Synopsis:    input.Synopsis,
+			PosterURL:   input.PosterURL,
+			BackdropURL: input.BackdropURL,
+			TrailerURL:  input.TrailerURL,
+			Status:      entity.ContentStatusDraft,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}
+		if err := s.contentRepo.CreateSeries(ctx, series); err != nil {
+			if errors.Is(err, domain.ErrSlugAlreadyExists) {
+				return nil, apperror.Conflict(apperror.CodeSlugConflict, "content with this slug already exists", err)
+			}
+			s.log.Error("creating series", "error", err)
+			return nil, apperror.Internal(apperror.CodeInternalError, "failed to create series", err)
+		}
+		return &ContentDetail{Type: entity.ContentTypeSeries, Series: series}, nil
+
+	default:
+		return nil, apperror.BadRequest(apperror.CodeValidationFailed, "unknown content type", nil)
+	}
+}
+
+// uniqueSlug generates a unique slug for the given title.
+func (s *Service) uniqueSlug(ctx context.Context, title string) (valueobject.Slug, *apperror.AppError) {
+	baseSlug, err := valueobject.NewSlug(title)
+	if err != nil {
+		return valueobject.Slug{}, apperror.BadRequest(apperror.CodeValidationFailed, "invalid title for slug", err)
+	}
+	exists, err := s.contentRepo.ExistsBySlug(ctx, baseSlug.String())
+	if err != nil {
+		s.log.Error("checking slug existence", "error", err)
+		return valueobject.Slug{}, apperror.Internal(apperror.CodeInternalError, "failed to check slug", err)
+	}
+	if exists {
+		return baseSlug.WithRandomID(), nil
+	}
+	return baseSlug, nil
 }

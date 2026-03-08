@@ -18,5 +18,9 @@ type SubscriptionRepository interface {
 
 	// Plans
 	ListPlans(ctx context.Context) ([]entity.Plan, error)
+	ListAllPlans(ctx context.Context) ([]entity.Plan, error)
 	GetPlanByID(ctx context.Context, id uuid.UUID) (*entity.Plan, error)
+	CreatePlan(ctx context.Context, plan *entity.Plan) error
+	UpdatePlan(ctx context.Context, plan *entity.Plan) error
+	DeactivatePlan(ctx context.Context, id uuid.UUID) error
 }

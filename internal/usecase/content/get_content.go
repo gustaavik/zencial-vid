@@ -2,6 +2,7 @@ package content
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/domain"
@@ -9,62 +10,77 @@ import (
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
-// GetByID retrieves content by its ID, including video-specific data and assets (no status filter).
-func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*entity.Content, *apperror.AppError) {
-	content, err := s.contentRepo.GetByID(ctx, id)
+// GetByID retrieves typed content by its ID.
+func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*ContentDetail, *apperror.AppError) {
+	ct, err := s.contentRepo.GetTypeByID(ctx, id)
 	if err != nil {
-		s.log.Error("getting content by id", "error", err)
+		if errors.Is(err, domain.ErrContentNotFound) {
+			return nil, apperror.NotFound(apperror.CodeContentNotFound, "content not found", err)
+		}
+		s.log.Error("getting content type by id", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to get content", err)
 	}
-	if content == nil {
-		return nil, apperror.NotFound(apperror.CodeContentNotFound, "content not found", domain.ErrContentNotFound)
-	}
-
-	return s.loadContentExtras(ctx, content)
+	return s.loadByType(ctx, ct, id)
 }
 
-// GetBySlug retrieves content by its URL slug, including video-specific data and assets.
-func (s *Service) GetBySlug(ctx context.Context, slug string) (*entity.Content, *apperror.AppError) {
-	content, err := s.contentRepo.GetBySlug(ctx, slug)
+// GetBySlug retrieves typed content by its URL slug.
+// It tries each typed getter in order (film → video → series).
+func (s *Service) GetBySlug(ctx context.Context, slug string) (*ContentDetail, *apperror.AppError) {
+	film, err := s.contentRepo.GetFilmBySlug(ctx, slug)
 	if err != nil {
-		s.log.Error("getting content by slug", "error", err)
+		s.log.Error("getting film by slug", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to get content", err)
 	}
-	if content == nil {
-		return nil, apperror.NotFound(apperror.CodeContentNotFound, "content not found", domain.ErrContentNotFound)
+	if film != nil {
+		return &ContentDetail{Type: entity.ContentTypeFilm, Film: film}, nil
 	}
 
-	return s.loadContentExtras(ctx, content)
+	video, err := s.contentRepo.GetVideoBySlug(ctx, slug)
+	if err != nil {
+		s.log.Error("getting video by slug", "error", err)
+		return nil, apperror.Internal(apperror.CodeInternalError, "failed to get content", err)
+	}
+	if video != nil {
+		return &ContentDetail{Type: entity.ContentTypeVideo, Video: video}, nil
+	}
+
+	series, err := s.contentRepo.GetSeriesBySlug(ctx, slug)
+	if err != nil {
+		s.log.Error("getting series by slug", "error", err)
+		return nil, apperror.Internal(apperror.CodeInternalError, "failed to get content", err)
+	}
+	if series != nil {
+		return &ContentDetail{Type: entity.ContentTypeSeries, Series: series}, nil
+	}
+
+	return nil, apperror.NotFound(apperror.CodeContentNotFound, "content not found", domain.ErrContentNotFound)
 }
 
-// loadContentExtras loads video-specific data and assets for the given content.
-func (s *Service) loadContentExtras(ctx context.Context, content *entity.Content) (*entity.Content, *apperror.AppError) {
-	// Load video-specific data.
-	if content.Type == entity.ContentTypeVideo {
-		video, err := s.contentRepo.GetVideoForContent(ctx, content.ID)
-		if err != nil {
-			s.log.Error("getting video data", "error", err)
-		} else {
-			content.Video = video
+// loadByType fetches the full typed entity for a given ID and content type.
+func (s *Service) loadByType(ctx context.Context, ct entity.ContentType, id uuid.UUID) (*ContentDetail, *apperror.AppError) {
+	switch ct {
+	case entity.ContentTypeFilm:
+		film, err := s.contentRepo.GetFilmByID(ctx, id)
+		if err != nil || film == nil {
+			return nil, apperror.NotFound(apperror.CodeContentNotFound, "film not found", domain.ErrContentNotFound)
 		}
-	}
+		return &ContentDetail{Type: ct, Film: film}, nil
 
-	// Load video asset for film or video content.
-	if content.Type == entity.ContentTypeFilm || content.Type == entity.ContentTypeVideo {
-		asset, err := s.contentRepo.GetVideoAssetForContent(ctx, content.ID)
-		if err != nil {
-			s.log.Error("getting video asset", "error", err)
-		} else if asset != nil {
-			if content.Type == entity.ContentTypeFilm {
-				if content.Film == nil {
-					content.Film = &entity.Film{ContentID: content.ID}
-				}
-				content.Film.Asset = *asset
-			} else if content.Video != nil {
-				content.Video.Asset = *asset
-			}
+	case entity.ContentTypeVideo:
+		video, err := s.contentRepo.GetVideoByID(ctx, id)
+		if err != nil || video == nil {
+			return nil, apperror.NotFound(apperror.CodeContentNotFound, "video not found", domain.ErrContentNotFound)
 		}
-	}
+		return &ContentDetail{Type: ct, Video: video}, nil
 
-	return content, nil
+	case entity.ContentTypeSeries:
+		series, err := s.contentRepo.GetSeriesByID(ctx, id)
+		if err != nil || series == nil {
+			return nil, apperror.NotFound(apperror.CodeContentNotFound, "series not found", domain.ErrContentNotFound)
+		}
+		return &ContentDetail{Type: ct, Series: series}, nil
+
+	default:
+		return nil, apperror.Internal(apperror.CodeInternalError, "unknown content type", nil)
+	}
 }

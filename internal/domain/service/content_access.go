@@ -14,7 +14,7 @@ func NewContentAccessService() *ContentAccessService {
 
 // CanAccess checks whether a user can access the given content.
 // It verifies subscription status, age restrictions, and content availability.
-func (s *ContentAccessService) CanAccess(user *entity.User, content *entity.Content, subscription *entity.Subscription) (bool, string) {
+func (s *ContentAccessService) CanAccess(user *entity.User, content *entity.BaseContent, subscription *entity.Subscription) (bool, string) {
 	if !user.IsActive() {
 		return false, "user account is not active"
 	}
@@ -27,8 +27,8 @@ func (s *ContentAccessService) CanAccess(user *entity.User, content *entity.Cont
 		return false, "content is restricted by age rating"
 	}
 
-	// Free videos can be watched without a subscription
-	if content.Type == entity.ContentTypeVideo && content.Video != nil && content.Video.IsFree {
+	// Free content (Plan == nil) can be watched without a subscription
+	if content.IsFree() {
 		return true, ""
 	}
 

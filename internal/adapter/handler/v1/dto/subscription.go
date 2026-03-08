@@ -11,6 +11,7 @@ type PlanResponse struct {
 	MaxQuality       string `json:"max_quality" example:"UHD"`
 	MaxStreams       int    `json:"max_streams" example:"4"`
 	DownloadsAllowed bool   `json:"downloads_allowed"`
+	IsActive         bool   `json:"is_active"`
 }
 
 // SubscriptionResponse represents a subscription in API responses.
@@ -57,4 +58,29 @@ type AdminChangePlanRequest struct {
 type AdminCreateSubscriptionRequest struct {
 	UserID string `json:"user_id" validate:"required,uuid"`
 	PlanID string `json:"plan_id" validate:"required,uuid"`
+}
+
+// CreatePlanRequest represents a request to create a new subscription plan.
+type CreatePlanRequest struct {
+	Name             string `json:"name" validate:"required"`
+	Tier             string `json:"tier" validate:"required"`
+	PriceAmount      int64  `json:"price_amount" validate:"required,min=0"`
+	PriceCurrency    string `json:"price_currency" validate:"required"`
+	BillingInterval  string `json:"billing_interval" validate:"required,oneof=monthly yearly"`
+	MaxQuality       string `json:"max_quality" validate:"required,oneof=SD HD FHD UHD"`
+	MaxStreams       int    `json:"max_streams" validate:"required,min=1"`
+	DownloadsAllowed bool   `json:"downloads_allowed"`
+}
+
+// UpdatePlanRequest represents a request to update an existing subscription plan.
+type UpdatePlanRequest struct {
+	Name             string `json:"name" validate:"required"`
+	Tier             string `json:"tier" validate:"required"`
+	PriceAmount      int64  `json:"price_amount" validate:"min=0"`
+	PriceCurrency    string `json:"price_currency" validate:"required"`
+	BillingInterval  string `json:"billing_interval" validate:"required,oneof=monthly yearly"`
+	MaxQuality       string `json:"max_quality" validate:"required,oneof=SD HD FHD UHD"`
+	MaxStreams       int    `json:"max_streams" validate:"required,min=1"`
+	DownloadsAllowed bool   `json:"downloads_allowed"`
+	IsActive         bool   `json:"is_active"`
 }

@@ -1,43 +1,49 @@
 package dto
 
 // ContentListResponse represents a content item in list views.
+// Covers Film, Video, and Series rows.
 type ContentListResponse struct {
-	ID          string   `json:"id"`
-	Type        string   `json:"type" example:"film"`
-	Title       string   `json:"title" example:"The Matrix"`
-	Slug        string   `json:"slug" example:"the-matrix"`
-	Description string   `json:"description"`
-	Status      string   `json:"status" example:"published"`
-	Rating      string   `json:"rating" example:"R"`
-	ReleaseYear int      `json:"release_year" example:"1999"`
-	PosterURL   string   `json:"poster_url"`
-	Genres      []string `json:"genres"`
-	IsFeatured  bool     `json:"is_featured"`
-	CreatorName string   `json:"creator_name,omitempty"`
-	IsFree      bool     `json:"is_free,omitempty"`
+	ID          string         `json:"id"`
+	Type        string         `json:"type" example:"film"`
+	Title       string         `json:"title" example:"The Matrix"`
+	Slug        string         `json:"slug" example:"the-matrix"`
+	Description string         `json:"description"`
+	Status      string         `json:"status" example:"published"`
+	Rating      string         `json:"rating,omitempty" example:"R"`
+	PosterURL   string         `json:"poster_url,omitempty"`
+	Genre       *GenreResponse `json:"genre,omitempty"`
+	IsFeatured  bool           `json:"is_featured"`
+	IsFree      bool           `json:"is_free"`
+	CreatorName string         `json:"creator_name,omitempty"`
+	CreatedAt   string         `json:"created_at"`
+	UpdatedAt   string         `json:"updated_at"`
 }
 
 // ContentDetailResponse represents full content details.
+// Film-specific fields (BackdropURL, TrailerURL, Director, Cast, ReleaseYear)
+// are omitted (zero/nil) for Video and Series responses.
 type ContentDetailResponse struct {
-	ID          string               `json:"id"`
-	Type        string               `json:"type"`
-	Title       string               `json:"title"`
-	Slug        string               `json:"slug"`
-	Description string               `json:"description"`
-	Synopsis    string               `json:"synopsis"`
-	Rating      string               `json:"rating"`
-	ReleaseYear int                  `json:"release_year"`
-	PosterURL   string               `json:"poster_url"`
-	BackdropURL string               `json:"backdrop_url"`
-	TrailerURL  string               `json:"trailer_url"`
-	Director    string               `json:"director"`
-	IsFeatured  bool                 `json:"is_featured"`
-	Genres      []GenreResponse      `json:"genres"`
-	Cast        []CastMemberResponse `json:"cast"`
-	Film        *FilmResponse        `json:"film,omitempty"`
-	Series      *SeriesResponse      `json:"series,omitempty"`
-	Video       *VideoResponse       `json:"video,omitempty"`
-	CreatedAt   string               `json:"created_at"`
+	ID           string               `json:"id"`
+	Type         string               `json:"type"`
+	Title        string               `json:"title"`
+	Slug         string               `json:"slug"`
+	Description  string               `json:"description"`
+	Synopsis     string               `json:"synopsis,omitempty"`
+	Rating       string               `json:"rating,omitempty"`
+	PosterURL    string               `json:"poster_url,omitempty"`
+	BackdropURL  string               `json:"backdrop_url,omitempty"`
+	TrailerURL   string               `json:"trailer_url,omitempty"`
+	Director     string               `json:"director,omitempty"`
+	ReleaseYear  int                  `json:"release_year,omitempty"`
+	IsFeatured   bool                 `json:"is_featured"`
+	IsFree       bool                 `json:"is_free"`
+	Genre        *GenreResponse       `json:"genre,omitempty"`
+	Cast         []CastMemberResponse `json:"cast,omitempty"`
+	Asset        *VideoAssetResponse  `json:"asset,omitempty"`
+	TotalSeasons int                  `json:"total_seasons,omitempty"`
+	CreatorName  string               `json:"creator_name,omitempty"`
+	CreatedAt    string               `json:"created_at"`
+	UpdatedAt    string               `json:"updated_at"`
 }
 
 // VideoAssetResponse represents a video asset.
@@ -56,28 +62,9 @@ type VideoRenditionResponse struct {
 	Resolution string `json:"resolution"`
 }
 
-// FilmResponse holds film-specific data.
-type FilmResponse struct {
-	DurationMinutes float64             `json:"duration_minutes"`
-	Asset           *VideoAssetResponse `json:"asset,omitempty"`
-}
-
-// VideoResponse holds video-specific data.
-type VideoResponse struct {
-	DurationMinutes float64             `json:"duration_minutes"`
-	CreatorName     string              `json:"creator_name"`
-	IsFree          bool                `json:"is_free"`
-	Asset           *VideoAssetResponse `json:"asset,omitempty"`
-}
-
 // AttachVideoAssetRequest represents a request to attach a video asset to content.
 type AttachVideoAssetRequest struct {
 	StorageKey string `json:"storage_key" validate:"required"`
-}
-
-// SeriesResponse holds series-specific data.
-type SeriesResponse struct {
-	TotalSeasons int `json:"total_seasons"`
 }
 
 // SeasonResponse represents a season.
@@ -106,9 +93,8 @@ type CastMemberResponse struct {
 	ImageURL  string `json:"image_url,omitempty"`
 }
 
-// CreateContentRequest represents a content creation request.
-type CreateContentRequest struct {
-	Type        string `json:"type" validate:"required,oneof=film series video"`
+// CreateFilmRequest represents a film creation request.
+type CreateFilmRequest struct {
 	Title       string `json:"title" validate:"required,min=1,max=255"`
 	Description string `json:"description" validate:"required"`
 	Synopsis    string `json:"synopsis"`
@@ -118,8 +104,26 @@ type CreateContentRequest struct {
 	BackdropURL string `json:"backdrop_url" validate:"omitempty,url"`
 	TrailerURL  string `json:"trailer_url" validate:"omitempty,url"`
 	Director    string `json:"director"`
-	CreatorName string `json:"creator_name"`
-	IsFree      *bool  `json:"is_free,omitempty"`
+}
+
+// CreateVideoRequest represents a video creation request.
+type CreateVideoRequest struct {
+	Title       string `json:"title" validate:"required,min=1,max=255"`
+	Description string `json:"description" validate:"required"`
+	Synopsis    string `json:"synopsis"`
+	Rating      string `json:"rating" validate:"omitempty,oneof=G PG PG13 R NC17"`
+	PosterURL   string `json:"poster_url" validate:"omitempty,url"`
+	CreatorName string `json:"creator_name" validate:"required"`
+}
+
+// CreateSeriesRequest represents a series creation request.
+type CreateSeriesRequest struct {
+	Title       string `json:"title" validate:"required,min=1,max=255"`
+	Description string `json:"description" validate:"required"`
+	Synopsis    string `json:"synopsis"`
+	PosterURL   string `json:"poster_url" validate:"omitempty,url"`
+	BackdropURL string `json:"backdrop_url" validate:"omitempty,url"`
+	TrailerURL  string `json:"trailer_url" validate:"omitempty,url"`
 }
 
 // UpdateContentRequest represents a content update request.
@@ -135,5 +139,4 @@ type UpdateContentRequest struct {
 	Director    *string `json:"director,omitempty"`
 	IsFeatured  *bool   `json:"is_featured,omitempty"`
 	CreatorName *string `json:"creator_name,omitempty"`
-	IsFree      *bool   `json:"is_free,omitempty"`
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 )
 
-// ContentType distinguishes films from series.
+// ContentType distinguishes content types.
 type ContentType string
 
 const (
@@ -25,8 +25,9 @@ const (
 	ContentStatusArchived  ContentStatus = "archived"
 )
 
-// Content is the aggregate root for all video content.
-type Content struct {
+// BaseContent holds fields shared by Film and Video — all playable content types.
+// It is embedded in Film and Video; it is not stored as a standalone entity.
+type BaseContent struct {
 	ID          uuid.UUID
 	Type        ContentType
 	Title       string
@@ -34,74 +35,174 @@ type Content struct {
 	Description string
 	Synopsis    string
 	Rating      valueobject.ContentRating
-	ReleaseYear int
-	PosterURL   string
-	BackdropURL string
-	TrailerURL  string
 	Status      ContentStatus
 	IsFeatured  bool
-	Director    string
+	PosterURL   string
 
-	// Relationships (loaded selectively)
-	Genres []Genre
-	Cast   []CastMember
+	// Genre is the single assigned genre (nil if unset).
+	Genre *Genre
 
-	// Type-specific data (nil when not applicable)
-	Film   *Film
-	Series *Series
-	Video  *Video
+	// Asset is the playable video asset (nil until attached).
+	Asset *VideoAsset
+
+	// Duration of the playable content.
+	Duration valueobject.Duration
+
+	// Plan is the minimum subscription plan required to watch.
+	// nil means the content is free for all subscribers.
+	Plan *Plan
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 
-// Film holds film-specific data.
+// IsPlayable reports whether the content can be streamed.
+func (b *BaseContent) IsPlayable() bool {
+	return b.Status == ContentStatusPublished &&
+		b.Asset != nil &&
+		b.Asset.Status == VideoAssetReady
+}
+
+// IsPublished reports whether the content is published.
+func (b *BaseContent) IsPublished() bool {
+	return b.Status == ContentStatusPublished
+}
+
+// IsFree reports whether the content requires no specific subscription plan.
+func (b *BaseContent) IsFree() bool {
+	return b.Plan == nil
+}
+
+// Publish sets the status to published.
+func (b *BaseContent) Publish() {
+	b.Status = ContentStatusPublished
+	b.UpdatedAt = time.Now()
+}
+
+// Archive sets the status to archived.
+func (b *BaseContent) Archive() {
+	b.Status = ContentStatusArchived
+	b.UpdatedAt = time.Now()
+}
+
+// Film represents a professionally produced film.
 type Film struct {
-	ContentID uuid.UUID
-	Duration  valueobject.Duration
-	Asset     VideoAsset
+	BaseContent
+	BackdropURL string
+	TrailerURL  string
+	ReleaseYear int
+	Director    string
+	CastMembers []CastMember
 }
 
-// Video holds video-specific data for viewer-submitted content.
+// Video represents viewer-submitted or creator content.
 type Video struct {
-	ContentID   uuid.UUID
-	Duration    valueobject.Duration
+	BaseContent
 	CreatorName string
-	IsFree      bool
-	Asset       VideoAsset
+	UploadedAt  time.Time
 }
 
-// Series holds series-specific data.
+// ContentSummary is a lightweight projection used for list and search results.
+// It covers Film, Video, and Series rows from the content table.
+type ContentSummary struct {
+	ID          uuid.UUID
+	Type        ContentType
+	Title       string
+	Slug        valueobject.Slug
+	Description string
+	Status      ContentStatus
+	Rating      valueobject.ContentRating
+	PosterURL   string
+	IsFeatured  bool
+
+	// Genre is the single assigned genre (nil if unset).
+	Genre *Genre
+
+	// Plan is nil when the content is free.
+	Plan *Plan
+
+	// CreatorName is populated for Video type only.
+	CreatorName string
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// IsFree reports whether the content requires no specific subscription plan.
+func (c *ContentSummary) IsFree() bool {
+	return c.Plan == nil
+}
+
+// Series is a container of seasons. It is stored as a content row (type="series")
+// so that watchlist and streaming references can use the same content ID.
 type Series struct {
-	ContentID    uuid.UUID
-	Seasons      []Season
+	ID           uuid.UUID
+	Title        string
+	Slug         valueobject.Slug
+	Description  string
+	Synopsis     string
+	PosterURL    string
+	BackdropURL  string
+	TrailerURL   string
+	Status       ContentStatus
+	IsFeatured   bool
 	TotalSeasons int
+	Seasons      []Season
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+// IsPublished reports whether the series is published.
+func (s *Series) IsPublished() bool {
+	return s.Status == ContentStatusPublished
+}
+
+// IsPlayable reports whether the series has seasons available.
+func (s *Series) IsPlayable() bool {
+	return s.Status == ContentStatusPublished && s.TotalSeasons > 0
+}
+
+// Publish sets the status to published.
+func (s *Series) Publish() {
+	s.Status = ContentStatusPublished
+	s.UpdatedAt = time.Now()
+}
+
+// Archive sets the status to archived.
+func (s *Series) Archive() {
+	s.Status = ContentStatusArchived
+	s.UpdatedAt = time.Now()
 }
 
 // Season represents a series season.
 type Season struct {
-	ID        uuid.UUID
-	ContentID uuid.UUID
-	Number    int
-	Title     string
-	Episodes  []Episode
-	CreatedAt time.Time
+	ID          uuid.UUID
+	SeriesID    uuid.UUID
+	Number      int
+	Title       string
+	TrailerURL  string
+	BackdropURL string
+	Episodes    []Episode
+	CreatedAt   time.Time
 }
 
-// Episode represents a single episode.
+// Episode represents a single episode within a season.
 type Episode struct {
-	ID        uuid.UUID
-	SeasonID  uuid.UUID
-	Number    int
-	Title     string
-	Synopsis  string
-	Duration  valueobject.Duration
-	Asset     VideoAsset
-	AirDate   *time.Time
-	CreatedAt time.Time
+	ID          uuid.UUID
+	SeasonID    uuid.UUID
+	SeriesID    uuid.UUID
+	Number      int
+	Title       string
+	Synopsis    string
+	Duration    valueobject.Duration
+	Asset       VideoAsset
+	AirDate     *time.Time
+	Director    string
+	CastMembers []CastMember
+	CreatedAt   time.Time
 }
 
-// VideoAssetStatus represents the processing status of a video.
+// VideoAssetStatus represents the processing status of a video asset.
 type VideoAssetStatus string
 
 const (
@@ -133,37 +234,4 @@ type CastMember struct {
 	Role      string // "actor", "director", "writer"
 	Character string // Character name (for actors)
 	ImageURL  string
-}
-
-// IsPlayable checks if this content can be streamed.
-func (c *Content) IsPlayable() bool {
-	if c.Status != ContentStatusPublished {
-		return false
-	}
-	switch c.Type {
-	case ContentTypeFilm:
-		return c.Film != nil && c.Film.Asset.Status == VideoAssetReady
-	case ContentTypeSeries:
-		return c.Series != nil && c.Series.TotalSeasons > 0
-	case ContentTypeVideo:
-		return c.Video != nil && c.Video.Asset.Status == VideoAssetReady
-	}
-	return false
-}
-
-// IsPublished reports whether the content is published.
-func (c *Content) IsPublished() bool {
-	return c.Status == ContentStatusPublished
-}
-
-// Publish sets the content status to published.
-func (c *Content) Publish() {
-	c.Status = ContentStatusPublished
-	c.UpdatedAt = time.Now()
-}
-
-// Archive sets the content status to archived.
-func (c *Content) Archive() {
-	c.Status = ContentStatusArchived
-	c.UpdatedAt = time.Now()
 }

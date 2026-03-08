@@ -2,6 +2,7 @@ package content
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/domain"
@@ -11,15 +12,19 @@ import (
 
 // Publish transitions content to published status.
 // For film and video types, a video asset must be attached before publishing.
-func (s *Service) Publish(ctx context.Context, id uuid.UUID) (*entity.Content, *apperror.AppError) {
-	content, err := s.contentRepo.GetByID(ctx, id)
-	if err != nil || content == nil {
-		return nil, apperror.NotFound(apperror.CodeContentNotFound, "content not found", domain.ErrContentNotFound)
+func (s *Service) Publish(ctx context.Context, id uuid.UUID) (*ContentDetail, *apperror.AppError) {
+	ct, err := s.contentRepo.GetTypeByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, domain.ErrContentNotFound) {
+			return nil, apperror.NotFound(apperror.CodeContentNotFound, "content not found", err)
+		}
+		s.log.Error("getting content type for publish", "error", err)
+		return nil, apperror.Internal(apperror.CodeInternalError, "failed to get content", err)
 	}
 
 	// Require a video asset for film and video content.
-	if content.Type == entity.ContentTypeFilm || content.Type == entity.ContentTypeVideo {
-		asset, err := s.contentRepo.GetVideoAssetForContent(ctx, content.ID)
+	if ct == entity.ContentTypeFilm || ct == entity.ContentTypeVideo {
+		asset, err := s.contentRepo.GetVideoAssetForContent(ctx, id)
 		if err != nil {
 			s.log.Error("checking video asset for publish", "error", err)
 			return nil, apperror.Internal(apperror.CodeInternalError, "failed to check video asset", err)
@@ -29,22 +34,27 @@ func (s *Service) Publish(ctx context.Context, id uuid.UUID) (*entity.Content, *
 		}
 	}
 
-	content.Publish()
-	if err := s.contentRepo.Update(ctx, content); err != nil {
+	if err := s.contentRepo.SetStatus(ctx, id, entity.ContentStatusPublished); err != nil {
+		s.log.Error("publishing content", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to publish content", err)
 	}
-	return content, nil
+	return s.loadByType(ctx, ct, id)
 }
 
 // Archive transitions content to archived status.
-func (s *Service) Archive(ctx context.Context, id uuid.UUID) (*entity.Content, *apperror.AppError) {
-	content, err := s.contentRepo.GetByID(ctx, id)
-	if err != nil || content == nil {
-		return nil, apperror.NotFound(apperror.CodeContentNotFound, "content not found", domain.ErrContentNotFound)
+func (s *Service) Archive(ctx context.Context, id uuid.UUID) (*ContentDetail, *apperror.AppError) {
+	ct, err := s.contentRepo.GetTypeByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, domain.ErrContentNotFound) {
+			return nil, apperror.NotFound(apperror.CodeContentNotFound, "content not found", err)
+		}
+		s.log.Error("getting content type for archive", "error", err)
+		return nil, apperror.Internal(apperror.CodeInternalError, "failed to get content", err)
 	}
-	content.Archive()
-	if err := s.contentRepo.Update(ctx, content); err != nil {
+
+	if err := s.contentRepo.SetStatus(ctx, id, entity.ContentStatusArchived); err != nil {
+		s.log.Error("archiving content", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to archive content", err)
 	}
-	return content, nil
+	return s.loadByType(ctx, ct, id)
 }

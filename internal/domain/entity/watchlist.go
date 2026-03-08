@@ -11,7 +11,7 @@ type WatchlistItem struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
 	ContentID uuid.UUID
-	Content   *Content // Loaded when needed
+	Content   *ContentSummary // Loaded when needed
 	AddedAt   time.Time
 }
 

@@ -16,24 +16,27 @@ func activeUser() *entity.User {
 	return u
 }
 
-func playableContent() *entity.Content {
+func playableContent() *entity.BaseContent {
 	slug := valueobject.SlugFromTrusted("test-film")
-	return &entity.Content{
+	return &entity.BaseContent{
 		ID:     uuid.New(),
 		Type:   entity.ContentTypeFilm,
 		Title:  "Test Film",
 		Slug:   slug,
 		Rating: valueobject.RatingPG,
 		Status: entity.ContentStatusPublished,
-		Film: &entity.Film{
-			ContentID: uuid.New(),
-			Duration:  valueobject.NewDuration(7200),
-			Asset: entity.VideoAsset{
-				ID:     uuid.New(),
-				Status: entity.VideoAssetReady,
-			},
+		Asset: &entity.VideoAsset{
+			ID:     uuid.New(),
+			Status: entity.VideoAssetReady,
 		},
 	}
+}
+
+// playableContentWithPlan returns playable content that requires a subscription plan.
+func playableContentWithPlan() *entity.BaseContent {
+	c := playableContent()
+	c.Plan = &entity.Plan{ID: uuid.New(), Name: "Basic", Tier: "basic"}
+	return c
 }
 
 func activeSubscription() *entity.Subscription {
@@ -101,17 +104,25 @@ func TestContentAccessService_CanAccess(t *testing.T) {
 		assert.Empty(t, reason)
 	})
 
-	t.Run("no subscription denies access", func(t *testing.T) {
-		ok, reason := svc.CanAccess(activeUser(), playableContent(), nil)
+	t.Run("no subscription denies access to paid content", func(t *testing.T) {
+		ok, reason := svc.CanAccess(activeUser(), playableContentWithPlan(), nil)
 		assert.False(t, ok)
 		assert.Contains(t, reason, "subscription required")
 	})
 
-	t.Run("expired subscription denies access", func(t *testing.T) {
+	t.Run("expired subscription denies access to paid content", func(t *testing.T) {
 		sub := activeSubscription()
 		sub.Status = entity.SubscriptionExpired
-		ok, reason := svc.CanAccess(activeUser(), playableContent(), sub)
+		ok, reason := svc.CanAccess(activeUser(), playableContentWithPlan(), sub)
 		assert.False(t, ok)
 		assert.Contains(t, reason, "subscription required")
+	})
+
+	t.Run("free content accessible without subscription", func(t *testing.T) {
+		content := playableContent()
+		content.Plan = nil // explicitly free
+		ok, reason := svc.CanAccess(activeUser(), content, nil)
+		assert.True(t, ok)
+		assert.Empty(t, reason)
 	})
 }

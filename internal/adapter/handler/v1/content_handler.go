@@ -19,14 +19,14 @@ var contentFilterCfg = filter.Config{
 	Columns: map[string]filter.ColumnDef{
 		"type":         {DBColumn: "c.type", AllowedOps: []filter.Op{filter.OpEq, filter.OpIn}, Type: filter.TypeString},
 		"rating":       {DBColumn: "c.rating", AllowedOps: []filter.Op{filter.OpEq, filter.OpIn}, Type: filter.TypeString},
-		"release_year": {DBColumn: "c.release_year", AllowedOps: []filter.Op{filter.OpEq, filter.OpGte, filter.OpLte}, Type: filter.TypeInt},
+		"release_year": {DBColumn: "f.release_year", AllowedOps: []filter.Op{filter.OpEq, filter.OpGte, filter.OpLte}, Type: filter.TypeInt},
 		"title":        {DBColumn: "c.title", AllowedOps: []filter.Op{filter.OpLike}, Type: filter.TypeString},
 		"is_featured":  {DBColumn: "c.is_featured", AllowedOps: []filter.Op{filter.OpEq}, Type: filter.TypeBool},
-		"director":     {DBColumn: "c.director", AllowedOps: []filter.Op{filter.OpLike, filter.OpEq}, Type: filter.TypeString},
+		"director":     {DBColumn: "f.director", AllowedOps: []filter.Op{filter.OpLike, filter.OpEq}, Type: filter.TypeString},
 	},
 	SortColumns: map[string]filter.SortDef{
 		"title":        {DBColumn: "c.title"},
-		"release_date": {DBColumn: "c.release_year"},
+		"release_date": {DBColumn: "f.release_year"},
 		"created_at":   {DBColumn: "c.created_at"},
 	},
 	DefaultSort: "c.created_at DESC",
@@ -69,15 +69,13 @@ func (h *ContentHandler) List(w http.ResponseWriter, r *http.Request) {
 		httputil.BadRequest(w, "BAD_REQUEST", err.Error())
 		return
 	}
-
 	searchQuery := r.URL.Query().Get("q")
-
 	contents, total, appErr := h.contentService.List(r.Context(), fs, searchQuery)
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return
 	}
-	httputil.SuccessWithMeta(w, mapper.ContentsToListResponse(contents), pagination.NewMeta(fs.Pagination.Page, fs.Pagination.PerPage, total))
+	httputil.SuccessWithMeta(w, mapper.ContentSummariesToListResponse(contents), pagination.NewMeta(fs.Pagination.Page, fs.Pagination.PerPage, total))
 }
 
 // Featured godoc
@@ -94,7 +92,7 @@ func (h *ContentHandler) Featured(w http.ResponseWriter, r *http.Request) {
 		httputil.Error(w, appErr)
 		return
 	}
-	httputil.Success(w, http.StatusOK, mapper.ContentsToListResponse(contents))
+	httputil.Success(w, http.StatusOK, mapper.ContentSummariesToListResponse(contents))
 }
 
 // GetBySlug godoc
@@ -112,7 +110,7 @@ func (h *ContentHandler) GetBySlug(w http.ResponseWriter, r *http.Request) {
 		httputil.Error(w, appErr)
 		return
 	}
-	httputil.Success(w, http.StatusOK, mapper.ContentToDetailResponse(content))
+	httputil.Success(w, http.StatusOK, mapper.ContentDetailToResponse(content))
 }
 
 // GetSeasons godoc
@@ -174,15 +172,13 @@ func (h *ContentHandler) Search(w http.ResponseWriter, r *http.Request) {
 		httputil.BadRequest(w, "BAD_REQUEST", err.Error())
 		return
 	}
-
 	searchQuery := r.URL.Query().Get("q")
-
 	contents, total, appErr := h.contentService.Search(r.Context(), fs, searchQuery)
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return
 	}
-	httputil.SuccessWithMeta(w, mapper.ContentsToListResponse(contents), pagination.NewMeta(fs.Pagination.Page, fs.Pagination.PerPage, total))
+	httputil.SuccessWithMeta(w, mapper.ContentSummariesToListResponse(contents), pagination.NewMeta(fs.Pagination.Page, fs.Pagination.PerPage, total))
 }
 
 // AdminGetByID godoc
@@ -205,7 +201,7 @@ func (h *ContentHandler) AdminGetByID(w http.ResponseWriter, r *http.Request) {
 		httputil.Error(w, appErr)
 		return
 	}
-	httputil.Success(w, http.StatusOK, mapper.ContentToDetailResponse(content))
+	httputil.Success(w, http.StatusOK, mapper.ContentDetailToResponse(content))
 }
 
 // AdminList godoc
@@ -225,28 +221,26 @@ func (h *ContentHandler) AdminList(w http.ResponseWriter, r *http.Request) {
 		httputil.BadRequest(w, "BAD_REQUEST", err.Error())
 		return
 	}
-
 	searchQuery := r.URL.Query().Get("q")
-
 	contents, total, appErr := h.contentService.AdminList(r.Context(), fs, searchQuery)
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return
 	}
-	httputil.SuccessWithMeta(w, mapper.ContentsToListResponse(contents), pagination.NewMeta(fs.Pagination.Page, fs.Pagination.PerPage, total))
+	httputil.SuccessWithMeta(w, mapper.ContentSummariesToListResponse(contents), pagination.NewMeta(fs.Pagination.Page, fs.Pagination.PerPage, total))
 }
 
-// Create godoc
-// @Summary      Create content (admin)
+// CreateFilm godoc
+// @Summary      Create a film (admin)
 // @Tags         admin
 // @Accept       json
 // @Produce      json
-// @Param        body body dto.CreateContentRequest true "Content data"
+// @Param        body body dto.CreateFilmRequest true "Film data"
 // @Success      201 {object} httputil.Response{data=dto.ContentDetailResponse}
 // @Security     BearerAuth
-// @Router       /admin/content [post]
-func (h *ContentHandler) Create(w http.ResponseWriter, r *http.Request) {
-	var req dto.CreateContentRequest
+// @Router       /admin/films [post]
+func (h *ContentHandler) CreateFilm(w http.ResponseWriter, r *http.Request) {
+	var req dto.CreateFilmRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
 		httputil.BadRequest(w, "BAD_REQUEST", "invalid request body")
 		return
@@ -255,19 +249,79 @@ func (h *ContentHandler) Create(w http.ResponseWriter, r *http.Request) {
 		httputil.ErrorWithDetails(w, apperror.BadRequest("VALIDATION_FAILED", "validation failed", nil), errors)
 		return
 	}
-
 	content, appErr := h.contentService.Create(r.Context(), contentuc.CreateContentInput{
-		Type: req.Type, Title: req.Title, Description: req.Description,
+		Type: "film", Title: req.Title, Description: req.Description,
 		Synopsis: req.Synopsis, Rating: req.Rating, ReleaseYear: req.ReleaseYear,
 		PosterURL: req.PosterURL, BackdropURL: req.BackdropURL,
 		TrailerURL: req.TrailerURL, Director: req.Director,
-		CreatorName: req.CreatorName, IsFree: req.IsFree,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return
 	}
-	httputil.Success(w, http.StatusCreated, mapper.ContentToDetailResponse(content))
+	httputil.Success(w, http.StatusCreated, mapper.ContentDetailToResponse(content))
+}
+
+// CreateVideo godoc
+// @Summary      Create a video (admin)
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        body body dto.CreateVideoRequest true "Video data"
+// @Success      201 {object} httputil.Response{data=dto.ContentDetailResponse}
+// @Security     BearerAuth
+// @Router       /admin/videos [post]
+func (h *ContentHandler) CreateVideo(w http.ResponseWriter, r *http.Request) {
+	var req dto.CreateVideoRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.BadRequest(w, "BAD_REQUEST", "invalid request body")
+		return
+	}
+	if errors := h.validator.Validate(req); errors != nil {
+		httputil.ErrorWithDetails(w, apperror.BadRequest("VALIDATION_FAILED", "validation failed", nil), errors)
+		return
+	}
+	content, appErr := h.contentService.Create(r.Context(), contentuc.CreateContentInput{
+		Type: "video", Title: req.Title, Description: req.Description,
+		Synopsis: req.Synopsis, Rating: req.Rating,
+		PosterURL: req.PosterURL, CreatorName: req.CreatorName,
+	})
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+	httputil.Success(w, http.StatusCreated, mapper.ContentDetailToResponse(content))
+}
+
+// CreateSeries godoc
+// @Summary      Create a series (admin)
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Param        body body dto.CreateSeriesRequest true "Series data"
+// @Success      201 {object} httputil.Response{data=dto.ContentDetailResponse}
+// @Security     BearerAuth
+// @Router       /admin/series [post]
+func (h *ContentHandler) CreateSeries(w http.ResponseWriter, r *http.Request) {
+	var req dto.CreateSeriesRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.BadRequest(w, "BAD_REQUEST", "invalid request body")
+		return
+	}
+	if errors := h.validator.Validate(req); errors != nil {
+		httputil.ErrorWithDetails(w, apperror.BadRequest("VALIDATION_FAILED", "validation failed", nil), errors)
+		return
+	}
+	content, appErr := h.contentService.Create(r.Context(), contentuc.CreateContentInput{
+		Type: "series", Title: req.Title, Description: req.Description,
+		Synopsis: req.Synopsis, PosterURL: req.PosterURL,
+		BackdropURL: req.BackdropURL, TrailerURL: req.TrailerURL,
+	})
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+	httputil.Success(w, http.StatusCreated, mapper.ContentDetailToResponse(content))
 }
 
 // Update godoc
@@ -291,19 +345,18 @@ func (h *ContentHandler) Update(w http.ResponseWriter, r *http.Request) {
 		httputil.BadRequest(w, "BAD_REQUEST", "invalid request body")
 		return
 	}
-
 	content, appErr := h.contentService.Update(r.Context(), id, contentuc.UpdateContentInput{
 		Title: req.Title, Description: req.Description, Synopsis: req.Synopsis,
 		Rating: req.Rating, ReleaseYear: req.ReleaseYear, PosterURL: req.PosterURL,
 		BackdropURL: req.BackdropURL, TrailerURL: req.TrailerURL,
 		Director: req.Director, IsFeatured: req.IsFeatured,
-		CreatorName: req.CreatorName, IsFree: req.IsFree,
+		CreatorName: req.CreatorName,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return
 	}
-	httputil.Success(w, http.StatusOK, mapper.ContentToDetailResponse(content))
+	httputil.Success(w, http.StatusOK, mapper.ContentDetailToResponse(content))
 }
 
 // Delete godoc
@@ -344,7 +397,7 @@ func (h *ContentHandler) Publish(w http.ResponseWriter, r *http.Request) {
 		httputil.Error(w, appErr)
 		return
 	}
-	httputil.Success(w, http.StatusOK, mapper.ContentToDetailResponse(content))
+	httputil.Success(w, http.StatusOK, mapper.ContentDetailToResponse(content))
 }
 
 // Archive godoc
@@ -365,7 +418,7 @@ func (h *ContentHandler) Archive(w http.ResponseWriter, r *http.Request) {
 		httputil.Error(w, appErr)
 		return
 	}
-	httputil.Success(w, http.StatusOK, mapper.ContentToDetailResponse(content))
+	httputil.Success(w, http.StatusOK, mapper.ContentDetailToResponse(content))
 }
 
 // AttachVideoAsset godoc
@@ -393,7 +446,6 @@ func (h *ContentHandler) AttachVideoAsset(w http.ResponseWriter, r *http.Request
 		httputil.ErrorWithDetails(w, apperror.BadRequest("VALIDATION_FAILED", "validation failed", nil), errors)
 		return
 	}
-
 	asset, appErr := h.contentService.AttachVideoAsset(r.Context(), id, req.StorageKey)
 	if appErr != nil {
 		httputil.Error(w, appErr)

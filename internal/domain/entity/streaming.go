@@ -62,7 +62,7 @@ func (p *PlaybackProgress) MarkCompleted() {
 
 // ContinueWatching represents an item in the "Continue Watching" row.
 type ContinueWatching struct {
-	Content  Content
+	Content  ContentSummary
 	Episode  *Episode
 	Progress PlaybackProgress
 }

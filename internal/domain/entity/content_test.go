@@ -9,164 +9,93 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 )
 
-func newTestContent(t *testing.T, ct ContentType, status ContentStatus) *Content {
+func newTestFilm(t *testing.T, status ContentStatus) *Film {
 	t.Helper()
-	slug, err := valueobject.NewSlug("test-content")
+	slug, err := valueobject.NewSlug("test-film")
 	if err != nil {
 		t.Fatalf("creating test slug: %v", err)
 	}
-	return &Content{
-		ID:          uuid.New(),
-		Type:        ct,
-		Title:       "Test Content",
-		Slug:        slug,
-		Description: "A test",
-		Rating:      valueobject.RatingPG,
-		ReleaseYear: 2024,
-		Status:      status,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+	return &Film{
+		BaseContent: BaseContent{
+			ID:        uuid.New(),
+			Type:      ContentTypeFilm,
+			Title:     "Test Film",
+			Slug:      slug,
+			Rating:    valueobject.RatingPG,
+			Status:    status,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		},
 	}
 }
 
-func TestContent_IsPlayable(t *testing.T) {
+func newTestVideo(t *testing.T, status ContentStatus) *Video {
+	t.Helper()
+	slug, err := valueobject.NewSlug("test-video")
+	if err != nil {
+		t.Fatalf("creating test slug: %v", err)
+	}
+	return &Video{
+		BaseContent: BaseContent{
+			ID:        uuid.New(),
+			Type:      ContentTypeVideo,
+			Title:     "Test Video",
+			Slug:      slug,
+			Rating:    valueobject.RatingG,
+			Status:    status,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		},
+		CreatorName: "Test Creator",
+	}
+}
+
+func TestFilm_IsPlayable(t *testing.T) {
 	tests := []struct {
 		name   string
-		setup  func() *Content
+		setup  func() *Film
 		expect bool
 	}{
 		{
 			name: "published film with ready asset is playable",
-			setup: func() *Content {
-				c := newTestContent(t, ContentTypeFilm, ContentStatusPublished)
-				c.Film = &Film{
-					ContentID: c.ID,
-					Duration:  valueobject.NewDuration(7200),
-					Asset: VideoAsset{
-						ID:     uuid.New(),
-						Status: VideoAssetReady,
-					},
-				}
-				return c
+			setup: func() *Film {
+				f := newTestFilm(t, ContentStatusPublished)
+				f.Asset = &VideoAsset{ID: uuid.New(), Status: VideoAssetReady}
+				return f
 			},
 			expect: true,
 		},
 		{
 			name: "published film with pending asset is not playable",
-			setup: func() *Content {
-				c := newTestContent(t, ContentTypeFilm, ContentStatusPublished)
-				c.Film = &Film{
-					ContentID: c.ID,
-					Asset: VideoAsset{
-						ID:     uuid.New(),
-						Status: VideoAssetPending,
-					},
-				}
-				return c
+			setup: func() *Film {
+				f := newTestFilm(t, ContentStatusPublished)
+				f.Asset = &VideoAsset{ID: uuid.New(), Status: VideoAssetPending}
+				return f
 			},
 			expect: false,
 		},
 		{
 			name: "draft film is not playable",
-			setup: func() *Content {
-				c := newTestContent(t, ContentTypeFilm, ContentStatusDraft)
-				c.Film = &Film{
-					ContentID: c.ID,
-					Asset: VideoAsset{
-						ID:     uuid.New(),
-						Status: VideoAssetReady,
-					},
-				}
-				return c
+			setup: func() *Film {
+				f := newTestFilm(t, ContentStatusDraft)
+				f.Asset = &VideoAsset{ID: uuid.New(), Status: VideoAssetReady}
+				return f
 			},
 			expect: false,
 		},
 		{
-			name: "published film with nil Film data is not playable",
-			setup: func() *Content {
-				c := newTestContent(t, ContentTypeFilm, ContentStatusPublished)
-				return c
+			name: "published film with nil asset is not playable",
+			setup: func() *Film {
+				return newTestFilm(t, ContentStatusPublished)
 			},
 			expect: false,
 		},
 		{
-			name: "published series with seasons is playable",
-			setup: func() *Content {
-				c := newTestContent(t, ContentTypeSeries, ContentStatusPublished)
-				c.Series = &Series{
-					ContentID:    c.ID,
-					TotalSeasons: 3,
-				}
-				return c
-			},
-			expect: true,
-		},
-		{
-			name: "published series with zero seasons is not playable",
-			setup: func() *Content {
-				c := newTestContent(t, ContentTypeSeries, ContentStatusPublished)
-				c.Series = &Series{
-					ContentID:    c.ID,
-					TotalSeasons: 0,
-				}
-				return c
-			},
-			expect: false,
-		},
-		{
-			name: "archived content is not playable",
-			setup: func() *Content {
-				c := newTestContent(t, ContentTypeFilm, ContentStatusArchived)
-				c.Film = &Film{
-					ContentID: c.ID,
-					Asset: VideoAsset{
-						ID:     uuid.New(),
-						Status: VideoAssetReady,
-					},
-				}
-				return c
-			},
-			expect: false,
-		},
-		{
-			name: "published video with ready asset is playable",
-			setup: func() *Content {
-				c := newTestContent(t, ContentTypeVideo, ContentStatusPublished)
-				c.Video = &Video{
-					ContentID:   c.ID,
-					Duration:    valueobject.NewDuration(300),
-					CreatorName: "Test Creator",
-					IsFree:      true,
-					Asset: VideoAsset{
-						ID:     uuid.New(),
-						Status: VideoAssetReady,
-					},
-				}
-				return c
-			},
-			expect: true,
-		},
-		{
-			name: "published video with pending asset is not playable",
-			setup: func() *Content {
-				c := newTestContent(t, ContentTypeVideo, ContentStatusPublished)
-				c.Video = &Video{
-					ContentID:   c.ID,
-					CreatorName: "Test Creator",
-					Asset: VideoAsset{
-						ID:     uuid.New(),
-						Status: VideoAssetPending,
-					},
-				}
-				return c
-			},
-			expect: false,
-		},
-		{
-			name: "published video with nil Video data is not playable",
-			setup: func() *Content {
-				c := newTestContent(t, ContentTypeVideo, ContentStatusPublished)
-				return c
+			name: "archived film is not playable",
+			setup: func() *Film {
+				f := newTestFilm(t, ContentStatusArchived)
+				f.Asset = &VideoAsset{ID: uuid.New(), Status: VideoAssetReady}
+				return f
 			},
 			expect: false,
 		},
@@ -174,13 +103,52 @@ func TestContent_IsPlayable(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := tt.setup()
-			assert.Equal(t, tt.expect, c.IsPlayable())
+			assert.Equal(t, tt.expect, tt.setup().IsPlayable())
 		})
 	}
 }
 
-func TestContent_IsPublished(t *testing.T) {
+func TestVideo_IsPlayable(t *testing.T) {
+	tests := []struct {
+		name   string
+		setup  func() *Video
+		expect bool
+	}{
+		{
+			name: "published video with ready asset is playable",
+			setup: func() *Video {
+				v := newTestVideo(t, ContentStatusPublished)
+				v.Asset = &VideoAsset{ID: uuid.New(), Status: VideoAssetReady}
+				return v
+			},
+			expect: true,
+		},
+		{
+			name: "published video with pending asset is not playable",
+			setup: func() *Video {
+				v := newTestVideo(t, ContentStatusPublished)
+				v.Asset = &VideoAsset{ID: uuid.New(), Status: VideoAssetPending}
+				return v
+			},
+			expect: false,
+		},
+		{
+			name: "published video with nil asset is not playable",
+			setup: func() *Video {
+				return newTestVideo(t, ContentStatusPublished)
+			},
+			expect: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expect, tt.setup().IsPlayable())
+		})
+	}
+}
+
+func TestBaseContent_IsPublished(t *testing.T) {
 	tests := []struct {
 		name   string
 		status ContentStatus
@@ -193,30 +161,51 @@ func TestContent_IsPublished(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := newTestContent(t, ContentTypeFilm, tt.status)
-			assert.Equal(t, tt.want, c.IsPublished())
+			assert.Equal(t, tt.want, newTestFilm(t, tt.status).IsPublished())
 		})
 	}
 }
 
-func TestContent_Publish(t *testing.T) {
-	c := newTestContent(t, ContentTypeFilm, ContentStatusDraft)
-	before := c.UpdatedAt
+func TestBaseContent_IsFree(t *testing.T) {
+	f := newTestFilm(t, ContentStatusPublished)
+	assert.True(t, f.IsFree(), "film with no plan should be free")
 
-	time.Sleep(time.Millisecond)
-	c.Publish()
-
-	assert.Equal(t, ContentStatusPublished, c.Status)
-	assert.True(t, c.UpdatedAt.After(before), "UpdatedAt should be updated")
+	f.Plan = &Plan{ID: uuid.New(), Name: "Premium", Tier: "premium"}
+	assert.False(t, f.IsFree(), "film with plan should not be free")
 }
 
-func TestContent_Archive(t *testing.T) {
-	c := newTestContent(t, ContentTypeFilm, ContentStatusPublished)
-	before := c.UpdatedAt
-
+func TestBaseContent_Publish(t *testing.T) {
+	f := newTestFilm(t, ContentStatusDraft)
+	before := f.UpdatedAt
 	time.Sleep(time.Millisecond)
-	c.Archive()
+	f.Publish()
+	assert.Equal(t, ContentStatusPublished, f.Status)
+	assert.True(t, f.UpdatedAt.After(before))
+}
 
-	assert.Equal(t, ContentStatusArchived, c.Status)
-	assert.True(t, c.UpdatedAt.After(before), "UpdatedAt should be updated")
+func TestBaseContent_Archive(t *testing.T) {
+	f := newTestFilm(t, ContentStatusPublished)
+	before := f.UpdatedAt
+	time.Sleep(time.Millisecond)
+	f.Archive()
+	assert.Equal(t, ContentStatusArchived, f.Status)
+	assert.True(t, f.UpdatedAt.After(before))
+}
+
+func TestSeries_IsPlayable(t *testing.T) {
+	slug, _ := valueobject.NewSlug("test-series")
+	s := &Series{
+		ID:           uuid.New(),
+		Slug:         slug,
+		Status:       ContentStatusPublished,
+		TotalSeasons: 3,
+	}
+	assert.True(t, s.IsPlayable())
+
+	s.TotalSeasons = 0
+	assert.False(t, s.IsPlayable(), "series with no seasons should not be playable")
+
+	s.TotalSeasons = 2
+	s.Status = ContentStatusDraft
+	assert.False(t, s.IsPlayable(), "unpublished series should not be playable")
 }
