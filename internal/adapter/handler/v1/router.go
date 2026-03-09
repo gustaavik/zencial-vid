@@ -35,54 +35,5 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 
 		// Auth (requires token)
 		r.Post("/auth/logout", authHandler.Logout)
-
-		// Admin routes
-		// r.Route("/admin", func(r chi.Router) {
-		// 	r.Use(middleware.RequireRole(entity.RoleAdmin))
-
-		// 	if uploadHandler != nil {
-		// 		r.Post("/upload", uploadHandler.Upload)
-		// 		r.Post("/upload/init", uploadHandler.InitUpload)
-		// 	}
-
-		// 	r.Route("/content", func(r chi.Router) {
-		// 		r.Get("/", contentHandler.AdminList)
-		// 		r.Get("/{id}", contentHandler.AdminGetByID)
-		// 		r.Put("/{id}", contentHandler.Update)
-		// 		r.Delete("/{id}", contentHandler.Delete)
-		// 		r.Post("/{id}/publish", contentHandler.Publish)
-		// 		r.Post("/{id}/archive", contentHandler.Archive)
-		// 		r.Post("/{id}/asset", contentHandler.AttachVideoAsset)
-		// 	})
-
-		// 	r.Post("/films", contentHandler.CreateFilm)
-		// 	r.Post("/videos", contentHandler.CreateVideo)
-		// 	r.Post("/series", contentHandler.CreateSeries)
-
-		// 	r.Get("/users", userHandler.AdminListUsers)
-		// 	r.Patch("/users/{id}/status", userHandler.AdminUpdateStatus)
-
-		// 	r.Route("/subscriptions", func(r chi.Router) {
-		// 		r.Get("/", subscriptionHandler.AdminListSubscriptions)
-		// 		r.Post("/", subscriptionHandler.AdminCreateSubscription)
-		// 		r.Get("/user/{userId}", subscriptionHandler.AdminGetUserSubscription)
-		// 		r.Patch("/{id}/plan", subscriptionHandler.AdminChangePlan)
-		// 		r.Post("/{id}/reactivate", subscriptionHandler.AdminReactivateSubscription)
-		// 		r.Post("/{id}/cancel", subscriptionHandler.AdminCancelSubscription)
-		// 	})
-
-		// 	r.Route("/genres", func(r chi.Router) {
-		// 		r.Post("/", catalogHandler.CreateGenre)
-		// 		r.Put("/{id}", catalogHandler.UpdateGenre)
-		// 		r.Delete("/{id}", catalogHandler.DeleteGenre)
-		// 	})
-
-		// 	r.Route("/plans", func(r chi.Router) {
-		// 		r.Get("/", subscriptionHandler.AdminListAllPlans)
-		// 		r.Post("/", subscriptionHandler.AdminCreatePlan)
-		// 		r.Put("/{id}", subscriptionHandler.AdminUpdatePlan)
-		// 		r.Delete("/{id}", subscriptionHandler.AdminDeactivatePlan)
-		// 	})
-		// })
 	})
 }
