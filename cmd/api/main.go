@@ -9,22 +9,16 @@ import (
 
 	v1 "github.com/zenfulcode/zencial/internal/adapter/handler/v1"
 	"github.com/zenfulcode/zencial/internal/adapter/messaging"
-	"github.com/zenfulcode/zencial/internal/adapter/persistence/postgres"
-	"github.com/zenfulcode/zencial/internal/adapter/persistence/redis"
 	"github.com/zenfulcode/zencial/internal/infrastructure/auth"
 	"github.com/zenfulcode/zencial/internal/infrastructure/config"
 	"github.com/zenfulcode/zencial/internal/infrastructure/database"
 	"github.com/zenfulcode/zencial/internal/infrastructure/logger"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
+	"github.com/zenfulcode/zencial/internal/infrastructure/persistence/postgres"
+	"github.com/zenfulcode/zencial/internal/infrastructure/persistence/redis"
 	"github.com/zenfulcode/zencial/internal/infrastructure/server"
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
-	cataloguc "github.com/zenfulcode/zencial/internal/usecase/catalog"
-	contentuc "github.com/zenfulcode/zencial/internal/usecase/content"
-	streaminguc "github.com/zenfulcode/zencial/internal/usecase/streaming"
-	subscriptionuc "github.com/zenfulcode/zencial/internal/usecase/subscription"
-	useruc "github.com/zenfulcode/zencial/internal/usecase/user"
-	watchlistuc "github.com/zenfulcode/zencial/internal/usecase/watchlist"
 
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
@@ -86,11 +80,6 @@ func main() {
 
 	// Repositories
 	userRepo := postgres.NewUserRepository(dbPool)
-	contentRepo := postgres.NewContentRepository(dbPool)
-	catalogRepo := postgres.NewCatalogRepository(dbPool)
-	subscriptionRepo := postgres.NewSubscriptionRepository(dbPool)
-	streamingRepo := postgres.NewStreamingRepository(dbPool)
-	watchlistRepo := postgres.NewWatchlistRepository(dbPool)
 
 	// Redis stores
 	sessionStore := redis.NewSessionStore(redisClient, cfg.JWT.RefreshDuration)
@@ -117,12 +106,6 @@ func main() {
 
 	// Use cases
 	authService := authuc.NewService(userRepo, tokenService, hasher, sessionStore, dispatcher, log)
-	userService := useruc.NewService(userRepo, log)
-	contentService := contentuc.NewService(contentRepo, catalogRepo, log)
-	catalogService := cataloguc.NewService(catalogRepo, contentRepo, log)
-	streamingService := streaminguc.NewService(streamingRepo, contentRepo, subscriptionRepo, cfg.CDN.BaseURL, log)
-	subscriptionService := subscriptionuc.NewService(subscriptionRepo, log)
-	watchlistService := watchlistuc.NewService(watchlistRepo, contentRepo, log)
 
 	// Router
 	r := chi.NewRouter()
@@ -149,12 +132,6 @@ func main() {
 	r.Route("/api/v1", func(r chi.Router) {
 		v1.RegisterRoutes(r, v1.Deps{
 			Auth:         authService,
-			User:         userService,
-			Content:      contentService,
-			Catalog:      catalogService,
-			Streaming:    streamingService,
-			Subscription: subscriptionService,
-			Watchlist:    watchlistService,
 			TokenService: tokenService,
 			Storage:      storageService,
 			Log:          log,
