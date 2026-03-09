@@ -76,15 +76,6 @@ func (u *User) IsAdmin() bool {
 	return u.Role == RoleAdmin
 }
 
-// CanAccessContent checks age-restricted content based on profile.
-func (u *User) CanAccessContent(rating valueobject.ContentRating) bool {
-	if u.Profile.DateOfBirth == nil {
-		return rating.IsUnrestricted()
-	}
-	age := computeAge(*u.Profile.DateOfBirth)
-	return rating.AllowedForAge(age)
-}
-
 // Suspend marks the user account as suspended.
 func (u *User) Suspend() {
 	u.Status = UserStatusSuspended
