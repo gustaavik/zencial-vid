@@ -68,9 +68,11 @@ func (r *GenreRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Ge
 	db := connFromCtx(ctx, r.pool)
 	genre := &entity.Genre{}
 
+	var slug string
+
 	err := db.QueryRow(ctx, `
 		SELECT id, slug, created_at, updated_at FROM genres WHERE id = $1
-	`, id).Scan(&genre.ID, &genre.Slug, &genre.CreatedAt, &genre.UpdatedAt)
+	`, id).Scan(&genre.ID, &slug, &genre.CreatedAt, &genre.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -83,6 +85,7 @@ func (r *GenreRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Ge
 		return nil, err
 	}
 	genre.Translations = translations
+	genre.Slug = valueobject.SlugFromTrusted(slug)
 
 	return genre, nil
 }
@@ -183,9 +186,12 @@ func (r *GenreRepository) List(ctx context.Context, fs filter.FilterSet) ([]enti
 	var genres []entity.Genre
 	for rows.Next() {
 		var g entity.Genre
-		if err := rows.Scan(&g.ID, &g.Slug, &g.CreatedAt, &g.UpdatedAt); err != nil {
+		var slug string
+
+		if err := rows.Scan(&g.ID, &slug, &g.CreatedAt, &g.UpdatedAt); err != nil {
 			return nil, 0, fmt.Errorf("scanning genre: %w", err)
 		}
+		g.Slug = valueobject.SlugFromTrusted(slug)
 		genres = append(genres, g)
 	}
 
