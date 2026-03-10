@@ -17,7 +17,10 @@ import (
 	"github.com/zenfulcode/zencial/internal/infrastructure/persistence/postgres"
 	"github.com/zenfulcode/zencial/internal/infrastructure/persistence/redis"
 	"github.com/zenfulcode/zencial/internal/infrastructure/server"
+	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
+	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
+	videouc "github.com/zenfulcode/zencial/internal/usecase/video"
 
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
@@ -79,6 +82,8 @@ func main() {
 
 	// Repositories
 	userRepo := postgres.NewUserRepository(dbPool)
+	genreRepo := postgres.NewGenreRepository(dbPool)
+	videoRepo := postgres.NewVideoRepository(dbPool)
 
 	// Redis stores
 	sessionStore := redis.NewSessionStore(redisClient, cfg.JWT.RefreshDuration)
@@ -87,10 +92,20 @@ func main() {
 	dispatcher := messaging.NewEventDispatcher(log)
 
 	// Storage (MinIO)
-	// storageService := storage.NewMinIOService(cfg.Storage)
+	storageService, err := storage.NewMinIOService(cfg.Storage)
+	if err != nil {
+		log.Error("failed to initialize storage", "error", err)
+		os.Exit(1)
+	}
+	if err := storageService.EnsureBucket(ctx); err != nil {
+		log.Error("failed to ensure storage bucket", "error", err)
+		os.Exit(1)
+	}
 
 	// Use cases
 	authService := authuc.NewService(userRepo, tokenService, hasher, sessionStore, dispatcher, log)
+	genreService := genreuc.NewService(genreRepo, log)
+	videoService := videouc.NewService(videoRepo, genreRepo, storageService, dispatcher, log)
 
 	// Router
 	r := chi.NewRouter()
@@ -117,9 +132,11 @@ func main() {
 	r.Route("/api/v1", func(r chi.Router) {
 		v1.RegisterRoutes(r, v1.Deps{
 			Auth:         authService,
+			Genre:        genreService,
+			Video:        videoService,
 			TokenService: tokenService,
-			// Storage:      storageService,
-			Log: log,
+			Storage:      storageService,
+			Log:          log,
 		})
 	})
 

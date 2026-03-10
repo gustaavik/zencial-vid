@@ -13,36 +13,18 @@ var (
 
 // Content errors.
 var (
-	ErrContentNotFound    = errors.New("content not found")
-	ErrContentNotPlayable = errors.New("content is not playable")
-	ErrSlugAlreadyExists  = errors.New("slug already exists")
-	ErrEpisodeNotFound    = errors.New("episode not found")
-	ErrSeasonNotFound     = errors.New("season not found")
+	ErrSlugAlreadyExists = errors.New("slug already exists")
 )
 
-// Catalog errors.
+// Video errors.
 var (
-	ErrGenreNotFound    = errors.New("genre not found")
-	ErrCategoryNotFound = errors.New("category not found")
+	ErrVideoNotFound    = errors.New("video not found")
+	ErrVideoNotPlayable = errors.New("video is not playable")
 )
 
-// Subscription errors.
+// Genre errors.
 var (
-	ErrNoActiveSubscription = errors.New("no active subscription")
-	ErrPlanNotFound         = errors.New("plan not found")
-	ErrAlreadySubscribed    = errors.New("user already has an active subscription")
-)
-
-// Streaming errors.
-var (
-	ErrMaxStreamsReached = errors.New("maximum concurrent streams reached")
-	ErrSessionNotFound   = errors.New("stream session not found")
-)
-
-// Watchlist errors.
-var (
-	ErrAlreadyInWatchlist = errors.New("content already in watchlist")
-	ErrNotInWatchlist     = errors.New("content not in watchlist")
+	ErrGenreNotFound = errors.New("genre not found")
 )
 
 // Auth errors.
