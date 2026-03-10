@@ -58,7 +58,7 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) (*entity.Video,
 		video.Quality = *input.Quality
 	}
 
-	video.UpdatedAt = time.Now()
+	video.UpdatedAt = time.Now().UTC()
 	if err := s.videoRepo.Update(ctx, video); err != nil {
 		s.log.Error("updating video", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to update video", err)

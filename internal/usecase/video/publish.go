@@ -31,7 +31,7 @@ func (s *Service) Publish(ctx context.Context, id uuid.UUID) (*entity.Video, *ap
 
 	s.dispatcher.Dispatch(event.VideoPublished{
 		VideoID:   video.ID,
-		Timestamp: time.Now(),
+		Timestamp: time.Now().UTC(),
 	})
 
 	return video, nil

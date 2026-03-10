@@ -27,7 +27,7 @@ type Genre struct {
 
 // NewGenre creates a new Genre from a slug.
 func NewGenre(slug valueobject.Slug) *Genre {
-	now := time.Now()
+	now := time.Now().UTC()
 	return &Genre{
 		ID:        uuid.New(),
 		Slug:      slug,
@@ -42,7 +42,7 @@ func (g *Genre) AddTranslation(langCode valueobject.LanguageCode, name, descript
 		if t.LanguageCode.String() == langCode.String() {
 			g.Translations[i].Name = name
 			g.Translations[i].Description = description
-			g.UpdatedAt = time.Now()
+			g.UpdatedAt = time.Now().UTC()
 			return
 		}
 	}
@@ -53,7 +53,7 @@ func (g *Genre) AddTranslation(langCode valueobject.LanguageCode, name, descript
 		Name:         name,
 		Description:  description,
 	})
-	g.UpdatedAt = time.Now()
+	g.UpdatedAt = time.Now().UTC()
 }
 
 // TranslationFor returns the translation for a language, falling back to "en", then the first available.

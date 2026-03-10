@@ -49,7 +49,7 @@ type UserProfile struct {
 
 // NewUser creates a new User with default values.
 func NewUser(email valueobject.Email, passwordHash valueobject.HashedPassword) *User {
-	now := time.Now()
+	now := time.Now().UTC()
 	id := uuid.New()
 	return &User{
 		ID:           id,
@@ -79,19 +79,19 @@ func (u *User) IsAdmin() bool {
 // Suspend marks the user account as suspended.
 func (u *User) Suspend() {
 	u.Status = UserStatusSuspended
-	u.UpdatedAt = time.Now()
+	u.UpdatedAt = time.Now().UTC()
 }
 
 // Activate marks the user account as active.
 func (u *User) Activate() {
 	u.Status = UserStatusActive
-	u.UpdatedAt = time.Now()
+	u.UpdatedAt = time.Now().UTC()
 }
 
 // SoftDelete marks the user account as deleted.
 func (u *User) SoftDelete() {
 	u.Status = UserStatusDeleted
-	u.UpdatedAt = time.Now()
+	u.UpdatedAt = time.Now().UTC()
 }
 
 func computeAge(dob time.Time) int {

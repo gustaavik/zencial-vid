@@ -51,7 +51,7 @@ func NewVideo(
 	fileSize int64,
 	uploadedBy uuid.UUID,
 ) *Video {
-	now := time.Now()
+	now := time.Now().UTC()
 	return &Video{
 		ID:            uuid.New(),
 		Title:         title,
@@ -73,13 +73,13 @@ func NewVideo(
 // Publish marks the video as published.
 func (v *Video) Publish() {
 	v.Status = VideoStatusPublished
-	v.UpdatedAt = time.Now()
+	v.UpdatedAt = time.Now().UTC()
 }
 
 // Archive soft-deletes the video.
 func (v *Video) Archive() {
 	v.Status = VideoStatusArchived
-	v.UpdatedAt = time.Now()
+	v.UpdatedAt = time.Now().UTC()
 }
 
 // IsPlayable reports whether the video can be streamed.
@@ -90,5 +90,5 @@ func (v *Video) IsPlayable() bool {
 // SetGenres replaces the genre associations.
 func (v *Video) SetGenres(genreIDs []uuid.UUID) {
 	v.GenreIDs = genreIDs
-	v.UpdatedAt = time.Now()
+	v.UpdatedAt = time.Now().UTC()
 }

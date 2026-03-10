@@ -40,6 +40,6 @@ func (s *Service) GetStreamURL(ctx context.Context, videoID uuid.UUID) (*StreamO
 
 	return &StreamOutput{
 		URL:       presignedURL,
-		ExpiresAt: time.Now().Add(defaultStreamURLExpiry),
+		ExpiresAt: time.Now().UTC().Add(defaultStreamURLExpiry),
 	}, nil
 }

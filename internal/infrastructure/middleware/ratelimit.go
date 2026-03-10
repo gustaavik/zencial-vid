@@ -56,7 +56,7 @@ func (rl *rateLimiter) allow(key string) bool {
 	defer rl.mu.Unlock()
 
 	v, exists := rl.visitors[key]
-	now := time.Now()
+	now := time.Now().UTC()
 
 	if !exists {
 		rl.visitors[key] = &visitor{tokens: rl.burst - 1, lastSeen: now}

@@ -24,7 +24,7 @@ func (rw *responseWriter) WriteHeader(code int) {
 func Logger(log *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			start := time.Now()
+			start := time.Now().UTC()
 			rw := newResponseWriter(w)
 
 			next.ServeHTTP(rw, r)

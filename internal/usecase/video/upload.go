@@ -85,7 +85,7 @@ func (s *Service) Upload(ctx context.Context, input UploadInput) (*entity.Video,
 		VideoID:    video.ID,
 		Title:      video.Title,
 		UploadedBy: input.UploadedBy,
-		Timestamp:  time.Now(),
+		Timestamp:  time.Now().UTC(),
 	})
 
 	return video, nil
