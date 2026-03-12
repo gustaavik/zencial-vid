@@ -71,6 +71,7 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 			r.Post("/videos", videoHandler.Upload)
 			r.Put("/videos/{id}", videoHandler.Update)
 			r.Post("/videos/{id}/publish", videoHandler.Publish)
+			r.Post("/videos/{id}/unarchive", videoHandler.Unarchive)
 			r.Delete("/videos/{id}", videoHandler.Delete)
 
 			// Admin video listing (all statuses)

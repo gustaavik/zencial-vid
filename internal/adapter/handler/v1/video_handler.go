@@ -227,6 +227,23 @@ func (h *VideoHandler) Publish(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(video, h.storage))
 }
 
+// Unarchive restores a soft-deleted video back to draft status.
+func (h *VideoHandler) Unarchive(w http.ResponseWriter, r *http.Request) {
+	id, err := httputil.URLParamUUID(r, "id")
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid video ID")
+		return
+	}
+
+	video, appErr := h.videoService.Unarchive(r.Context(), id)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(video, h.storage))
+}
+
 // Delete removes a video.
 func (h *VideoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := httputil.URLParamUUID(r, "id")

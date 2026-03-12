@@ -59,3 +59,12 @@ type VideoArchived struct {
 
 func (e VideoArchived) EventName() string     { return "video.archived" }
 func (e VideoArchived) OccurredAt() time.Time { return e.Timestamp }
+
+// VideoRestored is emitted when an archived video is restored.
+type VideoRestored struct {
+	VideoID   uuid.UUID
+	Timestamp time.Time
+}
+
+func (e VideoRestored) EventName() string     { return "video.restored" }
+func (e VideoRestored) OccurredAt() time.Time { return e.Timestamp }

@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -82,6 +83,12 @@ func (v *Video) Archive() {
 	v.UpdatedAt = time.Now().UTC()
 }
 
+// Unarchive restores an archived video back to draft status.
+func (v *Video) Unarchive() {
+	v.Status = VideoStatusDraft
+	v.UpdatedAt = time.Now().UTC()
+}
+
 // IsPlayable reports whether the video can be streamed.
 func (v *Video) IsPlayable() bool {
 	return v.Status == VideoStatusPublished
@@ -93,6 +100,11 @@ func DeletedStorageKey(key string) string {
 		return ""
 	}
 	return "deleted/" + key
+}
+
+// RestoredStorageKey strips the "deleted/" prefix from a storage key.
+func RestoredStorageKey(key string) string {
+	return strings.TrimPrefix(key, "deleted/")
 }
 
 // SetGenres replaces the genre associations.
