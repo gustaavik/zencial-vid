@@ -94,9 +94,11 @@ func (r *GenreRepository) GetBySlug(ctx context.Context, slug valueobject.Slug) 
 	db := connFromCtx(ctx, r.pool)
 	genre := &entity.Genre{}
 
+	var slugStr string
+
 	err := db.QueryRow(ctx, `
 		SELECT id, slug, created_at, updated_at FROM genres WHERE slug = $1
-	`, slug.String()).Scan(&genre.ID, &genre.Slug, &genre.CreatedAt, &genre.UpdatedAt)
+	`, slug.String()).Scan(&genre.ID, &slugStr, &genre.CreatedAt, &genre.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -109,6 +111,7 @@ func (r *GenreRepository) GetBySlug(ctx context.Context, slug valueobject.Slug) 
 		return nil, err
 	}
 	genre.Translations = translations
+	genre.Slug = valueobject.SlugFromTrusted(slugStr)
 
 	return genre, nil
 }
