@@ -15,9 +15,9 @@ import (
 
 // MinIOService implements StorageService using MinIO.
 type MinIOService struct {
-	client         *minio.Client
-	bucket         string
-	publicEndpoint string
+	client        *minio.Client
+	presignClient *minio.Client // uses public endpoint for correct S3v4 signatures
+	bucket        string
 }
 
 // NewMinIOService creates a new MinIO-backed StorageService.
@@ -44,10 +44,31 @@ func NewMinIOService(cfg config.StorageConfig) (*MinIOService, error) {
 		publicEndpoint = cfg.Endpoint
 	}
 
+	// Create a separate client for presigning URLs using the public endpoint.
+	// PresignedGetObject is a local computation (no network call), so this client
+	// doesn't need to reach the public endpoint from inside Docker.
+	// This ensures the S3v4 signature matches the Host header clients will send.
+	presignClient := client
+	if publicEndpoint != cfg.Endpoint {
+		pubU, err := url.Parse(publicEndpoint)
+		if err != nil {
+			return nil, fmt.Errorf("parsing public endpoint: %w", err)
+		}
+		pc, err := minio.New(pubU.Host, &minio.Options{
+			Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
+			Secure: pubU.Scheme == "https",
+			Region: cfg.Region,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("creating presign client: %w", err)
+		}
+		presignClient = pc
+	}
+
 	return &MinIOService{
-		client:         client,
-		bucket:         cfg.Bucket,
-		publicEndpoint: publicEndpoint,
+		client:        client,
+		presignClient: presignClient,
+		bucket:        cfg.Bucket,
 	}, nil
 }
 
@@ -83,29 +104,14 @@ func (s *MinIOService) Delete(ctx context.Context, key string) error {
 }
 
 func (s *MinIOService) PublicURL(key string) string {
-	return fmt.Sprintf("%s/%s/%s", strings.TrimRight(s.publicEndpoint, "/"), s.bucket, key)
+	ep := s.presignClient.EndpointURL()
+	return fmt.Sprintf("%s/%s/%s", strings.TrimRight(ep.String(), "/"), s.bucket, key)
 }
 
 func (s *MinIOService) PresignedGetURL(ctx context.Context, key string, expiry time.Duration) (string, error) {
-	presignedURL, err := s.client.PresignedGetObject(ctx, s.bucket, key, expiry, url.Values{})
+	presignedURL, err := s.presignClient.PresignedGetObject(ctx, s.bucket, key, expiry, url.Values{})
 	if err != nil {
 		return "", fmt.Errorf("generating presigned URL: %w", err)
 	}
-
-	// Replace internal endpoint with public endpoint for external access.
-	if s.publicEndpoint != "" {
-		internalHost := s.client.EndpointURL().Host
-		publicU, _ := url.Parse(s.publicEndpoint)
-		if publicU != nil && publicU.Host != internalHost {
-			result := presignedURL.String()
-			result = strings.Replace(result, internalHost, publicU.Host, 1)
-			internalScheme := s.client.EndpointURL().Scheme
-			if internalScheme != publicU.Scheme {
-				result = strings.Replace(result, internalScheme+"://", publicU.Scheme+"://", 1)
-			}
-			return result, nil
-		}
-	}
-
 	return presignedURL.String(), nil
 }
