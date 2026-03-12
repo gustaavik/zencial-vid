@@ -50,3 +50,12 @@ type VideoPublished struct {
 
 func (e VideoPublished) EventName() string     { return "video.published" }
 func (e VideoPublished) OccurredAt() time.Time { return e.Timestamp }
+
+// VideoArchived is emitted when a video is soft-deleted (archived).
+type VideoArchived struct {
+	VideoID   uuid.UUID
+	Timestamp time.Time
+}
+
+func (e VideoArchived) EventName() string     { return "video.archived" }
+func (e VideoArchived) OccurredAt() time.Time { return e.Timestamp }

@@ -10,6 +10,7 @@ import (
 type StorageService interface {
 	Upload(ctx context.Context, key string, body io.Reader, contentType string) (url string, err error)
 	Delete(ctx context.Context, key string) error
+	Move(ctx context.Context, srcKey, dstKey string) error
 	PublicURL(key string) string
 	PresignedGetURL(ctx context.Context, key string, expiry time.Duration) (string, error)
 }

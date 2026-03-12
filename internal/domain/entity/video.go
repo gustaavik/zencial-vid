@@ -87,6 +87,14 @@ func (v *Video) IsPlayable() bool {
 	return v.Status == VideoStatusPublished
 }
 
+// DeletedStorageKey returns the storage key relocated under the "deleted/" prefix.
+func DeletedStorageKey(key string) string {
+	if key == "" {
+		return ""
+	}
+	return "deleted/" + key
+}
+
 // SetGenres replaces the genre associations.
 func (v *Video) SetGenres(genreIDs []uuid.UUID) {
 	v.GenreIDs = genreIDs

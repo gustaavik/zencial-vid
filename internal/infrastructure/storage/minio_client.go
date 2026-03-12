@@ -103,6 +103,27 @@ func (s *MinIOService) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
+func (s *MinIOService) Move(ctx context.Context, srcKey, dstKey string) error {
+	src := minio.CopySrcOptions{
+		Bucket: s.bucket,
+		Object: srcKey,
+	}
+	dst := minio.CopyDestOptions{
+		Bucket: s.bucket,
+		Object: dstKey,
+	}
+
+	if _, err := s.client.CopyObject(ctx, dst, src); err != nil {
+		return fmt.Errorf("copying object from %s to %s: %w", srcKey, dstKey, err)
+	}
+
+	if err := s.client.RemoveObject(ctx, s.bucket, srcKey, minio.RemoveObjectOptions{}); err != nil {
+		return fmt.Errorf("removing source object %s after copy: %w", srcKey, err)
+	}
+
+	return nil
+}
+
 func (s *MinIOService) PublicURL(key string) string {
 	ep := s.presignClient.EndpointURL()
 	return fmt.Sprintf("%s/%s/%s", strings.TrimRight(ep.String(), "/"), s.bucket, key)
