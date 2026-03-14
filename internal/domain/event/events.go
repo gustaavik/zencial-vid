@@ -68,3 +68,31 @@ type VideoRestored struct {
 
 func (e VideoRestored) EventName() string     { return "video.restored" }
 func (e VideoRestored) OccurredAt() time.Time { return e.Timestamp }
+
+// UserProfileUpdated is emitted when a user updates their profile.
+type UserProfileUpdated struct {
+	UserID    uuid.UUID
+	Timestamp time.Time
+}
+
+func (e UserProfileUpdated) EventName() string     { return "user.profile_updated" }
+func (e UserProfileUpdated) OccurredAt() time.Time { return e.Timestamp }
+
+// UserAccountDeleted is emitted when a user soft-deletes their account.
+type UserAccountDeleted struct {
+	UserID    uuid.UUID
+	Timestamp time.Time
+}
+
+func (e UserAccountDeleted) EventName() string     { return "user.account_deleted" }
+func (e UserAccountDeleted) OccurredAt() time.Time { return e.Timestamp }
+
+// UserStatusChanged is emitted when an admin changes a user's status.
+type UserStatusChanged struct {
+	UserID    uuid.UUID
+	NewStatus string
+	Timestamp time.Time
+}
+
+func (e UserStatusChanged) EventName() string     { return "user.status_changed" }
+func (e UserStatusChanged) OccurredAt() time.Time { return e.Timestamp }

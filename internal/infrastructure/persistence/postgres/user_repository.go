@@ -10,7 +10,26 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
+	"github.com/zenfulcode/zencial/internal/pkg/filter"
 )
+
+var userFilterConfig = filter.Config{
+	Columns: map[string]filter.ColumnDef{
+		"status": {DBColumn: "u.status", AllowedOps: []filter.Op{filter.OpEq, filter.OpIn}, Type: filter.TypeString},
+		"role":   {DBColumn: "u.role", AllowedOps: []filter.Op{filter.OpEq}, Type: filter.TypeString},
+		"email":  {DBColumn: "u.email", AllowedOps: []filter.Op{filter.OpLike, filter.OpEq}, Type: filter.TypeString},
+	},
+	SortColumns: map[string]filter.SortDef{
+		"created_at": {DBColumn: "u.created_at"},
+		"email":      {DBColumn: "u.email"},
+	},
+	DefaultSort: "u.created_at DESC",
+}
+
+// UserFilterConfig returns the filter configuration for users.
+func UserFilterConfig() filter.Config {
+	return userFilterConfig
+}
 
 // UserRepository implements repository.UserRepository using PostgreSQL.
 type UserRepository struct {
@@ -144,25 +163,30 @@ func (r *UserRepository) ExistsByEmail(ctx context.Context, email valueobject.Em
 	return exists, nil
 }
 
-func (r *UserRepository) List(ctx context.Context, page, perPage int) ([]entity.User, int64, error) {
+func (r *UserRepository) List(ctx context.Context, fs filter.FilterSet) ([]entity.User, int64, error) {
 	db := connFromCtx(ctx, r.pool)
-	offset := (page - 1) * perPage
+	baseCondition := "u.status != 'deleted'"
+
+	// Count
+	countWhere, countArgs, _ := filter.CountSQL(fs, baseCondition, 1)
+	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM users u %s`, countWhere)
 
 	var total int64
-	err := db.QueryRow(ctx, `SELECT COUNT(*) FROM users WHERE status != 'deleted'`).Scan(&total)
-	if err != nil {
+	if err := db.QueryRow(ctx, countQuery, countArgs...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("counting users: %w", err)
 	}
 
-	rows, err := db.Query(ctx, `
+	// Data
+	sql := filter.ToSQL(fs, baseCondition, 1)
+	dataQuery := fmt.Sprintf(`
 		SELECT u.id, u.email, u.role, u.status, u.created_at, u.updated_at,
 		       p.display_name, p.avatar_url, p.language, p.country
 		FROM users u
 		LEFT JOIN user_profiles p ON u.id = p.user_id
-		WHERE u.status != 'deleted'
-		ORDER BY u.created_at DESC
-		LIMIT $1 OFFSET $2
-	`, perPage, offset)
+		%s %s %s
+	`, sql.WhereClause, sql.OrderClause, sql.LimitClause)
+
+	rows, err := db.Query(ctx, dataQuery, sql.Args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("listing users: %w", err)
 	}

@@ -14,6 +14,8 @@ const (
 	CodeUserNotFound       = "USER_NOT_FOUND"
 	CodeEmailAlreadyExists = "EMAIL_ALREADY_EXISTS"
 	CodeUserSuspended      = "USER_SUSPENDED"
+	CodeUserDeleted        = "USER_DELETED"
+	CodeInvalidDateFormat  = "INVALID_DATE_FORMAT"
 
 	// Videos
 	CodeSlugConflict = "SLUG_CONFLICT"

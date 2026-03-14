@@ -10,6 +10,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
+	useruc "github.com/zenfulcode/zencial/internal/usecase/user"
 	videouc "github.com/zenfulcode/zencial/internal/usecase/video"
 )
 
@@ -17,6 +18,7 @@ import (
 type Deps struct {
 	Auth         *authuc.Service
 	Genre        *genreuc.Service
+	User         *useruc.Service
 	Video        *videouc.Service
 	TokenService auth.TokenService
 	Storage      storage.StorageService
@@ -27,6 +29,7 @@ type Deps struct {
 func RegisterRoutes(r chi.Router, deps Deps) {
 	authHandler := NewAuthHandler(deps.Auth)
 	genreHandler := NewGenreHandler(deps.Genre)
+	userHandler := NewUserHandler(deps.User)
 	videoHandler := NewVideoHandler(deps.Video, deps.Storage)
 
 	// Public routes
@@ -55,6 +58,11 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 		// Auth (requires token)
 		r.Post("/auth/logout", authHandler.Logout)
 
+		// User profile (self)
+		r.Get("/me", userHandler.GetMe)
+		r.Put("/me", userHandler.UpdateMe)
+		r.Delete("/me", userHandler.DeleteMe)
+
 		// Video streaming (any authenticated user)
 		r.Get("/videos/{id}/stream", videoHandler.Stream)
 
@@ -77,6 +85,11 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 
 			// Admin video listing (all statuses)
 			r.Get("/admin/videos", videoHandler.ListAll)
+
+			// User management (admin)
+			r.Get("/admin/users", userHandler.ListUsers)
+			r.Get("/admin/users/{id}", userHandler.GetUser)
+			r.Put("/admin/users/{id}/status", userHandler.UpdateUserStatus)
 		})
 	})
 }

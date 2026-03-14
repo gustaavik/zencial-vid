@@ -20,6 +20,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
+	useruc "github.com/zenfulcode/zencial/internal/usecase/user"
 	videouc "github.com/zenfulcode/zencial/internal/usecase/video"
 
 	"github.com/go-chi/chi/v5"
@@ -105,6 +106,7 @@ func main() {
 	// Use cases
 	authService := authuc.NewService(userRepo, tokenService, hasher, sessionStore, dispatcher, log)
 	genreService := genreuc.NewService(genreRepo, log)
+	userService := useruc.NewService(userRepo, dispatcher, log)
 	videoService := videouc.NewService(videoRepo, genreRepo, storageService, dispatcher, log)
 
 	// Router
@@ -133,6 +135,7 @@ func main() {
 		v1.RegisterRoutes(r, v1.Deps{
 			Auth:         authService,
 			Genre:        genreService,
+			User:         userService,
 			Video:        videoService,
 			TokenService: tokenService,
 			Storage:      storageService,
