@@ -70,6 +70,7 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 			// Video management
 			r.Post("/videos", videoHandler.Upload)
 			r.Put("/videos/{id}", videoHandler.Update)
+			r.Put("/videos/{id}/thumbnail", videoHandler.UploadThumbnail)
 			r.Post("/videos/{id}/publish", videoHandler.Publish)
 			r.Post("/videos/{id}/unarchive", videoHandler.Unarchive)
 			r.Delete("/videos/{id}", videoHandler.Delete)

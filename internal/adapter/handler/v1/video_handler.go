@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"io"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -47,6 +48,21 @@ func (h *VideoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
+	// Optional thumbnail file
+	var thumbnailReader io.Reader
+	var thumbnailFileName string
+	var thumbnailContentType string
+	thumbnailFile, thumbnailHeader, thumbnailErr := r.FormFile("thumbnail")
+	if thumbnailErr == nil {
+		defer thumbnailFile.Close()
+		thumbnailReader = thumbnailFile
+		thumbnailFileName = thumbnailHeader.Filename
+		thumbnailContentType = thumbnailHeader.Header.Get("Content-Type")
+		if thumbnailContentType == "" {
+			thumbnailContentType = "image/jpeg"
+		}
+	}
+
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
 		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
@@ -76,17 +92,20 @@ func (h *VideoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	video, appErr := h.videoService.Upload(r.Context(), videouc.UploadInput{
-		Title:         title,
-		Description:   r.FormValue("description"),
-		Creator:       r.FormValue("creator"),
-		ContentRating: r.FormValue("content_rating"),
-		Quality:       r.FormValue("quality"),
-		GenreIDs:      genreIDs,
-		File:          file,
-		FileName:      header.Filename,
-		ContentType:   contentType,
-		FileSize:      header.Size,
-		UploadedBy:    userID,
+		Title:                title,
+		Description:          r.FormValue("description"),
+		Creator:              r.FormValue("creator"),
+		ContentRating:        r.FormValue("content_rating"),
+		Quality:              r.FormValue("quality"),
+		GenreIDs:             genreIDs,
+		File:                 file,
+		FileName:             header.Filename,
+		ContentType:          contentType,
+		FileSize:             header.Size,
+		UploadedBy:           userID,
+		Thumbnail:            thumbnailReader,
+		ThumbnailFileName:    thumbnailFileName,
+		ThumbnailContentType: thumbnailContentType,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
@@ -276,4 +295,43 @@ func (h *VideoHandler) Stream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.Success(w, http.StatusOK, mapper.StreamToResponse(output))
+}
+
+// UploadThumbnail handles updating a video's thumbnail image.
+func (h *VideoHandler) UploadThumbnail(w http.ResponseWriter, r *http.Request) {
+	id, err := httputil.URLParamUUID(r, "id")
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid video ID")
+		return
+	}
+
+	if err := r.ParseMultipartForm(20 << 20); err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "failed to parse multipart form")
+		return
+	}
+
+	file, header, err := r.FormFile("thumbnail")
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "thumbnail file is required")
+		return
+	}
+	defer file.Close()
+
+	contentType := header.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "image/jpeg"
+	}
+
+	video, appErr := h.videoService.UpdateThumbnail(r.Context(), videouc.UpdateThumbnailInput{
+		VideoID:     id,
+		File:        file,
+		FileName:    header.Filename,
+		ContentType: contentType,
+	})
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(video, h.storage))
 }
