@@ -15,22 +15,39 @@ func VideoToResponse(video *entity.Video, store storage.StorageService) dto.Vide
 	}
 
 	resp := dto.VideoResponse{
-		ID:            video.ID.String(),
-		Title:         video.Title,
-		Slug:          video.Slug.String(),
-		Description:   video.Description,
-		Creator:       video.Creator,
-		Duration:      video.Duration.Seconds,
-		ContentRating: video.ContentRating,
-		Quality:       video.Quality,
-		Status:        string(video.Status),
-		FileSize:      video.FileSize,
-		GenreIDs:      genreIDs,
-		CreatedAt:     video.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		UpdatedAt:     video.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:               video.ID.String(),
+		Title:            video.Title,
+		Slug:             video.Slug.String(),
+		Description:      video.Description,
+		Creator:          video.Creator,
+		Duration:         video.Duration.Seconds,
+		ContentRating:    video.ContentRating,
+		Quality:          video.Quality,
+		Status:           string(video.Status),
+		FileSize:         video.FileSize,
+		GenreIDs:         genreIDs,
+		MinimumPlanLevel: video.MinimumPlanLevel,
+		CreatedAt:        video.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:        video.UpdatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 	if video.ThumbnailKey != "" && store != nil {
 		resp.ThumbnailURL = store.PublicURL(video.ThumbnailKey)
+	}
+	return resp
+}
+
+// VideoToResponseWithAccess maps a Video entity to a VideoResponse DTO with access info.
+func VideoToResponseWithAccess(video *entity.Video, store storage.StorageService, userPlanLevel *int) dto.VideoResponse {
+	resp := VideoToResponse(video, store)
+	if !video.RequiresSubscription() {
+		accessible := true
+		resp.IsAccessible = &accessible
+	} else if userPlanLevel != nil {
+		accessible := *userPlanLevel >= *video.MinimumPlanLevel
+		resp.IsAccessible = &accessible
+	} else {
+		accessible := false
+		resp.IsAccessible = &accessible
 	}
 	return resp
 }
@@ -40,6 +57,15 @@ func VideosToResponse(videos []entity.Video, store storage.StorageService) []dto
 	result := make([]dto.VideoResponse, len(videos))
 	for i := range videos {
 		result[i] = VideoToResponse(&videos[i], store)
+	}
+	return result
+}
+
+// VideosToResponseWithAccess maps a slice of Video entities to VideoResponse DTOs with access info.
+func VideosToResponseWithAccess(videos []entity.Video, store storage.StorageService, userPlanLevel *int) []dto.VideoResponse {
+	result := make([]dto.VideoResponse, len(videos))
+	for i := range videos {
+		result[i] = VideoToResponseWithAccess(&videos[i], store, userPlanLevel)
 	}
 	return result
 }

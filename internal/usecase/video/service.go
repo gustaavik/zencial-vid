@@ -12,6 +12,8 @@ import (
 type Service struct {
 	videoRepo  repository.VideoRepository
 	genreRepo  repository.GenreRepository
+	subRepo    repository.SubscriptionRepository
+	planRepo   repository.PlanRepository
 	storage    storage.StorageService
 	dispatcher event.Dispatcher
 	log        *slog.Logger
@@ -21,6 +23,8 @@ type Service struct {
 func NewService(
 	videoRepo repository.VideoRepository,
 	genreRepo repository.GenreRepository,
+	subRepo repository.SubscriptionRepository,
+	planRepo repository.PlanRepository,
 	storage storage.StorageService,
 	dispatcher event.Dispatcher,
 	log *slog.Logger,
@@ -28,6 +32,8 @@ func NewService(
 	return &Service{
 		videoRepo:  videoRepo,
 		genreRepo:  genreRepo,
+		subRepo:    subRepo,
+		planRepo:   planRepo,
 		storage:    storage,
 		dispatcher: dispatcher,
 		log:        log,

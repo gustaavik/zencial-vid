@@ -12,10 +12,12 @@ type VideoResponse struct {
 	Quality       string   `json:"quality" example:"HD"`
 	Status        string   `json:"status" example:"published"`
 	ThumbnailURL  string   `json:"thumbnail_url,omitempty" example:"https://..."`
-	FileSize      int64    `json:"file_size" example:"104857600"`
-	GenreIDs      []string `json:"genre_ids"`
-	CreatedAt     string   `json:"created_at" example:"2025-01-01T00:00:00Z"`
-	UpdatedAt     string   `json:"updated_at" example:"2025-01-01T00:00:00Z"`
+	FileSize         int64    `json:"file_size" example:"104857600"`
+	GenreIDs         []string `json:"genre_ids"`
+	MinimumPlanLevel *int     `json:"minimum_plan_level,omitempty" example:"1"`
+	IsAccessible     *bool    `json:"is_accessible,omitempty"`
+	CreatedAt        string   `json:"created_at" example:"2025-01-01T00:00:00Z"`
+	UpdatedAt        string   `json:"updated_at" example:"2025-01-01T00:00:00Z"`
 }
 
 // VideoStreamResponse returns the presigned streaming URL.
@@ -30,6 +32,7 @@ type UpdateVideoRequest struct {
 	Description   *string  `json:"description,omitempty" validate:"omitempty,max=5000"`
 	Creator       *string  `json:"creator,omitempty" validate:"omitempty,max=255"`
 	ContentRating *string  `json:"content_rating,omitempty" validate:"omitempty,oneof=G PG PG13 R NC17"`
-	Quality       *string  `json:"quality,omitempty" validate:"omitempty,oneof=SD HD FHD UHD"`
-	GenreIDs      []string `json:"genre_ids,omitempty" validate:"omitempty,dive,uuid"`
+	Quality          *string  `json:"quality,omitempty" validate:"omitempty,oneof=SD HD FHD UHD"`
+	GenreIDs         []string `json:"genre_ids,omitempty" validate:"omitempty,dive,uuid"`
+	MinimumPlanLevel *int     `json:"minimum_plan_level,omitempty" validate:"omitempty,gte=0"`
 }

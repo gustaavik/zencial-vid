@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 
@@ -91,6 +92,15 @@ func (h *VideoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Parse optional minimum plan level
+	var minimumPlanLevel *int
+	if mpl := r.FormValue("minimum_plan_level"); mpl != "" {
+		var level int
+		if _, err := fmt.Sscanf(mpl, "%d", &level); err == nil {
+			minimumPlanLevel = &level
+		}
+	}
+
 	video, appErr := h.videoService.Upload(r.Context(), videouc.UploadInput{
 		Title:                title,
 		Description:          r.FormValue("description"),
@@ -98,6 +108,7 @@ func (h *VideoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		ContentRating:        r.FormValue("content_rating"),
 		Quality:              r.FormValue("quality"),
 		GenreIDs:             genreIDs,
+		MinimumPlanLevel:     minimumPlanLevel,
 		File:                 file,
 		FileName:             header.Filename,
 		ContentType:          contentType,
@@ -213,13 +224,14 @@ func (h *VideoHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	video, appErr := h.videoService.Update(r.Context(), videouc.UpdateInput{
-		ID:            id,
-		Title:         req.Title,
-		Description:   req.Description,
-		Creator:       req.Creator,
-		ContentRating: req.ContentRating,
-		Quality:       req.Quality,
-		GenreIDs:      genreIDs,
+		ID:               id,
+		Title:            req.Title,
+		Description:      req.Description,
+		Creator:          req.Creator,
+		ContentRating:    req.ContentRating,
+		Quality:          req.Quality,
+		GenreIDs:         genreIDs,
+		MinimumPlanLevel: req.MinimumPlanLevel,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
@@ -288,7 +300,13 @@ func (h *VideoHandler) Stream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	output, appErr := h.videoService.GetStreamURL(r.Context(), id)
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
+		return
+	}
+
+	output, appErr := h.videoService.GetStreamURL(r.Context(), id, userID)
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return

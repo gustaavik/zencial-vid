@@ -57,3 +57,32 @@ func GetUserRole(ctx context.Context) (entity.UserRole, bool) {
 	role, ok := ctx.Value(userRoleKey).(entity.UserRole)
 	return role, ok
 }
+
+// OptionalAuthenticate parses the JWT token if present but does not reject unauthenticated requests.
+func OptionalAuthenticate(tokenService auth.TokenService) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			header := r.Header.Get("Authorization")
+			if header == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			parts := strings.SplitN(header, " ", 2)
+			if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			claims, err := tokenService.ValidateAccessToken(parts[1])
+			if err != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), userIDKey, claims.UserID)
+			ctx = context.WithValue(ctx, userRoleKey, claims.Role)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}

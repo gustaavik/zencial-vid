@@ -27,6 +27,19 @@ var (
 	ErrGenreNotFound = errors.New("genre not found")
 )
 
+// Plan errors.
+var (
+	ErrPlanNotFound   = errors.New("plan not found")
+	ErrPlanSlugExists = errors.New("plan slug already exists")
+)
+
+// Subscription errors.
+var (
+	ErrSubscriptionNotFound     = errors.New("subscription not found")
+	ErrActiveSubscriptionExists = errors.New("user already has an active subscription")
+	ErrInsufficientPlanLevel    = errors.New("insufficient plan level for this content")
+)
+
 // Auth errors.
 var (
 	ErrInvalidToken         = errors.New("invalid token")

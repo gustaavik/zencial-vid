@@ -10,6 +10,8 @@ import (
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
+	planuc "github.com/zenfulcode/zencial/internal/usecase/plan"
+	subscriptionuc "github.com/zenfulcode/zencial/internal/usecase/subscription"
 	useruc "github.com/zenfulcode/zencial/internal/usecase/user"
 	videouc "github.com/zenfulcode/zencial/internal/usecase/video"
 )
@@ -20,6 +22,8 @@ type Deps struct {
 	Genre        *genreuc.Service
 	User         *useruc.Service
 	Video        *videouc.Service
+	Plan         *planuc.Service
+	Subscription *subscriptionuc.Service
 	TokenService auth.TokenService
 	Storage      storage.StorageService
 	Log          *slog.Logger
@@ -31,6 +35,8 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 	genreHandler := NewGenreHandler(deps.Genre)
 	userHandler := NewUserHandler(deps.User)
 	videoHandler := NewVideoHandler(deps.Video, deps.Storage)
+	planHandler := NewPlanHandler(deps.Plan)
+	subscriptionHandler := NewSubscriptionHandler(deps.Subscription)
 
 	// Public routes
 	r.Route("/auth", func(r chi.Router) {
@@ -45,10 +51,15 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 		r.Get("/{id}", genreHandler.GetByID)
 	})
 
-	// Public video routes (published videos only)
-	r.Route("/videos", func(r chi.Router) {
-		r.Get("/", videoHandler.ListPublished)
-		r.Get("/{id}", videoHandler.GetByID)
+	// Public plan routes (active plans only)
+	r.Get("/plans", planHandler.ListActive)
+
+	// Public video routes with optional auth (for is_accessible field)
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.OptionalAuthenticate(deps.TokenService))
+
+		r.Get("/videos", videoHandler.ListPublished)
+		r.Get("/videos/{id}", videoHandler.GetByID)
 	})
 
 	// Authenticated routes
@@ -63,6 +74,9 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 		r.Put("/me", userHandler.UpdateMe)
 		r.Delete("/me", userHandler.DeleteMe)
 
+		// User subscription (self)
+		r.Get("/me/subscription", subscriptionHandler.GetMySubscription)
+
 		// Video streaming (any authenticated user)
 		r.Get("/videos/{id}/stream", videoHandler.Stream)
 
@@ -74,6 +88,17 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 			r.Post("/genres", genreHandler.Create)
 			r.Put("/genres/{id}", genreHandler.Update)
 			r.Delete("/genres/{id}", genreHandler.Delete)
+
+			// Plan management
+			r.Post("/plans", planHandler.Create)
+			r.Get("/plans/{id}", planHandler.GetByID)
+			r.Put("/plans/{id}", planHandler.Update)
+			r.Delete("/plans/{id}", planHandler.Delete)
+			r.Get("/admin/plans", planHandler.List)
+
+			// Subscription management
+			r.Post("/admin/subscriptions", subscriptionHandler.Assign)
+			r.Delete("/admin/subscriptions/{id}", subscriptionHandler.Cancel)
 
 			// Video management
 			r.Post("/videos", videoHandler.Upload)
@@ -90,6 +115,7 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 			r.Get("/admin/users", userHandler.ListUsers)
 			r.Get("/admin/users/{id}", userHandler.GetUser)
 			r.Put("/admin/users/{id}/status", userHandler.UpdateUserStatus)
+			r.Get("/admin/users/{id}/subscriptions", subscriptionHandler.ListByUser)
 		})
 	})
 }

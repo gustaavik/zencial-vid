@@ -13,13 +13,14 @@ import (
 
 // UpdateInput holds the data needed to update a video's metadata.
 type UpdateInput struct {
-	ID            uuid.UUID
-	Title         *string
-	Description   *string
-	Creator       *string
-	ContentRating *string
-	Quality       *string
-	GenreIDs      []uuid.UUID
+	ID               uuid.UUID
+	Title            *string
+	Description      *string
+	Creator          *string
+	ContentRating    *string
+	Quality          *string
+	GenreIDs         []uuid.UUID
+	MinimumPlanLevel *int
 }
 
 // Update updates a video's metadata.
@@ -56,6 +57,10 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) (*entity.Video,
 
 	if input.Quality != nil {
 		video.Quality = *input.Quality
+	}
+
+	if input.MinimumPlanLevel != nil {
+		video.MinimumPlanLevel = input.MinimumPlanLevel
 	}
 
 	video.UpdatedAt = time.Now().UTC()

@@ -20,23 +20,24 @@ const (
 
 // Video is the core video entity.
 type Video struct {
-	ID            uuid.UUID
-	Title         string
-	Slug          valueobject.Slug
-	Description   string
-	Creator       string
-	Duration      valueobject.Duration
-	ContentRating string
-	Quality       string
-	Status        VideoStatus
-	StorageKey    string
-	ContentType   string
-	FileSize      int64
-	ThumbnailKey  string
-	UploadedBy    uuid.UUID
-	GenreIDs      []uuid.UUID
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID               uuid.UUID
+	Title            string
+	Slug             valueobject.Slug
+	Description      string
+	Creator          string
+	Duration         valueobject.Duration
+	ContentRating    string
+	Quality          string
+	Status           VideoStatus
+	StorageKey       string
+	ContentType      string
+	FileSize         int64
+	ThumbnailKey     string
+	UploadedBy       uuid.UUID
+	GenreIDs         []uuid.UUID
+	MinimumPlanLevel *int
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 // NewVideo creates a new Video entity in draft status.
@@ -105,6 +106,11 @@ func DeletedStorageKey(key string) string {
 // RestoredStorageKey strips the "deleted/" prefix from a storage key.
 func RestoredStorageKey(key string) string {
 	return strings.TrimPrefix(key, "deleted/")
+}
+
+// RequiresSubscription reports whether the video requires a subscription to stream.
+func (v *Video) RequiresSubscription() bool {
+	return v.MinimumPlanLevel != nil && *v.MinimumPlanLevel > 0
 }
 
 // SetGenres replaces the genre associations.

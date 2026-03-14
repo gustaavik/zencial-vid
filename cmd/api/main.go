@@ -20,6 +20,8 @@ import (
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
+	planuc "github.com/zenfulcode/zencial/internal/usecase/plan"
+	subscriptionuc "github.com/zenfulcode/zencial/internal/usecase/subscription"
 	useruc "github.com/zenfulcode/zencial/internal/usecase/user"
 	videouc "github.com/zenfulcode/zencial/internal/usecase/video"
 
@@ -85,6 +87,8 @@ func main() {
 	userRepo := postgres.NewUserRepository(dbPool)
 	genreRepo := postgres.NewGenreRepository(dbPool)
 	videoRepo := postgres.NewVideoRepository(dbPool)
+	planRepo := postgres.NewPlanRepository(dbPool)
+	subRepo := postgres.NewSubscriptionRepository(dbPool)
 
 	// Redis stores
 	sessionStore := redis.NewSessionStore(redisClient, cfg.JWT.RefreshDuration)
@@ -107,7 +111,9 @@ func main() {
 	authService := authuc.NewService(userRepo, tokenService, hasher, sessionStore, dispatcher, log)
 	genreService := genreuc.NewService(genreRepo, log)
 	userService := useruc.NewService(userRepo, dispatcher, log)
-	videoService := videouc.NewService(videoRepo, genreRepo, storageService, dispatcher, log)
+	planService := planuc.NewService(planRepo, log)
+	subscriptionService := subscriptionuc.NewService(subRepo, planRepo, log)
+	videoService := videouc.NewService(videoRepo, genreRepo, subRepo, planRepo, storageService, dispatcher, log)
 
 	// Router
 	r := chi.NewRouter()
@@ -137,6 +143,8 @@ func main() {
 			Genre:        genreService,
 			User:         userService,
 			Video:        videoService,
+			Plan:         planService,
+			Subscription: subscriptionService,
 			TokenService: tokenService,
 			Storage:      storageService,
 			Log:          log,

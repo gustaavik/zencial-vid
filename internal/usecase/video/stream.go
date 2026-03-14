@@ -18,7 +18,7 @@ type StreamOutput struct {
 }
 
 // GetStreamURL generates a presigned URL for streaming a published video.
-func (s *Service) GetStreamURL(ctx context.Context, videoID uuid.UUID) (*StreamOutput, *apperror.AppError) {
+func (s *Service) GetStreamURL(ctx context.Context, videoID uuid.UUID, userID uuid.UUID) (*StreamOutput, *apperror.AppError) {
 	video, err := s.videoRepo.GetByID(ctx, videoID)
 	if err != nil {
 		s.log.Error("getting video for streaming", "error", err)
@@ -30,6 +30,27 @@ func (s *Service) GetStreamURL(ctx context.Context, videoID uuid.UUID) (*StreamO
 
 	if !video.IsPlayable() {
 		return nil, apperror.BadRequest(apperror.CodeVideoNotPlayable, "video is not available for streaming", domain.ErrVideoNotPlayable)
+	}
+
+	// Check subscription if video requires a plan
+	if video.RequiresSubscription() {
+		sub, err := s.subRepo.GetActiveByUserID(ctx, userID)
+		if err != nil {
+			s.log.Error("checking subscription for streaming", "error", err)
+			return nil, apperror.Internal(apperror.CodeInternalError, "failed to check subscription", err)
+		}
+		if sub == nil {
+			return nil, apperror.Forbidden(apperror.CodeInsufficientPlanLevel, "subscription required to watch this content", domain.ErrInsufficientPlanLevel)
+		}
+
+		plan, err := s.planRepo.GetByID(ctx, sub.PlanID)
+		if err != nil {
+			s.log.Error("getting plan for subscription check", "error", err)
+			return nil, apperror.Internal(apperror.CodeInternalError, "failed to check plan", err)
+		}
+		if plan == nil || plan.Level < *video.MinimumPlanLevel {
+			return nil, apperror.Forbidden(apperror.CodeInsufficientPlanLevel, "your plan does not include this content", domain.ErrInsufficientPlanLevel)
+		}
 	}
 
 	presignedURL, err := s.storage.PresignedGetURL(ctx, video.StorageKey, defaultStreamURLExpiry)

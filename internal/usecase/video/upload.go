@@ -30,6 +30,8 @@ type UploadInput struct {
 	FileSize      int64
 	UploadedBy    uuid.UUID
 
+	MinimumPlanLevel *int
+
 	// Optional thumbnail upload. If nil, a thumbnail is extracted from the video.
 	Thumbnail            io.Reader
 	ThumbnailFileName    string
@@ -97,6 +99,7 @@ func (s *Service) Upload(ctx context.Context, input UploadInput) (*entity.Video,
 	)
 	video.ID = videoID
 	video.ThumbnailKey = thumbnailKey
+	video.MinimumPlanLevel = input.MinimumPlanLevel
 	video.SetGenres(input.GenreIDs)
 
 	if err := s.videoRepo.Create(ctx, video); err != nil {

@@ -49,12 +49,12 @@ func (r *VideoRepository) Create(ctx context.Context, video *entity.Video) error
 	_, err := db.Exec(ctx, `
 		INSERT INTO videos (id, title, slug, description, creator, duration, content_rating, quality,
 		                    status, storage_key, content_type, file_size, thumbnail_key, uploaded_by,
-		                    created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		                    minimum_plan_level, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 	`, video.ID, video.Title, video.Slug.String(), video.Description, video.Creator,
 		video.Duration.Seconds, video.ContentRating, video.Quality,
 		string(video.Status), video.StorageKey, video.ContentType, video.FileSize,
-		video.ThumbnailKey, video.UploadedBy, video.CreatedAt, video.UpdatedAt)
+		video.ThumbnailKey, video.UploadedBy, video.MinimumPlanLevel, video.CreatedAt, video.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("creating video: %w", err)
 	}
@@ -73,7 +73,7 @@ func (r *VideoRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Vi
 	return r.scanVideo(ctx, db, `
 		SELECT id, title, slug, description, creator, duration, content_rating, quality,
 		       status, storage_key, content_type, file_size, thumbnail_key, uploaded_by,
-		       created_at, updated_at
+		       minimum_plan_level, created_at, updated_at
 		FROM videos WHERE id = $1
 	`, id)
 }
@@ -83,7 +83,7 @@ func (r *VideoRepository) GetBySlug(ctx context.Context, slug valueobject.Slug) 
 	return r.scanVideo(ctx, db, `
 		SELECT id, title, slug, description, creator, duration, content_rating, quality,
 		       status, storage_key, content_type, file_size, thumbnail_key, uploaded_by,
-		       created_at, updated_at
+		       minimum_plan_level, created_at, updated_at
 		FROM videos WHERE slug = $1
 	`, slug.String())
 }
@@ -95,12 +95,12 @@ func (r *VideoRepository) Update(ctx context.Context, video *entity.Video) error
 		UPDATE videos SET title = $2, slug = $3, description = $4, creator = $5,
 		       duration = $6, content_rating = $7, quality = $8, status = $9,
 		       storage_key = $10, content_type = $11, file_size = $12, thumbnail_key = $13,
-		       updated_at = $14
+		       minimum_plan_level = $14, updated_at = $15
 		WHERE id = $1
 	`, video.ID, video.Title, video.Slug.String(), video.Description, video.Creator,
 		video.Duration.Seconds, video.ContentRating, video.Quality,
 		string(video.Status), video.StorageKey, video.ContentType, video.FileSize,
-		video.ThumbnailKey, video.UpdatedAt)
+		video.ThumbnailKey, video.MinimumPlanLevel, video.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("updating video: %w", err)
 	}
@@ -142,7 +142,7 @@ func (r *VideoRepository) listWithBase(ctx context.Context, fs filter.FilterSet,
 	dataQuery := fmt.Sprintf(`
 		SELECT id, title, slug, description, creator, duration, content_rating, quality,
 		       status, storage_key, content_type, file_size, thumbnail_key, uploaded_by,
-		       created_at, updated_at
+		       minimum_plan_level, created_at, updated_at
 		FROM videos v
 		%s %s %s
 	`, sql.WhereClause, sql.OrderClause, sql.LimitClause)
@@ -234,7 +234,7 @@ func (r *VideoRepository) scanVideo(ctx context.Context, db DBTX, query string, 
 		&v.ID, &v.Title, &slug, &v.Description, &v.Creator,
 		&duration, &contentRating, &quality, &status,
 		&v.StorageKey, &v.ContentType, &v.FileSize, &v.ThumbnailKey,
-		&v.UploadedBy, &v.CreatedAt, &v.UpdatedAt,
+		&v.UploadedBy, &v.MinimumPlanLevel, &v.CreatedAt, &v.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -268,7 +268,7 @@ func (r *VideoRepository) scanVideoRow(rows pgx.Rows) (*entity.Video, error) {
 		&v.ID, &v.Title, &slug, &v.Description, &v.Creator,
 		&duration, &contentRating, &quality, &status,
 		&v.StorageKey, &v.ContentType, &v.FileSize, &v.ThumbnailKey,
-		&v.UploadedBy, &v.CreatedAt, &v.UpdatedAt,
+		&v.UploadedBy, &v.MinimumPlanLevel, &v.CreatedAt, &v.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scanning video row: %w", err)

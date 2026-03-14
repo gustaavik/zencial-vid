@@ -29,6 +29,15 @@ const (
 	CodeStorageError     = "STORAGE_ERROR"
 	CodeUploadFailed     = "UPLOAD_FAILED"
 
+	// Plan
+	CodePlanNotFound     = "PLAN_NOT_FOUND"
+	CodePlanSlugConflict = "PLAN_SLUG_CONFLICT"
+
+	// Subscription
+	CodeSubscriptionNotFound     = "SUBSCRIPTION_NOT_FOUND"
+	CodeActiveSubscriptionExists = "ACTIVE_SUBSCRIPTION_EXISTS"
+	CodeInsufficientPlanLevel    = "INSUFFICIENT_PLAN_LEVEL"
+
 	// General
 	CodeValidationFailed = "VALIDATION_FAILED"
 	CodeInternalError    = "INTERNAL_ERROR"
