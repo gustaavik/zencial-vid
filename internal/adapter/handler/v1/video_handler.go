@@ -106,7 +106,6 @@ func (h *VideoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		Description:          r.FormValue("description"),
 		Creator:              r.FormValue("creator"),
 		ContentRating:        r.FormValue("content_rating"),
-		Quality:              r.FormValue("quality"),
 		GenreIDs:             genreIDs,
 		MinimumPlanLevel:     minimumPlanLevel,
 		File:                 file,
@@ -229,7 +228,6 @@ func (h *VideoHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Description:      req.Description,
 		Creator:          req.Creator,
 		ContentRating:    req.ContentRating,
-		Quality:          req.Quality,
 		GenreIDs:         genreIDs,
 		MinimumPlanLevel: req.MinimumPlanLevel,
 	})

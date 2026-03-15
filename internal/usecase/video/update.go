@@ -18,7 +18,6 @@ type UpdateInput struct {
 	Description      *string
 	Creator          *string
 	ContentRating    *string
-	Quality          *string
 	GenreIDs         []uuid.UUID
 	MinimumPlanLevel *int
 }
@@ -53,10 +52,6 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) (*entity.Video,
 
 	if input.ContentRating != nil {
 		video.ContentRating = *input.ContentRating
-	}
-
-	if input.Quality != nil {
-		video.Quality = *input.Quality
 	}
 
 	if input.MinimumPlanLevel != nil {

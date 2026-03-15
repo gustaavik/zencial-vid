@@ -22,7 +22,6 @@ type UploadInput struct {
 	Description   string
 	Creator       string
 	ContentRating string
-	Quality       string
 	GenreIDs      []uuid.UUID
 	File          io.Reader
 	FileName      string
@@ -43,11 +42,6 @@ func (s *Service) Upload(ctx context.Context, input UploadInput) (*entity.Video,
 	contentRating := input.ContentRating
 	if contentRating == "" {
 		contentRating = "G"
-	}
-
-	quality := input.Quality
-	if quality == "" {
-		quality = "HD"
 	}
 
 	// Generate slug from title
@@ -94,7 +88,7 @@ func (s *Service) Upload(ctx context.Context, input UploadInput) (*entity.Video,
 	// Create video entity
 	video := entity.NewVideo(
 		input.Title, slug, input.Description, input.Creator,
-		contentRating, quality, storageKey, input.ContentType,
+		contentRating, storageKey, input.ContentType,
 		input.FileSize, input.UploadedBy,
 	)
 	video.ID = videoID

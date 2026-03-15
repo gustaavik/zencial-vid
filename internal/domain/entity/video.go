@@ -27,7 +27,6 @@ type Video struct {
 	Creator          string
 	Duration         valueobject.Duration
 	ContentRating    string
-	Quality          string
 	Status           VideoStatus
 	StorageKey       string
 	ContentType      string
@@ -47,7 +46,6 @@ func NewVideo(
 	description string,
 	creator string,
 	contentRating string,
-	quality string,
 	storageKey string,
 	contentType string,
 	fileSize int64,
@@ -61,7 +59,6 @@ func NewVideo(
 		Description:   description,
 		Creator:       creator,
 		ContentRating: contentRating,
-		Quality:       quality,
 		Status:        VideoStatusDraft,
 		StorageKey:    storageKey,
 		ContentType:   contentType,

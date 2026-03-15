@@ -22,7 +22,6 @@ func VideoToResponse(video *entity.Video, store storage.StorageService) dto.Vide
 		Creator:          video.Creator,
 		Duration:         video.Duration.Seconds,
 		ContentRating:    video.ContentRating,
-		Quality:          video.Quality,
 		Status:           string(video.Status),
 		FileSize:         video.FileSize,
 		GenreIDs:         genreIDs,
