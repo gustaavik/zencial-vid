@@ -8,6 +8,11 @@ import (
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 )
 
+// CDNClient triggers HLS transcoding on the CDN service.
+type CDNClient interface {
+	TriggerTranscode(videoID string) error
+}
+
 // Service handles video use cases.
 type Service struct {
 	videoRepo  repository.VideoRepository
@@ -16,6 +21,8 @@ type Service struct {
 	planRepo   repository.PlanRepository
 	storage    storage.StorageService
 	dispatcher event.Dispatcher
+	cdn        CDNClient
+	cdnBaseURL string
 	log        *slog.Logger
 }
 
@@ -28,8 +35,9 @@ func NewService(
 	storage storage.StorageService,
 	dispatcher event.Dispatcher,
 	log *slog.Logger,
+	opts ...Option,
 ) *Service {
-	return &Service{
+	s := &Service{
 		videoRepo:  videoRepo,
 		genreRepo:  genreRepo,
 		subRepo:    subRepo,
@@ -37,5 +45,20 @@ func NewService(
 		storage:    storage,
 		dispatcher: dispatcher,
 		log:        log,
+	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
+// Option configures optional Service dependencies.
+type Option func(*Service)
+
+// WithCDN configures the CDN client and base URL for HLS streaming.
+func WithCDN(client CDNClient, baseURL string) Option {
+	return func(s *Service) {
+		s.cdn = client
+		s.cdnBaseURL = baseURL
 	}
 }

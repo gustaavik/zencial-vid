@@ -20,10 +20,11 @@ type VideoResponse struct {
 	UpdatedAt        string   `json:"updated_at" example:"2025-01-01T00:00:00Z"`
 }
 
-// VideoStreamResponse returns the presigned streaming URL.
+// VideoStreamResponse returns the streaming URL (presigned or HLS).
 type VideoStreamResponse struct {
 	URL       string `json:"url" example:"https://minio:9000/bucket/videos/..."`
 	ExpiresAt string `json:"expires_at" example:"2025-01-01T04:00:00Z"`
+	Type      string `json:"type" example:"hls"`
 }
 
 // UpdateVideoRequest represents a video metadata update.

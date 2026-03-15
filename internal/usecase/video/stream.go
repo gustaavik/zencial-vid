@@ -2,6 +2,7 @@ package video
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,10 +12,11 @@ import (
 
 const defaultStreamURLExpiry = 4 * time.Hour
 
-// StreamOutput holds the presigned streaming URL.
+// StreamOutput holds the streaming URL (presigned or HLS).
 type StreamOutput struct {
 	URL       string
 	ExpiresAt time.Time
+	Type      string // "direct" or "hls"
 }
 
 // GetStreamURL generates a presigned URL for streaming a published video.
@@ -53,6 +55,16 @@ func (s *Service) GetStreamURL(ctx context.Context, videoID uuid.UUID, userID uu
 		}
 	}
 
+	// If CDN is configured, return HLS streaming URL.
+	if s.cdnBaseURL != "" {
+		hlsURL := fmt.Sprintf("%s/api/v1/videos/%s/master.m3u8", s.cdnBaseURL, videoID)
+		return &StreamOutput{
+			URL:       hlsURL,
+			ExpiresAt: time.Now().UTC().Add(defaultStreamURLExpiry),
+			Type:      "hls",
+		}, nil
+	}
+
 	presignedURL, err := s.storage.PresignedGetURL(ctx, video.StorageKey, defaultStreamURLExpiry)
 	if err != nil {
 		s.log.Error("generating presigned URL", "error", err)
@@ -62,5 +74,6 @@ func (s *Service) GetStreamURL(ctx context.Context, videoID uuid.UUID, userID uu
 	return &StreamOutput{
 		URL:       presignedURL,
 		ExpiresAt: time.Now().UTC().Add(defaultStreamURLExpiry),
+		Type:      "direct",
 	}, nil
 }

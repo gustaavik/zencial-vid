@@ -96,5 +96,6 @@ func StreamToResponse(output *videouc.StreamOutput) dto.VideoStreamResponse {
 	return dto.VideoStreamResponse{
 		URL:       output.URL,
 		ExpiresAt: output.ExpiresAt.Format("2006-01-02T15:04:05Z"),
+		Type:      output.Type,
 	}
 }

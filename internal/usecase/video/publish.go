@@ -34,5 +34,14 @@ func (s *Service) Publish(ctx context.Context, id uuid.UUID) (*entity.Video, *ap
 		Timestamp: time.Now().UTC(),
 	})
 
+	// Trigger HLS transcoding on the CDN (fire-and-forget).
+	if s.cdn != nil {
+		go func() {
+			if err := s.cdn.TriggerTranscode(video.ID.String()); err != nil {
+				s.log.Error("triggering CDN transcode", "video_id", video.ID, "error", err)
+			}
+		}()
+	}
+
 	return video, nil
 }

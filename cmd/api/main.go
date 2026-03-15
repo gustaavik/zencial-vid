@@ -10,6 +10,7 @@ import (
 	v1 "github.com/zenfulcode/zencial/internal/adapter/handler/v1"
 	"github.com/zenfulcode/zencial/internal/adapter/messaging"
 	"github.com/zenfulcode/zencial/internal/infrastructure/auth"
+	"github.com/zenfulcode/zencial/internal/infrastructure/cdn"
 	"github.com/zenfulcode/zencial/internal/infrastructure/config"
 	"github.com/zenfulcode/zencial/internal/infrastructure/database"
 	"github.com/zenfulcode/zencial/internal/infrastructure/logger"
@@ -113,7 +114,19 @@ func main() {
 	userService := useruc.NewService(userRepo, dispatcher, log)
 	planService := planuc.NewService(planRepo, log)
 	subscriptionService := subscriptionuc.NewService(subRepo, planRepo, log)
-	videoService := videouc.NewService(videoRepo, genreRepo, subRepo, planRepo, storageService, dispatcher, log)
+	// Video service with optional CDN integration
+	var videoOpts []videouc.Option
+	if cfg.CDN.BaseURL != "" {
+		// Use internal URL for backend→CDN calls, fall back to base URL.
+		cdnInternalURL := cfg.CDN.InternalURL
+		if cdnInternalURL == "" {
+			cdnInternalURL = cfg.CDN.BaseURL
+		}
+		cdnClient := cdn.New(cdnInternalURL)
+		videoOpts = append(videoOpts, videouc.WithCDN(cdnClient, cfg.CDN.BaseURL))
+		log.Info("CDN integration enabled", "public_url", cfg.CDN.BaseURL, "internal_url", cdnInternalURL)
+	}
+	videoService := videouc.NewService(videoRepo, genreRepo, subRepo, planRepo, storageService, dispatcher, log, videoOpts...)
 
 	// Router
 	r := chi.NewRouter()
