@@ -111,6 +111,11 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 			// Admin video listing (all statuses)
 			r.Get("/admin/videos", videoHandler.ListAll)
 
+			// Bulk video operations
+			r.Post("/admin/videos/bulk-publish", videoHandler.BulkPublish)
+			r.Post("/admin/videos/bulk-archive", videoHandler.BulkDelete)
+			r.Post("/admin/videos/bulk-unarchive", videoHandler.BulkUnarchive)
+
 			// User management (admin)
 			r.Get("/admin/users", userHandler.ListUsers)
 			r.Get("/admin/users/{id}", userHandler.GetUser)

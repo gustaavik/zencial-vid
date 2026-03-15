@@ -315,6 +315,112 @@ func (h *VideoHandler) Stream(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusOK, mapper.StreamToResponse(output))
 }
 
+// BulkPublish publishes multiple videos.
+func (h *VideoHandler) BulkPublish(w http.ResponseWriter, r *http.Request) {
+	var req dto.BulkVideoIDsRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
+		return
+	}
+
+	if errors := h.validator.Validate(req); errors != nil {
+		httputil.ErrorWithDetails(w,
+			apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil),
+			errors,
+		)
+		return
+	}
+
+	ids, err := parseUUIDs(req.IDs)
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeValidationFailed, err.Error())
+		return
+	}
+
+	result, appErr := h.videoService.BulkPublish(r.Context(), ids)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.BulkResultToResponse(result))
+}
+
+// BulkDelete archives multiple videos.
+func (h *VideoHandler) BulkDelete(w http.ResponseWriter, r *http.Request) {
+	var req dto.BulkVideoIDsRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
+		return
+	}
+
+	if errors := h.validator.Validate(req); errors != nil {
+		httputil.ErrorWithDetails(w,
+			apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil),
+			errors,
+		)
+		return
+	}
+
+	ids, err := parseUUIDs(req.IDs)
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeValidationFailed, err.Error())
+		return
+	}
+
+	result, appErr := h.videoService.BulkDelete(r.Context(), ids)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.BulkResultToResponse(result))
+}
+
+// BulkUnarchive restores multiple archived videos.
+func (h *VideoHandler) BulkUnarchive(w http.ResponseWriter, r *http.Request) {
+	var req dto.BulkVideoIDsRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
+		return
+	}
+
+	if errors := h.validator.Validate(req); errors != nil {
+		httputil.ErrorWithDetails(w,
+			apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil),
+			errors,
+		)
+		return
+	}
+
+	ids, err := parseUUIDs(req.IDs)
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeValidationFailed, err.Error())
+		return
+	}
+
+	result, appErr := h.videoService.BulkUnarchive(r.Context(), ids)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.BulkResultToResponse(result))
+}
+
+// parseUUIDs converts a slice of string IDs to uuid.UUID.
+func parseUUIDs(ids []string) ([]uuid.UUID, error) {
+	result := make([]uuid.UUID, len(ids))
+	for i, id := range ids {
+		parsed, err := uuid.Parse(id)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ID: %s", id)
+		}
+		result[i] = parsed
+	}
+	return result, nil
+}
+
 // UploadThumbnail handles updating a video's thumbnail image.
 func (h *VideoHandler) UploadThumbnail(w http.ResponseWriter, r *http.Request) {
 	id, err := httputil.URLParamUUID(r, "id")

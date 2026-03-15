@@ -70,6 +70,27 @@ func VideosToResponseWithAccess(videos []entity.Video, store storage.StorageServ
 	return result
 }
 
+// BulkResultToResponse maps a BulkResult to a BulkResultResponse DTO.
+func BulkResultToResponse(result *videouc.BulkResult) dto.BulkResultResponse {
+	succeeded := make([]string, len(result.Succeeded))
+	for i, id := range result.Succeeded {
+		succeeded[i] = id.String()
+	}
+
+	failed := make([]dto.BulkFailureResponse, len(result.Failed))
+	for i, f := range result.Failed {
+		failed[i] = dto.BulkFailureResponse{
+			ID:    f.ID.String(),
+			Error: f.Error,
+		}
+	}
+
+	return dto.BulkResultResponse{
+		Succeeded: succeeded,
+		Failed:    failed,
+	}
+}
+
 // StreamToResponse maps a StreamOutput to a VideoStreamResponse DTO.
 func StreamToResponse(output *videouc.StreamOutput) dto.VideoStreamResponse {
 	return dto.VideoStreamResponse{
