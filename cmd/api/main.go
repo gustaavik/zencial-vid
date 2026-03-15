@@ -9,22 +9,22 @@ import (
 
 	v1 "github.com/zenfulcode/zencial/internal/adapter/handler/v1"
 	"github.com/zenfulcode/zencial/internal/adapter/messaging"
-	"github.com/zenfulcode/zencial/internal/adapter/persistence/postgres"
-	"github.com/zenfulcode/zencial/internal/adapter/persistence/redis"
 	"github.com/zenfulcode/zencial/internal/infrastructure/auth"
+	"github.com/zenfulcode/zencial/internal/infrastructure/cdn"
 	"github.com/zenfulcode/zencial/internal/infrastructure/config"
 	"github.com/zenfulcode/zencial/internal/infrastructure/database"
 	"github.com/zenfulcode/zencial/internal/infrastructure/logger"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
+	"github.com/zenfulcode/zencial/internal/infrastructure/persistence/postgres"
+	"github.com/zenfulcode/zencial/internal/infrastructure/persistence/redis"
 	"github.com/zenfulcode/zencial/internal/infrastructure/server"
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
-	cataloguc "github.com/zenfulcode/zencial/internal/usecase/catalog"
-	contentuc "github.com/zenfulcode/zencial/internal/usecase/content"
-	streaminguc "github.com/zenfulcode/zencial/internal/usecase/streaming"
+	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
+	planuc "github.com/zenfulcode/zencial/internal/usecase/plan"
 	subscriptionuc "github.com/zenfulcode/zencial/internal/usecase/subscription"
 	useruc "github.com/zenfulcode/zencial/internal/usecase/user"
-	watchlistuc "github.com/zenfulcode/zencial/internal/usecase/watchlist"
+	videouc "github.com/zenfulcode/zencial/internal/usecase/video"
 
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
@@ -86,11 +86,10 @@ func main() {
 
 	// Repositories
 	userRepo := postgres.NewUserRepository(dbPool)
-	contentRepo := postgres.NewContentRepository(dbPool)
-	catalogRepo := postgres.NewCatalogRepository(dbPool)
-	subscriptionRepo := postgres.NewSubscriptionRepository(dbPool)
-	streamingRepo := postgres.NewStreamingRepository(dbPool)
-	watchlistRepo := postgres.NewWatchlistRepository(dbPool)
+	genreRepo := postgres.NewGenreRepository(dbPool)
+	videoRepo := postgres.NewVideoRepository(dbPool)
+	planRepo := postgres.NewPlanRepository(dbPool)
+	subRepo := postgres.NewSubscriptionRepository(dbPool)
 
 	// Redis stores
 	sessionStore := redis.NewSessionStore(redisClient, cfg.JWT.RefreshDuration)
@@ -98,31 +97,36 @@ func main() {
 	// Event dispatcher
 	dispatcher := messaging.NewEventDispatcher(log)
 
-	// Storage (S3 / MinIO) — optional, gracefully degrades if not configured
-	var storageService storage.StorageService
-	if cfg.Storage.Endpoint != "" {
-		s3Client, err := storage.NewS3Client(cfg.Storage, cfg.CDN.BaseURL)
-		if err != nil {
-			log.Warn("failed to initialize S3 storage, uploads will be disabled", "error", err)
-		} else {
-			if err := s3Client.EnsureBucket(ctx); err != nil {
-				log.Warn("failed to ensure S3 bucket", "error", err)
-			}
-			storageService = s3Client
-			log.Info("S3 storage initialized", "endpoint", cfg.Storage.Endpoint, "bucket", cfg.Storage.Bucket)
-		}
-	} else {
-		log.Info("S3 storage not configured, uploads disabled")
+	// Storage (MinIO)
+	storageService, err := storage.NewMinIOService(cfg.Storage)
+	if err != nil {
+		log.Error("failed to initialize storage", "error", err)
+		os.Exit(1)
+	}
+	if err := storageService.EnsureBucket(ctx); err != nil {
+		log.Error("failed to ensure storage bucket", "error", err)
+		os.Exit(1)
 	}
 
 	// Use cases
 	authService := authuc.NewService(userRepo, tokenService, hasher, sessionStore, dispatcher, log)
-	userService := useruc.NewService(userRepo, log)
-	contentService := contentuc.NewService(contentRepo, catalogRepo, log)
-	catalogService := cataloguc.NewService(catalogRepo, contentRepo, log)
-	streamingService := streaminguc.NewService(streamingRepo, contentRepo, subscriptionRepo, cfg.CDN.BaseURL, log)
-	subscriptionService := subscriptionuc.NewService(subscriptionRepo, log)
-	watchlistService := watchlistuc.NewService(watchlistRepo, contentRepo, log)
+	genreService := genreuc.NewService(genreRepo, log)
+	userService := useruc.NewService(userRepo, dispatcher, log)
+	planService := planuc.NewService(planRepo, log)
+	subscriptionService := subscriptionuc.NewService(subRepo, planRepo, log)
+	// Video service with optional CDN integration
+	var videoOpts []videouc.Option
+	if cfg.CDN.BaseURL != "" {
+		// Use internal URL for backend→CDN calls, fall back to base URL.
+		cdnInternalURL := cfg.CDN.InternalURL
+		if cdnInternalURL == "" {
+			cdnInternalURL = cfg.CDN.BaseURL
+		}
+		cdnClient := cdn.New(cdnInternalURL)
+		videoOpts = append(videoOpts, videouc.WithCDN(cdnClient, cfg.CDN.BaseURL))
+		log.Info("CDN integration enabled", "public_url", cfg.CDN.BaseURL, "internal_url", cdnInternalURL)
+	}
+	videoService := videouc.NewService(videoRepo, genreRepo, subRepo, planRepo, storageService, dispatcher, log, videoOpts...)
 
 	// Router
 	r := chi.NewRouter()
@@ -149,12 +153,11 @@ func main() {
 	r.Route("/api/v1", func(r chi.Router) {
 		v1.RegisterRoutes(r, v1.Deps{
 			Auth:         authService,
+			Genre:        genreService,
 			User:         userService,
-			Content:      contentService,
-			Catalog:      catalogService,
-			Streaming:    streamingService,
+			Video:        videoService,
+			Plan:         planService,
 			Subscription: subscriptionService,
-			Watchlist:    watchlistService,
 			TokenService: tokenService,
 			Storage:      storageService,
 			Log:          log,

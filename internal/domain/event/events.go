@@ -31,35 +31,68 @@ type UserLoggedIn struct {
 func (e UserLoggedIn) EventName() string     { return "user.logged_in" }
 func (e UserLoggedIn) OccurredAt() time.Time { return e.Timestamp }
 
-// PlaybackStarted is emitted when a user starts streaming content.
-type PlaybackStarted struct {
-	UserID    uuid.UUID
-	ContentID uuid.UUID
-	EpisodeID *uuid.UUID
-	Timestamp time.Time
-}
-
-func (e PlaybackStarted) EventName() string     { return "playback.started" }
-func (e PlaybackStarted) OccurredAt() time.Time { return e.Timestamp }
-
-// SubscriptionChanged is emitted when a subscription is created, changed, or canceled.
-type SubscriptionChanged struct {
-	UserID     uuid.UUID
-	OldPlanID  *uuid.UUID
-	NewPlanID  uuid.UUID
-	ChangeType string // "created", "upgraded", "downgraded", "canceled"
+// VideoUploaded is emitted when a new video is uploaded.
+type VideoUploaded struct {
+	VideoID    uuid.UUID
+	Title      string
+	UploadedBy uuid.UUID
 	Timestamp  time.Time
 }
 
-func (e SubscriptionChanged) EventName() string     { return "subscription.changed" }
-func (e SubscriptionChanged) OccurredAt() time.Time { return e.Timestamp }
+func (e VideoUploaded) EventName() string     { return "video.uploaded" }
+func (e VideoUploaded) OccurredAt() time.Time { return e.Timestamp }
 
-// ContentPublished is emitted when content is published.
-type ContentPublished struct {
-	ContentID uuid.UUID
-	Title     string
+// VideoPublished is emitted when a video is published.
+type VideoPublished struct {
+	VideoID   uuid.UUID
 	Timestamp time.Time
 }
 
-func (e ContentPublished) EventName() string     { return "content.published" }
-func (e ContentPublished) OccurredAt() time.Time { return e.Timestamp }
+func (e VideoPublished) EventName() string     { return "video.published" }
+func (e VideoPublished) OccurredAt() time.Time { return e.Timestamp }
+
+// VideoArchived is emitted when a video is soft-deleted (archived).
+type VideoArchived struct {
+	VideoID   uuid.UUID
+	Timestamp time.Time
+}
+
+func (e VideoArchived) EventName() string     { return "video.archived" }
+func (e VideoArchived) OccurredAt() time.Time { return e.Timestamp }
+
+// VideoRestored is emitted when an archived video is restored.
+type VideoRestored struct {
+	VideoID   uuid.UUID
+	Timestamp time.Time
+}
+
+func (e VideoRestored) EventName() string     { return "video.restored" }
+func (e VideoRestored) OccurredAt() time.Time { return e.Timestamp }
+
+// UserProfileUpdated is emitted when a user updates their profile.
+type UserProfileUpdated struct {
+	UserID    uuid.UUID
+	Timestamp time.Time
+}
+
+func (e UserProfileUpdated) EventName() string     { return "user.profile_updated" }
+func (e UserProfileUpdated) OccurredAt() time.Time { return e.Timestamp }
+
+// UserAccountDeleted is emitted when a user soft-deletes their account.
+type UserAccountDeleted struct {
+	UserID    uuid.UUID
+	Timestamp time.Time
+}
+
+func (e UserAccountDeleted) EventName() string     { return "user.account_deleted" }
+func (e UserAccountDeleted) OccurredAt() time.Time { return e.Timestamp }
+
+// UserStatusChanged is emitted when an admin changes a user's status.
+type UserStatusChanged struct {
+	UserID    uuid.UUID
+	NewStatus string
+	Timestamp time.Time
+}
+
+func (e UserStatusChanged) EventName() string     { return "user.status_changed" }
+func (e UserStatusChanged) OccurredAt() time.Time { return e.Timestamp }

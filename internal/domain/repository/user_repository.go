@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
+	"github.com/zenfulcode/zencial/internal/pkg/filter"
 )
 
 // UserRepository defines persistence operations for users.
@@ -16,6 +17,6 @@ type UserRepository interface {
 	Update(ctx context.Context, user *entity.User) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	ExistsByEmail(ctx context.Context, email valueobject.Email) (bool, error)
-	List(ctx context.Context, page, perPage int) ([]entity.User, int64, error)
+	List(ctx context.Context, fs filter.FilterSet) ([]entity.User, int64, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status entity.UserStatus) error
 }

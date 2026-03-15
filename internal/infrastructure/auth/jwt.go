@@ -56,14 +56,14 @@ func NewJWTService(cfg config.JWTConfig) TokenService {
 }
 
 func (s *jwtService) GenerateTokenPair(userID uuid.UUID, role entity.UserRole) (*TokenPair, error) {
-	expiresAt := time.Now().Add(s.accessDuration)
+	expiresAt := time.Now().UTC().Add(s.accessDuration)
 
 	claims := jwtClaims{
 		UserID: userID.String(),
 		Role:   string(role),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 			Issuer:    s.issuer,
 			Subject:   userID.String(),
 		},

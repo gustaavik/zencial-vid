@@ -8,11 +8,12 @@ import (
 
 // Service handles subscription use cases.
 type Service struct {
-	subscriptionRepo repository.SubscriptionRepository
-	log              *slog.Logger
+	subRepo  repository.SubscriptionRepository
+	planRepo repository.PlanRepository
+	log      *slog.Logger
 }
 
 // NewService creates a new subscription Service.
-func NewService(subscriptionRepo repository.SubscriptionRepository, log *slog.Logger) *Service {
-	return &Service{subscriptionRepo: subscriptionRepo, log: log}
+func NewService(subRepo repository.SubscriptionRepository, planRepo repository.PlanRepository, log *slog.Logger) *Service {
+	return &Service{subRepo: subRepo, planRepo: planRepo, log: log}
 }

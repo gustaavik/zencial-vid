@@ -1,0 +1,10 @@
+deployments/
+bin/
+.claude/
+scripts/
+tmp/
+.git/
+.gitignore
+.dockerignore
+Makefile
+README.md

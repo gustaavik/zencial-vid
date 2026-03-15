@@ -9,23 +9,21 @@ import (
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
-	cataloguc "github.com/zenfulcode/zencial/internal/usecase/catalog"
-	contentuc "github.com/zenfulcode/zencial/internal/usecase/content"
-	streaminguc "github.com/zenfulcode/zencial/internal/usecase/streaming"
+	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
+	planuc "github.com/zenfulcode/zencial/internal/usecase/plan"
 	subscriptionuc "github.com/zenfulcode/zencial/internal/usecase/subscription"
 	useruc "github.com/zenfulcode/zencial/internal/usecase/user"
-	watchlistuc "github.com/zenfulcode/zencial/internal/usecase/watchlist"
+	videouc "github.com/zenfulcode/zencial/internal/usecase/video"
 )
 
 // Deps holds all dependencies needed by V1 handlers.
 type Deps struct {
 	Auth         *authuc.Service
+	Genre        *genreuc.Service
 	User         *useruc.Service
-	Content      *contentuc.Service
-	Catalog      *cataloguc.Service
-	Streaming    *streaminguc.Service
+	Video        *videouc.Service
+	Plan         *planuc.Service
 	Subscription *subscriptionuc.Service
-	Watchlist    *watchlistuc.Service
 	TokenService auth.TokenService
 	Storage      storage.StorageService
 	Log          *slog.Logger
@@ -34,17 +32,11 @@ type Deps struct {
 // RegisterRoutes registers all V1 API routes.
 func RegisterRoutes(r chi.Router, deps Deps) {
 	authHandler := NewAuthHandler(deps.Auth)
+	genreHandler := NewGenreHandler(deps.Genre)
 	userHandler := NewUserHandler(deps.User)
-	contentHandler := NewContentHandler(deps.Content)
-	catalogHandler := NewCatalogHandler(deps.Catalog)
-	streamingHandler := NewStreamingHandler(deps.Streaming)
+	videoHandler := NewVideoHandler(deps.Video, deps.Storage)
+	planHandler := NewPlanHandler(deps.Plan)
 	subscriptionHandler := NewSubscriptionHandler(deps.Subscription)
-	watchlistHandler := NewWatchlistHandler(deps.Watchlist)
-
-	var uploadHandler *UploadHandler
-	if deps.Storage != nil {
-		uploadHandler = NewUploadHandler(deps.Storage)
-	}
 
 	// Public routes
 	r.Route("/auth", func(r chi.Router) {
@@ -53,8 +45,22 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 		r.Post("/refresh", authHandler.RefreshToken)
 	})
 
-	// Public: subscription plans
-	r.Get("/plans", subscriptionHandler.ListPlans)
+	// Public genre routes (read-only)
+	r.Route("/genres", func(r chi.Router) {
+		r.Get("/", genreHandler.List)
+		r.Get("/{id}", genreHandler.GetByID)
+	})
+
+	// Public plan routes (active plans only)
+	r.Get("/plans", planHandler.ListActive)
+
+	// Public video routes with optional auth (for is_accessible field)
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.OptionalAuthenticate(deps.TokenService))
+
+		r.Get("/videos", videoHandler.ListPublished)
+		r.Get("/videos/{id}", videoHandler.GetByID)
+	})
 
 	// Authenticated routes
 	r.Group(func(r chi.Router) {
@@ -63,100 +69,58 @@ func RegisterRoutes(r chi.Router, deps Deps) {
 		// Auth (requires token)
 		r.Post("/auth/logout", authHandler.Logout)
 
-		// User profile
-		r.Route("/users/me", func(r chi.Router) {
-			r.Get("/", userHandler.GetMe)
-			r.Patch("/", userHandler.UpdateMe)
-			r.Delete("/", userHandler.DeleteMe)
-		})
+		// User profile (self)
+		r.Get("/me", userHandler.GetMe)
+		r.Put("/me", userHandler.UpdateMe)
+		r.Delete("/me", userHandler.DeleteMe)
 
-		// Content
-		r.Route("/content", func(r chi.Router) {
-			r.Get("/", contentHandler.List)
-			r.Get("/featured", contentHandler.Featured)
-			r.Get("/{slug}", contentHandler.GetBySlug)
-			r.Get("/{slug}/seasons", contentHandler.GetSeasons)
-			r.Get("/{slug}/seasons/{seasonNumber}/episodes", contentHandler.GetEpisodes)
-		})
+		// User subscription (self)
+		r.Get("/me/subscription", subscriptionHandler.GetMySubscription)
 
-		// Catalog
-		r.Get("/genres", catalogHandler.ListGenres)
-		r.Get("/genres/{slug}/content", catalogHandler.ContentByGenre)
-		r.Get("/categories", catalogHandler.ListCategories)
-		r.Get("/search", contentHandler.Search)
-
-		// Streaming
-		r.Route("/streaming", func(r chi.Router) {
-			r.Post("/sessions", streamingHandler.StartSession)
-			r.Delete("/sessions/{id}", streamingHandler.EndSession)
-			r.Put("/progress", streamingHandler.UpdateProgress)
-			r.Get("/progress/{contentId}", streamingHandler.GetProgress)
-			r.Get("/continue-watching", streamingHandler.ContinueWatching)
-		})
-
-		// Subscription
-		r.Route("/subscriptions", func(r chi.Router) {
-			r.Get("/me", subscriptionHandler.GetCurrent)
-			r.Post("/", subscriptionHandler.Subscribe)
-			r.Patch("/me/plan", subscriptionHandler.ChangePlan)
-			r.Post("/me/cancel", subscriptionHandler.Cancel)
-		})
-
-		// Watchlist
-		r.Route("/watchlist", func(r chi.Router) {
-			r.Get("/", watchlistHandler.List)
-			r.Post("/{contentId}", watchlistHandler.Add)
-			r.Delete("/{contentId}", watchlistHandler.Remove)
-			r.Get("/{contentId}/status", watchlistHandler.Status)
-		})
+		// Video streaming (any authenticated user)
+		r.Get("/videos/{id}/stream", videoHandler.Stream)
 
 		// Admin routes
-		r.Route("/admin", func(r chi.Router) {
+		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequireRole(entity.RoleAdmin))
 
-			if uploadHandler != nil {
-				r.Post("/upload", uploadHandler.Upload)
-				r.Post("/upload/init", uploadHandler.InitUpload)
-			}
+			// Genre management
+			r.Post("/genres", genreHandler.Create)
+			r.Put("/genres/{id}", genreHandler.Update)
+			r.Delete("/genres/{id}", genreHandler.Delete)
 
-			r.Route("/content", func(r chi.Router) {
-				r.Get("/", contentHandler.AdminList)
-				r.Get("/{id}", contentHandler.AdminGetByID)
-				r.Put("/{id}", contentHandler.Update)
-				r.Delete("/{id}", contentHandler.Delete)
-				r.Post("/{id}/publish", contentHandler.Publish)
-				r.Post("/{id}/archive", contentHandler.Archive)
-				r.Post("/{id}/asset", contentHandler.AttachVideoAsset)
-			})
+			// Plan management
+			r.Post("/plans", planHandler.Create)
+			r.Get("/plans/{id}", planHandler.GetByID)
+			r.Put("/plans/{id}", planHandler.Update)
+			r.Delete("/plans/{id}", planHandler.Delete)
+			r.Get("/admin/plans", planHandler.List)
 
-			r.Post("/films", contentHandler.CreateFilm)
-			r.Post("/videos", contentHandler.CreateVideo)
-			r.Post("/series", contentHandler.CreateSeries)
+			// Subscription management
+			r.Post("/admin/subscriptions", subscriptionHandler.Assign)
+			r.Delete("/admin/subscriptions/{id}", subscriptionHandler.Cancel)
 
-			r.Get("/users", userHandler.AdminListUsers)
-			r.Patch("/users/{id}/status", userHandler.AdminUpdateStatus)
+			// Video management
+			r.Post("/videos", videoHandler.Upload)
+			r.Put("/videos/{id}", videoHandler.Update)
+			r.Put("/videos/{id}/thumbnail", videoHandler.UploadThumbnail)
+			r.Post("/videos/{id}/publish", videoHandler.Publish)
+			r.Post("/videos/{id}/unarchive", videoHandler.Unarchive)
+			r.Delete("/videos/{id}", videoHandler.Delete)
 
-			r.Route("/subscriptions", func(r chi.Router) {
-				r.Get("/", subscriptionHandler.AdminListSubscriptions)
-				r.Post("/", subscriptionHandler.AdminCreateSubscription)
-				r.Get("/user/{userId}", subscriptionHandler.AdminGetUserSubscription)
-				r.Patch("/{id}/plan", subscriptionHandler.AdminChangePlan)
-				r.Post("/{id}/reactivate", subscriptionHandler.AdminReactivateSubscription)
-				r.Post("/{id}/cancel", subscriptionHandler.AdminCancelSubscription)
-			})
+			// Admin video listing (all statuses)
+			r.Get("/admin/videos", videoHandler.ListAll)
 
-			r.Route("/genres", func(r chi.Router) {
-				r.Post("/", catalogHandler.CreateGenre)
-				r.Put("/{id}", catalogHandler.UpdateGenre)
-				r.Delete("/{id}", catalogHandler.DeleteGenre)
-			})
+			// Bulk video operations
+			r.Post("/admin/videos/bulk-publish", videoHandler.BulkPublish)
+			r.Post("/admin/videos/bulk-archive", videoHandler.BulkDelete)
+			r.Post("/admin/videos/bulk-unarchive", videoHandler.BulkUnarchive)
 
-			r.Route("/plans", func(r chi.Router) {
-				r.Get("/", subscriptionHandler.AdminListAllPlans)
-				r.Post("/", subscriptionHandler.AdminCreatePlan)
-				r.Put("/{id}", subscriptionHandler.AdminUpdatePlan)
-				r.Delete("/{id}", subscriptionHandler.AdminDeactivatePlan)
-			})
+			// User management (admin)
+			r.Get("/admin/users", userHandler.ListUsers)
+			r.Get("/admin/users/{id}", userHandler.GetUser)
+			r.Put("/admin/users/{id}/status", userHandler.UpdateUserStatus)
+			r.Get("/admin/users/{id}/subscriptions", subscriptionHandler.ListByUser)
 		})
 	})
 }

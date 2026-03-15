@@ -64,7 +64,7 @@ func (s *Service) Login(ctx context.Context, input LoginInput) (*LoginOutput, *a
 
 	s.dispatcher.Dispatch(event.UserLoggedIn{
 		UserID:    user.ID,
-		Timestamp: time.Now(),
+		Timestamp: time.Now().UTC(),
 	})
 
 	return &LoginOutput{

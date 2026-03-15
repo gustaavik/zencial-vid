@@ -1,0 +1,41 @@
+package user
+
+import (
+	"context"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/zenfulcode/zencial/internal/domain"
+	"github.com/zenfulcode/zencial/internal/domain/entity"
+	"github.com/zenfulcode/zencial/internal/domain/event"
+	"github.com/zenfulcode/zencial/internal/pkg/apperror"
+)
+
+// DeleteAccount soft-deletes the authenticated user's account.
+func (s *Service) DeleteAccount(ctx context.Context, userID uuid.UUID) *apperror.AppError {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		s.log.Error("getting user for account deletion", "error", err, "userID", userID)
+		return apperror.Internal(apperror.CodeInternalError, "failed to get user", err)
+	}
+	if user == nil {
+		return apperror.NotFound(apperror.CodeUserNotFound, "user not found", domain.ErrUserNotFound)
+	}
+	if user.Status == entity.UserStatusDeleted {
+		return apperror.NotFound(apperror.CodeUserNotFound, "user not found", domain.ErrUserDeleted)
+	}
+
+	user.SoftDelete()
+
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		s.log.Error("soft-deleting user account", "error", err, "userID", userID)
+		return apperror.Internal(apperror.CodeInternalError, "failed to delete account", err)
+	}
+
+	s.dispatcher.Dispatch(event.UserAccountDeleted{
+		UserID:    user.ID,
+		Timestamp: time.Now().UTC(),
+	})
+
+	return nil
+}

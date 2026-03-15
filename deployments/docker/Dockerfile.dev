@@ -1,7 +1,7 @@
 # Development Dockerfile with hot-reload
 FROM golang:1.25-alpine
 
-RUN apk add --no-cache git
+RUN apk add --no-cache git ffmpeg
 
 # Install air for hot-reload
 RUN go install github.com/air-verse/air@latest

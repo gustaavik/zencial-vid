@@ -10,6 +10,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain/event"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 	infraAuth "github.com/zenfulcode/zencial/internal/infrastructure/auth"
+	"github.com/zenfulcode/zencial/internal/pkg/filter"
 )
 
 // --- Mock UserRepository ---
@@ -21,7 +22,7 @@ type mockUserRepo struct {
 	updateFn        func(ctx context.Context, user *entity.User) error
 	deleteFn        func(ctx context.Context, id uuid.UUID) error
 	existsByEmailFn func(ctx context.Context, email valueobject.Email) (bool, error)
-	listFn          func(ctx context.Context, page, perPage int) ([]entity.User, int64, error)
+	listFn          func(ctx context.Context, fs filter.FilterSet) ([]entity.User, int64, error)
 	updateStatusFn  func(ctx context.Context, id uuid.UUID, status entity.UserStatus) error
 }
 
@@ -67,9 +68,9 @@ func (m *mockUserRepo) ExistsByEmail(ctx context.Context, email valueobject.Emai
 	return false, nil
 }
 
-func (m *mockUserRepo) List(ctx context.Context, page, perPage int) ([]entity.User, int64, error) {
+func (m *mockUserRepo) List(ctx context.Context, fs filter.FilterSet) ([]entity.User, int64, error) {
 	if m.listFn != nil {
-		return m.listFn(ctx, page, perPage)
+		return m.listFn(ctx, fs)
 	}
 	return nil, 0, nil
 }

@@ -14,31 +14,29 @@ const (
 	CodeUserNotFound       = "USER_NOT_FOUND"
 	CodeEmailAlreadyExists = "EMAIL_ALREADY_EXISTS"
 	CodeUserSuspended      = "USER_SUSPENDED"
+	CodeUserDeleted        = "USER_DELETED"
+	CodeInvalidDateFormat  = "INVALID_DATE_FORMAT"
 
-	// Content
-	CodeContentNotFound    = "CONTENT_NOT_FOUND"
-	CodeContentNotPlayable = "CONTENT_NOT_PLAYABLE"
-	CodeSlugConflict       = "SLUG_CONFLICT"
-	CodeVideoAssetRequired = "VIDEO_ASSET_REQUIRED"
-	CodeEpisodeNotFound    = "EPISODE_NOT_FOUND"
-	CodeSeasonNotFound     = "SEASON_NOT_FOUND"
+	// Videos
+	CodeSlugConflict = "SLUG_CONFLICT"
 
 	// Catalog
-	CodeGenreNotFound    = "GENRE_NOT_FOUND"
-	CodeCategoryNotFound = "CATEGORY_NOT_FOUND"
+	CodeGenreNotFound = "GENRE_NOT_FOUND"
+
+	// Video
+	CodeVideoNotFound    = "VIDEO_NOT_FOUND"
+	CodeVideoNotPlayable = "VIDEO_NOT_PLAYABLE"
+	CodeStorageError     = "STORAGE_ERROR"
+	CodeUploadFailed     = "UPLOAD_FAILED"
+
+	// Plan
+	CodePlanNotFound     = "PLAN_NOT_FOUND"
+	CodePlanSlugConflict = "PLAN_SLUG_CONFLICT"
 
 	// Subscription
-	CodeNoActiveSubscription = "NO_ACTIVE_SUBSCRIPTION"
-	CodePlanNotFound         = "PLAN_NOT_FOUND"
-	CodeAlreadySubscribed    = "ALREADY_SUBSCRIBED"
-
-	// Streaming
-	CodeMaxStreamsReached = "MAX_STREAMS_REACHED"
-	CodeSessionNotFound   = "SESSION_NOT_FOUND"
-
-	// Watchlist
-	CodeAlreadyInWatchlist = "ALREADY_IN_WATCHLIST"
-	CodeNotInWatchlist     = "NOT_IN_WATCHLIST"
+	CodeSubscriptionNotFound     = "SUBSCRIPTION_NOT_FOUND"
+	CodeActiveSubscriptionExists = "ACTIVE_SUBSCRIPTION_EXISTS"
+	CodeInsufficientPlanLevel    = "INSUFFICIENT_PLAN_LEVEL"
 
 	// General
 	CodeValidationFailed = "VALIDATION_FAILED"

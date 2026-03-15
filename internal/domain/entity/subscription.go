@@ -4,90 +4,51 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 )
 
-// PlanTier represents a subscription plan level label (free-form string).
-type PlanTier string
-
-// Plan represents a subscription plan.
-type Plan struct {
-	ID               uuid.UUID
-	Name             string
-	Tier             PlanTier
-	Price            valueobject.Money
-	BillingInterval  string // "monthly", "yearly"
-	MaxQuality       valueobject.VideoQuality
-	MaxStreams       int
-	DownloadsAllowed bool
-	IsActive         bool
-	CreatedAt        time.Time
-}
-
-// SubscriptionStatus represents the state of a subscription.
+// SubscriptionStatus represents the lifecycle state of a subscription.
 type SubscriptionStatus string
 
 const (
-	SubscriptionActive   SubscriptionStatus = "active"
-	SubscriptionCanceled SubscriptionStatus = "canceled"
-	SubscriptionPastDue  SubscriptionStatus = "past_due"
-	SubscriptionExpired  SubscriptionStatus = "expired"
-	SubscriptionTrialing SubscriptionStatus = "trialing"
+	SubscriptionStatusActive    SubscriptionStatus = "active"
+	SubscriptionStatusCancelled SubscriptionStatus = "cancelled"
+	SubscriptionStatusExpired   SubscriptionStatus = "expired"
 )
 
 // Subscription represents a user's subscription to a plan.
 type Subscription struct {
-	ID                 uuid.UUID
-	UserID             uuid.UUID
-	PlanID             uuid.UUID
-	Plan               *Plan
-	Status             SubscriptionStatus
-	ExternalID         string // Payment provider subscription ID
-	CurrentPeriodStart time.Time
-	CurrentPeriodEnd   time.Time
-	CanceledAt         *time.Time
-	TrialEnd           *time.Time
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
-
-	// Transient fields (populated by specific queries, not persisted)
-	UserEmail string
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	PlanID    uuid.UUID
+	Status    SubscriptionStatus
+	StartedAt time.Time
+	ExpiresAt *time.Time
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
-// IsAccessible returns whether the subscription grants content access.
-func (s *Subscription) IsAccessible() bool {
-	switch s.Status {
-	case SubscriptionActive, SubscriptionTrialing:
-		return true
-	case SubscriptionCanceled:
-		return time.Now().Before(s.CurrentPeriodEnd)
-	default:
-		return false
+// NewSubscription creates a new active Subscription.
+func NewSubscription(userID, planID uuid.UUID, expiresAt *time.Time) *Subscription {
+	now := time.Now().UTC()
+	return &Subscription{
+		ID:        uuid.New(),
+		UserID:    userID,
+		PlanID:    planID,
+		Status:    SubscriptionStatusActive,
+		StartedAt: now,
+		ExpiresAt: expiresAt,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 }
 
-// MaxVideoQuality returns the highest quality this subscription permits.
-func (s *Subscription) MaxVideoQuality() valueobject.VideoQuality {
-	if s.Plan == nil {
-		return valueobject.QualitySD
-	}
-	return s.Plan.MaxQuality
+// IsActive reports whether the subscription is currently active.
+func (s *Subscription) IsActive() bool {
+	return s.Status == SubscriptionStatusActive
 }
 
-// Cancel marks the subscription as canceled.
+// Cancel marks the subscription as cancelled.
 func (s *Subscription) Cancel() {
-	now := time.Now()
-	s.Status = SubscriptionCanceled
-	s.CanceledAt = &now
-	s.UpdatedAt = now
-}
-
-// Reactivate restores a canceled subscription to active.
-func (s *Subscription) Reactivate() {
-	now := time.Now()
-	s.Status = SubscriptionActive
-	s.CanceledAt = nil
-	s.CurrentPeriodStart = now
-	s.CurrentPeriodEnd = now.AddDate(0, 1, 0)
-	s.UpdatedAt = now
+	s.Status = SubscriptionStatusCancelled
+	s.UpdatedAt = time.Now().UTC()
 }

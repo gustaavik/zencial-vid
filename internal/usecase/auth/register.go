@@ -69,7 +69,7 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterO
 	s.dispatcher.Dispatch(event.UserRegistered{
 		UserID:    user.ID,
 		Email:     user.Email.String(),
-		Timestamp: time.Now(),
+		Timestamp: time.Now().UTC(),
 	})
 
 	return &RegisterOutput{

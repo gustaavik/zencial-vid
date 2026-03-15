@@ -75,7 +75,8 @@ type StorageConfig struct {
 }
 
 type CDNConfig struct {
-	BaseURL        string        `env:"CDN_BASE_URL"`
+	BaseURL        string        `env:"CDN_BASE_URL"`     // Public/browser-facing URL (e.g. http://localhost:8090)
+	InternalURL    string        `env:"CDN_INTERNAL_URL"` // Docker-internal URL for backend→CDN calls (e.g. http://cdn:8090)
 	SigningKeyID   string        `env:"CDN_SIGNING_KEY_ID"`
 	SigningKeyPath string        `env:"CDN_SIGNING_KEY_PATH"`
 	URLExpiry      time.Duration `env:"CDN_URL_EXPIRY" envDefault:"4h"`

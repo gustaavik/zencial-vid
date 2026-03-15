@@ -12,7 +12,7 @@ type RealClock struct{}
 
 // Now returns the current time.
 func (RealClock) Now() time.Time {
-	return time.Now()
+	return time.Now().UTC()
 }
 
 // MockClock returns a fixed time, useful in tests.
