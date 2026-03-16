@@ -163,7 +163,7 @@ func (r *UserRepository) ExistsByEmail(ctx context.Context, email valueobject.Em
 	return exists, nil
 }
 
-func (r *UserRepository) List(ctx context.Context, fs filter.FilterSet) ([]entity.User, int64, error) {
+func (r *UserRepository) List(ctx context.Context, fs *filter.FilterSet) ([]entity.User, int64, error) {
 	db := connFromCtx(ctx, r.pool)
 	baseCondition := "u.status != 'deleted'"
 

@@ -29,7 +29,7 @@ func (c *Client) TriggerTranscode(videoID string) error {
 	if err != nil {
 		return fmt.Errorf("calling CDN transcode: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 300 {
 		return fmt.Errorf("CDN transcode returned status %d", resp.StatusCode)

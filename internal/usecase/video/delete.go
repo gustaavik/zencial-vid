@@ -52,10 +52,12 @@ func (s *Service) Delete(ctx context.Context, id uuid.UUID) *apperror.AppError {
 		return apperror.Internal(apperror.CodeInternalError, "failed to archive video", err)
 	}
 
-	s.dispatcher.Dispatch(event.VideoArchived{
+	if err := s.dispatcher.Dispatch(event.VideoArchived{
 		VideoID:   video.ID,
 		Timestamp: time.Now().UTC(),
-	})
+	}); err != nil {
+		s.log.Error("dispatching video archived event", "error", err)
+	}
 
 	return nil
 }

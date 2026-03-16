@@ -61,13 +61,13 @@ func main() {
 	}
 
 	// Initialize logger
-	log := logger.New(cfg.Log.Level, cfg.Log.Format)
-	slog.SetDefault(log)
+	appLog := logger.New(cfg.Log.Level, cfg.Log.Format)
+	slog.SetDefault(appLog)
 
 	// Connect to PostgreSQL
-	dbPool, err := database.NewPostgres(ctx, cfg.Database)
+	dbPool, err := database.NewPostgres(ctx, &cfg.Database)
 	if err != nil {
-		log.Error("failed to connect to database", "error", err)
+		appLog.Error("failed to connect to database", "error", err)
 		os.Exit(1)
 	}
 	defer dbPool.Close()
@@ -75,10 +75,10 @@ func main() {
 	// Connect to Redis
 	redisClient, err := database.NewRedis(ctx, cfg.Redis)
 	if err != nil {
-		log.Error("failed to connect to redis", "error", err)
-		os.Exit(1)
+		appLog.Error("failed to connect to redis", "error", err)
+		os.Exit(1) //nolint:gocritic // exitAfterDefer — startup failure, cleanup irrelevant
 	}
-	defer redisClient.Close()
+	defer func() { _ = redisClient.Close() }()
 
 	// Infrastructure services
 	tokenService := auth.NewJWTService(cfg.JWT)
@@ -95,25 +95,25 @@ func main() {
 	sessionStore := redis.NewSessionStore(redisClient, cfg.JWT.RefreshDuration)
 
 	// Event dispatcher
-	dispatcher := messaging.NewEventDispatcher(log)
+	dispatcher := messaging.NewEventDispatcher(appLog)
 
 	// Storage (MinIO)
-	storageService, err := storage.NewMinIOService(cfg.Storage)
+	storageService, err := storage.NewMinIOService(&cfg.Storage)
 	if err != nil {
-		log.Error("failed to initialize storage", "error", err)
+		appLog.Error("failed to initialize storage", "error", err)
 		os.Exit(1)
 	}
 	if err := storageService.EnsureBucket(ctx); err != nil {
-		log.Error("failed to ensure storage bucket", "error", err)
+		appLog.Error("failed to ensure storage bucket", "error", err)
 		os.Exit(1)
 	}
 
 	// Use cases
-	authService := authuc.NewService(userRepo, tokenService, hasher, sessionStore, dispatcher, log)
-	genreService := genreuc.NewService(genreRepo, log)
-	userService := useruc.NewService(userRepo, dispatcher, log)
-	planService := planuc.NewService(planRepo, log)
-	subscriptionService := subscriptionuc.NewService(subRepo, planRepo, log)
+	authService := authuc.NewService(userRepo, tokenService, hasher, sessionStore, dispatcher, appLog)
+	genreService := genreuc.NewService(genreRepo, appLog)
+	userService := useruc.NewService(userRepo, dispatcher, appLog)
+	planService := planuc.NewService(planRepo, appLog)
+	subscriptionService := subscriptionuc.NewService(subRepo, planRepo, appLog)
 	// Video service with optional CDN integration
 	var videoOpts []videouc.Option
 	if cfg.CDN.BaseURL != "" {
@@ -124,9 +124,9 @@ func main() {
 		}
 		cdnClient := cdn.New(cdnInternalURL)
 		videoOpts = append(videoOpts, videouc.WithCDN(cdnClient, cfg.CDN.BaseURL))
-		log.Info("CDN integration enabled", "public_url", cfg.CDN.BaseURL, "internal_url", cdnInternalURL)
+		appLog.Info("CDN integration enabled", "public_url", cfg.CDN.BaseURL, "internal_url", cdnInternalURL)
 	}
-	videoService := videouc.NewService(videoRepo, genreRepo, subRepo, planRepo, storageService, dispatcher, log, videoOpts...)
+	videoService := videouc.NewService(videoRepo, genreRepo, subRepo, planRepo, storageService, dispatcher, appLog, videoOpts...)
 
 	// Router
 	r := chi.NewRouter()
@@ -134,14 +134,14 @@ func main() {
 	// Global middleware
 	r.Use(chiMiddleware.RealIP)
 	r.Use(middleware.RequestID)
-	r.Use(middleware.Recovery(log))
-	r.Use(middleware.Logger(log))
+	r.Use(middleware.Recovery(appLog))
+	r.Use(middleware.Logger(appLog))
 	r.Use(middleware.CORS(cfg.Server))
 
 	// Health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok"}`))
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
 
 	// Swagger UI
@@ -151,7 +151,7 @@ func main() {
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
-		v1.RegisterRoutes(r, v1.Deps{
+		v1.RegisterRoutes(r, &v1.Deps{
 			Auth:         authService,
 			Genre:        genreService,
 			User:         userService,
@@ -160,14 +160,14 @@ func main() {
 			Subscription: subscriptionService,
 			TokenService: tokenService,
 			Storage:      storageService,
-			Log:          log,
+			Log:          appLog,
 		})
 	})
 
 	// Start server
-	srv := server.New(cfg.Server, r, log)
+	srv := server.New(cfg.Server, r, appLog)
 	if err := srv.Start(); err != nil {
-		log.Error("server error", "error", err)
+		appLog.Error("server error", "error", err)
 		os.Exit(1)
 	}
 }

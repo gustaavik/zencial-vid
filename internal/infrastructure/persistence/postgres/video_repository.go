@@ -117,15 +117,15 @@ func (r *VideoRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *VideoRepository) List(ctx context.Context, fs filter.FilterSet) ([]entity.Video, int64, error) {
+func (r *VideoRepository) List(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error) {
 	return r.listWithBase(ctx, fs, "")
 }
 
-func (r *VideoRepository) ListPublished(ctx context.Context, fs filter.FilterSet) ([]entity.Video, int64, error) {
+func (r *VideoRepository) ListPublished(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error) {
 	return r.listWithBase(ctx, fs, "v.status = 'published'")
 }
 
-func (r *VideoRepository) listWithBase(ctx context.Context, fs filter.FilterSet, baseCondition string) ([]entity.Video, int64, error) {
+func (r *VideoRepository) listWithBase(ctx context.Context, fs *filter.FilterSet, baseCondition string) ([]entity.Video, int64, error) {
 	db := connFromCtx(ctx, r.pool)
 
 	// Count

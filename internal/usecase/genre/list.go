@@ -9,7 +9,7 @@ import (
 )
 
 // List returns a paginated list of genres.
-func (s *Service) List(ctx context.Context, fs filter.FilterSet) ([]entity.Genre, int64, *apperror.AppError) {
+func (s *Service) List(ctx context.Context, fs *filter.FilterSet) ([]entity.Genre, int64, *apperror.AppError) {
 	genres, total, err := s.genreRepo.List(ctx, fs)
 	if err != nil {
 		s.log.Error("listing genres", "error", err)

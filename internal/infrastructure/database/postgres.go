@@ -9,7 +9,7 @@ import (
 )
 
 // NewPostgres creates a PostgreSQL connection pool.
-func NewPostgres(ctx context.Context, cfg config.DatabaseConfig) (*pgxpool.Pool, error) {
+func NewPostgres(ctx context.Context, cfg *config.DatabaseConfig) (*pgxpool.Pool, error) {
 	poolCfg, err := pgxpool.ParseConfig(cfg.DSN())
 	if err != nil {
 		return nil, fmt.Errorf("parsing database config: %w", err)

@@ -66,11 +66,13 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterO
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to store session", err)
 	}
 
-	s.dispatcher.Dispatch(event.UserRegistered{
+	if err := s.dispatcher.Dispatch(event.UserRegistered{
 		UserID:    user.ID,
 		Email:     user.Email.String(),
 		Timestamp: time.Now().UTC(),
-	})
+	}); err != nil {
+		s.log.Error("dispatching user registered event", "error", err)
+	}
 
 	return &RegisterOutput{
 		User:      user,

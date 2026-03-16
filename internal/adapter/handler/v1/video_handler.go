@@ -26,10 +26,10 @@ type VideoHandler struct {
 }
 
 // NewVideoHandler creates a new VideoHandler.
-func NewVideoHandler(videoService *videouc.Service, storage storage.StorageService) *VideoHandler {
+func NewVideoHandler(videoService *videouc.Service, storageSvc storage.StorageService) *VideoHandler {
 	return &VideoHandler{
 		videoService: videoService,
-		storage:      storage,
+		storage:      storageSvc,
 		validator:    validator.New(),
 	}
 }
@@ -47,7 +47,7 @@ func (h *VideoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		httputil.BadRequest(w, apperror.CodeBadRequest, "video file is required")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Optional thumbnail file
 	var thumbnailReader io.Reader
@@ -55,7 +55,7 @@ func (h *VideoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	var thumbnailContentType string
 	thumbnailFile, thumbnailHeader, thumbnailErr := r.FormFile("thumbnail")
 	if thumbnailErr == nil {
-		defer thumbnailFile.Close()
+		defer func() { _ = thumbnailFile.Close() }()
 		thumbnailReader = thumbnailFile
 		thumbnailFileName = thumbnailHeader.Filename
 		thumbnailContentType = thumbnailHeader.Header.Get("Content-Type")
@@ -101,7 +101,7 @@ func (h *VideoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	video, appErr := h.videoService.Upload(r.Context(), videouc.UploadInput{
+	video, appErr := h.videoService.Upload(r.Context(), &videouc.UploadInput{
 		Title:                title,
 		Description:          r.FormValue("description"),
 		Creator:              r.FormValue("creator"),
@@ -150,7 +150,7 @@ func (h *VideoHandler) ListPublished(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	videos, total, appErr := h.videoService.ListPublished(r.Context(), fs)
+	videos, total, appErr := h.videoService.ListPublished(r.Context(), &fs)
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return
@@ -172,7 +172,7 @@ func (h *VideoHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	videos, total, appErr := h.videoService.List(r.Context(), fs)
+	videos, total, appErr := h.videoService.List(r.Context(), &fs)
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return
@@ -222,7 +222,7 @@ func (h *VideoHandler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	video, appErr := h.videoService.Update(r.Context(), videouc.UpdateInput{
+	video, appErr := h.videoService.Update(r.Context(), &videouc.UpdateInput{
 		ID:               id,
 		Title:            req.Title,
 		Description:      req.Description,
@@ -437,7 +437,7 @@ func (h *VideoHandler) UploadThumbnail(w http.ResponseWriter, r *http.Request) {
 		httputil.BadRequest(w, apperror.CodeBadRequest, "thumbnail file is required")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	contentType := header.Header.Get("Content-Type")
 	if contentType == "" {

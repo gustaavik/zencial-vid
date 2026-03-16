@@ -52,10 +52,12 @@ func (s *Service) Unarchive(ctx context.Context, id uuid.UUID) (*entity.Video, *
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to restore video", err)
 	}
 
-	s.dispatcher.Dispatch(event.VideoRestored{
+	if err := s.dispatcher.Dispatch(event.VideoRestored{
 		VideoID:   video.ID,
 		Timestamp: time.Now().UTC(),
-	})
+	}); err != nil {
+		s.log.Error("dispatching video restored event", "error", err)
+	}
 
 	return video, nil
 }

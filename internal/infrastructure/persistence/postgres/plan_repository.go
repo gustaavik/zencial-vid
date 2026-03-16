@@ -125,7 +125,7 @@ func (r *PlanRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *PlanRepository) List(ctx context.Context, fs filter.FilterSet) ([]entity.Plan, int64, error) {
+func (r *PlanRepository) List(ctx context.Context, fs *filter.FilterSet) ([]entity.Plan, int64, error) {
 	db := connFromCtx(ctx, r.pool)
 
 	// Count

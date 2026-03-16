@@ -82,7 +82,7 @@ func (h *PlanHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	plans, total, appErr := h.planService.List(r.Context(), fs)
+	plans, total, appErr := h.planService.List(r.Context(), &fs)
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return

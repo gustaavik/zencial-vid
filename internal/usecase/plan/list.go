@@ -9,7 +9,7 @@ import (
 )
 
 // List returns a paginated list of all plans (admin).
-func (s *Service) List(ctx context.Context, fs filter.FilterSet) ([]entity.Plan, int64, *apperror.AppError) {
+func (s *Service) List(ctx context.Context, fs *filter.FilterSet) ([]entity.Plan, int64, *apperror.AppError) {
 	plans, total, err := s.planRepo.List(ctx, fs)
 	if err != nil {
 		s.log.Error("listing plans", "error", err)

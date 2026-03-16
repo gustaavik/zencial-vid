@@ -21,7 +21,7 @@ type MinIOService struct {
 }
 
 // NewMinIOService creates a new MinIO-backed StorageService.
-func NewMinIOService(cfg config.StorageConfig) (*MinIOService, error) {
+func NewMinIOService(cfg *config.StorageConfig) (*MinIOService, error) {
 	u, err := url.Parse(cfg.Endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("parsing S3 endpoint: %w", err)

@@ -20,7 +20,7 @@ type StreamOutput struct {
 }
 
 // GetStreamURL generates a presigned URL for streaming a published video.
-func (s *Service) GetStreamURL(ctx context.Context, videoID uuid.UUID, userID uuid.UUID) (*StreamOutput, *apperror.AppError) {
+func (s *Service) GetStreamURL(ctx context.Context, videoID, userID uuid.UUID) (*StreamOutput, *apperror.AppError) {
 	video, err := s.videoRepo.GetByID(ctx, videoID)
 	if err != nil {
 		s.log.Error("getting video for streaming", "error", err)

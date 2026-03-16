@@ -30,7 +30,7 @@ type Deps struct {
 }
 
 // RegisterRoutes registers all V1 API routes.
-func RegisterRoutes(r chi.Router, deps Deps) {
+func RegisterRoutes(r chi.Router, deps *Deps) {
 	authHandler := NewAuthHandler(deps.Auth)
 	genreHandler := NewGenreHandler(deps.Genre)
 	userHandler := NewUserHandler(deps.User)

@@ -15,7 +15,7 @@ func DecodeJSON(r *http.Request, dst interface{}) error {
 	if r.Body == nil {
 		return fmt.Errorf("request body is empty")
 	}
-	defer r.Body.Close()
+	defer func() { _ = r.Body.Close() }()
 
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()

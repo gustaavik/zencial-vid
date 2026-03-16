@@ -29,10 +29,12 @@ func (s *Service) Publish(ctx context.Context, id uuid.UUID) (*entity.Video, *ap
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to publish video", err)
 	}
 
-	s.dispatcher.Dispatch(event.VideoPublished{
+	if err := s.dispatcher.Dispatch(event.VideoPublished{
 		VideoID:   video.ID,
 		Timestamp: time.Now().UTC(),
-	})
+	}); err != nil {
+		s.log.Error("dispatching video published event", "error", err)
+	}
 
 	// Trigger HLS transcoding on the CDN (fire-and-forget).
 	if s.cdn != nil {

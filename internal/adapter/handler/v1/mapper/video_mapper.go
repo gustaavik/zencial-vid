@@ -38,16 +38,16 @@ func VideoToResponse(video *entity.Video, store storage.StorageService) dto.Vide
 // VideoToResponseWithAccess maps a Video entity to a VideoResponse DTO with access info.
 func VideoToResponseWithAccess(video *entity.Video, store storage.StorageService, userPlanLevel *int) dto.VideoResponse {
 	resp := VideoToResponse(video, store)
-	if !video.RequiresSubscription() {
-		accessible := true
-		resp.IsAccessible = &accessible
-	} else if userPlanLevel != nil {
-		accessible := *userPlanLevel >= *video.MinimumPlanLevel
-		resp.IsAccessible = &accessible
-	} else {
-		accessible := false
-		resp.IsAccessible = &accessible
+	var accessible bool
+	switch {
+	case !video.RequiresSubscription():
+		accessible = true
+	case userPlanLevel != nil:
+		accessible = *userPlanLevel >= *video.MinimumPlanLevel
+	default:
+		accessible = false
 	}
+	resp.IsAccessible = &accessible
 	return resp
 }
 

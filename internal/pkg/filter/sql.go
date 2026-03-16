@@ -9,7 +9,7 @@ import (
 // baseCondition is an optional literal SQL predicate prepended to the WHERE
 // clause (e.g. "c.status = 'published'"). Pass "" if not needed.
 // startArgIdx is the 1-based parameter index to start from.
-func ToSQL(fs FilterSet, baseCondition string, startArgIdx int) SQLResult {
+func ToSQL(fs *FilterSet, baseCondition string, startArgIdx int) SQLResult {
 	var res SQLResult
 	idx := startArgIdx
 	var whereParts []string
@@ -80,7 +80,7 @@ func ToSQL(fs FilterSet, baseCondition string, startArgIdx int) SQLResult {
 }
 
 // CountSQL returns the WHERE clause and args for a COUNT query (no ORDER BY or LIMIT).
-func CountSQL(fs FilterSet, baseCondition string, startArgIdx int) (whereClause string, args []interface{}, nextArgIdx int) {
+func CountSQL(fs *FilterSet, baseCondition string, startArgIdx int) (whereClause string, args []interface{}, nextArgIdx int) {
 	full := ToSQL(fs, baseCondition, startArgIdx)
 	// Strip the 2 LIMIT/OFFSET args from the end
 	countArgs := full.Args

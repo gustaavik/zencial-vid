@@ -23,7 +23,7 @@ type UpdateInput struct {
 }
 
 // Update updates a video's metadata.
-func (s *Service) Update(ctx context.Context, input UpdateInput) (*entity.Video, *apperror.AppError) {
+func (s *Service) Update(ctx context.Context, input *UpdateInput) (*entity.Video, *apperror.AppError) {
 	video, err := s.videoRepo.GetByID(ctx, input.ID)
 	if err != nil {
 		s.log.Error("getting video for update", "error", err)

@@ -16,6 +16,6 @@ type GenreRepository interface {
 	GetBySlug(ctx context.Context, slug valueobject.Slug) (*entity.Genre, error)
 	Update(ctx context.Context, genre *entity.Genre) error
 	Delete(ctx context.Context, id uuid.UUID) error
-	List(ctx context.Context, fs filter.FilterSet) ([]entity.Genre, int64, error)
+	List(ctx context.Context, fs *filter.FilterSet) ([]entity.Genre, int64, error)
 	ExistsBySlug(ctx context.Context, slug valueobject.Slug) (bool, error)
 }

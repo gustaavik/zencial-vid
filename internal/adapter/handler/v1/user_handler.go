@@ -109,7 +109,7 @@ func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users, total, appErr := h.userService.List(r.Context(), fs)
+	users, total, appErr := h.userService.List(r.Context(), &fs)
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return

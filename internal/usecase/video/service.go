@@ -32,7 +32,7 @@ func NewService(
 	genreRepo repository.GenreRepository,
 	subRepo repository.SubscriptionRepository,
 	planRepo repository.PlanRepository,
-	storage storage.StorageService,
+	storageSvc storage.StorageService,
 	dispatcher event.Dispatcher,
 	log *slog.Logger,
 	opts ...Option,
@@ -42,7 +42,7 @@ func NewService(
 		genreRepo:  genreRepo,
 		subRepo:    subRepo,
 		planRepo:   planRepo,
-		storage:    storage,
+		storage:    storageSvc,
 		dispatcher: dispatcher,
 		log:        log,
 	}

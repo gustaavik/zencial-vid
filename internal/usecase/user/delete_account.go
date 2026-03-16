@@ -32,10 +32,12 @@ func (s *Service) DeleteAccount(ctx context.Context, userID uuid.UUID) *apperror
 		return apperror.Internal(apperror.CodeInternalError, "failed to delete account", err)
 	}
 
-	s.dispatcher.Dispatch(event.UserAccountDeleted{
+	if err := s.dispatcher.Dispatch(event.UserAccountDeleted{
 		UserID:    user.ID,
 		Timestamp: time.Now().UTC(),
-	})
+	}); err != nil {
+		s.log.Error("dispatching user account deleted event", "error", err)
+	}
 
 	return nil
 }

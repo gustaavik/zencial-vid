@@ -38,7 +38,7 @@ type UploadInput struct {
 }
 
 // Upload uploads a video file and creates its metadata record.
-func (s *Service) Upload(ctx context.Context, input UploadInput) (*entity.Video, *apperror.AppError) {
+func (s *Service) Upload(ctx context.Context, input *UploadInput) (*entity.Video, *apperror.AppError) {
 	contentRating := input.ContentRating
 	if contentRating == "" {
 		contentRating = "G"
@@ -66,8 +66,8 @@ func (s *Service) Upload(ctx context.Context, input UploadInput) (*entity.Video,
 	if err != nil {
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to create temp file", err)
 	}
-	defer os.Remove(tmpVideo.Name())
-	defer tmpVideo.Close()
+	defer func() { _ = os.Remove(tmpVideo.Name()) }()
+	defer func() { _ = tmpVideo.Close() }()
 
 	if _, err := io.Copy(tmpVideo, input.File); err != nil {
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to write temp file", err)
@@ -105,26 +105,28 @@ func (s *Service) Upload(ctx context.Context, input UploadInput) (*entity.Video,
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to save video", err)
 	}
 
-	s.dispatcher.Dispatch(event.VideoUploaded{
+	if err := s.dispatcher.Dispatch(event.VideoUploaded{
 		VideoID:    video.ID,
 		Title:      video.Title,
 		UploadedBy: input.UploadedBy,
 		Timestamp:  time.Now().UTC(),
-	})
+	}); err != nil {
+		s.log.Error("dispatching video uploaded event", "error", err)
+	}
 
 	return video, nil
 }
 
 // handleThumbnail uploads a user-provided thumbnail or extracts one from the video.
 // Returns the storage key on success, or empty string on failure (non-fatal).
-func (s *Service) handleThumbnail(ctx context.Context, input UploadInput, videoID uuid.UUID, videoPath string) string {
+func (s *Service) handleThumbnail(ctx context.Context, input *UploadInput, videoID uuid.UUID, videoPath string) string {
 	if input.Thumbnail != nil {
 		return s.uploadUserThumbnail(ctx, input, videoID)
 	}
 	return s.extractThumbnail(ctx, videoID, videoPath)
 }
 
-func (s *Service) uploadUserThumbnail(ctx context.Context, input UploadInput, videoID uuid.UUID) string {
+func (s *Service) uploadUserThumbnail(ctx context.Context, input *UploadInput, videoID uuid.UUID) string {
 	thumbExt := filepath.Ext(input.ThumbnailFileName)
 	if thumbExt == "" {
 		thumbExt = thumbnailExtFromContentType(input.ThumbnailContentType)
@@ -145,8 +147,8 @@ func (s *Service) extractThumbnail(ctx context.Context, videoID uuid.UUID, video
 		return ""
 	}
 	tmpThumbPath := tmpThumb.Name()
-	tmpThumb.Close()
-	defer os.Remove(tmpThumbPath)
+	_ = tmpThumb.Close()
+	defer func() { _ = os.Remove(tmpThumbPath) }()
 
 	if err := thumbnail.ExtractFirstFrame(videoPath, tmpThumbPath); err != nil {
 		s.log.Error("extracting thumbnail with ffmpeg", "error", err)
@@ -158,7 +160,7 @@ func (s *Service) extractThumbnail(ctx context.Context, videoID uuid.UUID, video
 		s.log.Error("opening extracted thumbnail", "error", err)
 		return ""
 	}
-	defer thumbFile.Close()
+	defer func() { _ = thumbFile.Close() }()
 
 	key := fmt.Sprintf("videos/%s/thumbnail.jpg", videoID.String())
 	if _, err := s.storage.Upload(ctx, key, thumbFile, "image/jpeg"); err != nil {

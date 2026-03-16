@@ -154,7 +154,7 @@ func (r *GenreRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *GenreRepository) List(ctx context.Context, fs filter.FilterSet) ([]entity.Genre, int64, error) {
+func (r *GenreRepository) List(ctx context.Context, fs *filter.FilterSet) ([]entity.Genre, int64, error) {
 	db := connFromCtx(ctx, r.pool)
 
 	// Count query

@@ -16,8 +16,8 @@ type VideoRepository interface {
 	GetBySlug(ctx context.Context, slug valueobject.Slug) (*entity.Video, error)
 	Update(ctx context.Context, video *entity.Video) error
 	Delete(ctx context.Context, id uuid.UUID) error
-	List(ctx context.Context, fs filter.FilterSet) ([]entity.Video, int64, error)
-	ListPublished(ctx context.Context, fs filter.FilterSet) ([]entity.Video, int64, error)
+	List(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error)
+	ListPublished(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error)
 	ExistsBySlug(ctx context.Context, slug valueobject.Slug) (bool, error)
 	SetGenres(ctx context.Context, videoID uuid.UUID, genreIDs []uuid.UUID) error
 	GetGenreIDs(ctx context.Context, videoID uuid.UUID) ([]uuid.UUID, error)

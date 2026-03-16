@@ -62,10 +62,12 @@ func (s *Service) Login(ctx context.Context, input LoginInput) (*LoginOutput, *a
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to store session", err)
 	}
 
-	s.dispatcher.Dispatch(event.UserLoggedIn{
+	if err := s.dispatcher.Dispatch(event.UserLoggedIn{
 		UserID:    user.ID,
 		Timestamp: time.Now().UTC(),
-	})
+	}); err != nil {
+		s.log.Error("dispatching user logged in event", "error", err)
+	}
 
 	return &LoginOutput{
 		User:      user,

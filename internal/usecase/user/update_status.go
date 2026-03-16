@@ -36,11 +36,13 @@ func (s *Service) UpdateStatus(ctx context.Context, input UpdateStatusInput) (*e
 	user.Status = input.Status
 	user.UpdatedAt = time.Now().UTC()
 
-	s.dispatcher.Dispatch(event.UserStatusChanged{
+	if err := s.dispatcher.Dispatch(event.UserStatusChanged{
 		UserID:    user.ID,
 		NewStatus: string(input.Status),
 		Timestamp: time.Now().UTC(),
-	})
+	}); err != nil {
+		s.log.Error("dispatching user status changed event", "error", err)
+	}
 
 	return user, nil
 }

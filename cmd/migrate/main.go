@@ -23,10 +23,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if err := db.PingContext(context.Background()); err != nil {
-		log.Fatalf("failed to ping database: %v", err)
+		log.Fatalf("failed to ping database: %v", err) //nolint:gocritic // exitAfterDefer — startup failure, cleanup irrelevant
 	}
 
 	if len(os.Args) < 2 {

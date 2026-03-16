@@ -93,14 +93,3 @@ func (u *User) SoftDelete() {
 	u.Status = UserStatusDeleted
 	u.UpdatedAt = time.Now().UTC()
 }
-
-func computeAge(dob time.Time) int {
-	now := time.Now()
-	age := now.Year() - dob.Year()
-	// Compare month and day to handle birthday not yet reached this year.
-	// Using Month/Day avoids leap year issues with YearDay().
-	if now.Month() < dob.Month() || (now.Month() == dob.Month() && now.Day() < dob.Day()) {
-		age--
-	}
-	return age
-}

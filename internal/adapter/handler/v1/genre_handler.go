@@ -89,7 +89,7 @@ func (h *GenreHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	genres, total, appErr := h.genreService.List(r.Context(), fs)
+	genres, total, appErr := h.genreService.List(r.Context(), &fs)
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return

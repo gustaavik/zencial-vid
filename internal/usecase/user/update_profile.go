@@ -68,10 +68,12 @@ func (s *Service) UpdateProfile(ctx context.Context, input UpdateProfileInput) (
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to update profile", err)
 	}
 
-	s.dispatcher.Dispatch(event.UserProfileUpdated{
+	if err := s.dispatcher.Dispatch(event.UserProfileUpdated{
 		UserID:    user.ID,
 		Timestamp: now,
-	})
+	}); err != nil {
+		s.log.Error("dispatching user profile updated event", "error", err)
+	}
 
 	return user, nil
 }
