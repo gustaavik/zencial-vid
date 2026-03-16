@@ -35,11 +35,6 @@ Thumbs.db
 # Docker
 docker-compose.override.yml
 
-# Generated
-/docs/docs.go
-/docs/swagger.json
-/docs/swagger.yaml
-
 # Temporary
 tmp/
 *.tmp

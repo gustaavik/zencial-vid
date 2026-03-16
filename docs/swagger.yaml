@@ -1,0 +1,307 @@
+basePath: /api/v1
+definitions:
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AuthResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+      expires_at:
+        example: "2025-01-01T00:15:00Z"
+        type: string
+      refresh_token:
+        example: abc123def456
+        type: string
+      user:
+        $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UserResponse'
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.LoginRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: securepassword123
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.LogoutRequest:
+    properties:
+      refresh_token:
+        example: abc123def456
+        type: string
+    required:
+    - refresh_token
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfileResponse:
+    properties:
+      avatar_url:
+        example: https://example.com/avatar.jpg
+        type: string
+      country:
+        example: US
+        type: string
+      date_of_birth:
+        example: "1990-01-15"
+        type: string
+      display_name:
+        example: John Doe
+        type: string
+      language:
+        example: en
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        example: abc123def456
+        type: string
+    required:
+    - refresh_token
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.RegisterRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      name:
+        example: John Doe
+        maxLength: 100
+        minLength: 1
+        type: string
+      password:
+        example: securepassword123
+        maxLength: 128
+        minLength: 8
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.TokenResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+      expires_at:
+        example: "2025-01-01T00:15:00Z"
+        type: string
+      refresh_token:
+        example: abc123def456
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UserResponse:
+    properties:
+      created_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      email:
+        example: user@example.com
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      profile:
+        $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfileResponse'
+      role:
+        example: user
+        type: string
+      status:
+        example: active
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorBody:
+    properties:
+      code:
+        type: string
+      details: {}
+      message:
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorBody'
+    type: object
+  github_com_zenfulcode_zencial_internal_pkg_httputil.Meta:
+    properties:
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  github_com_zenfulcode_zencial_internal_pkg_httputil.Response:
+    properties:
+      data: {}
+      meta:
+        $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta'
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@zencial.com
+    name: Zencial API Support
+  description: Video on Demand streaming platform API
+  license:
+    name: Proprietary
+    url: http://zencial.com/license/
+  termsOfService: http://zencial.com/terms/
+  title: Zencial VOD API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate with email and password, returns tokens
+      parameters:
+      - description: Login credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AuthResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      summary: Login
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Invalidate the refresh token
+      parameters:
+      - description: Refresh token to invalidate
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Logout
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Exchange a valid refresh token for a new token pair
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.TokenResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      summary: Refresh access token
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account and return authentication tokens
+      parameters:
+      - description: Registration data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AuthResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - auth
+securityDefinitions:
+  BearerAuth:
+    description: 'Enter your bearer token in the format: Bearer {token}'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
