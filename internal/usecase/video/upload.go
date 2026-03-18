@@ -13,6 +13,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain/event"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
+	"github.com/zenfulcode/zencial/internal/pkg/duration"
 	"github.com/zenfulcode/zencial/internal/pkg/thumbnail"
 )
 
@@ -85,6 +86,14 @@ func (s *Service) Upload(ctx context.Context, input *UploadInput) (*entity.Video
 	// Handle thumbnail (non-fatal on failure)
 	thumbnailKey := s.handleThumbnail(ctx, input, videoID, tmpVideo.Name())
 
+	// Extract video duration (non-fatal on failure)
+	var durationSecs int64
+	if d, err := duration.Probe(tmpVideo.Name()); err != nil {
+		s.log.Warn("extracting video duration with ffprobe", "error", err)
+	} else {
+		durationSecs = d
+	}
+
 	// Create video entity
 	video := entity.NewVideo(
 		input.Title, slug, input.Description, input.Creator,
@@ -92,6 +101,7 @@ func (s *Service) Upload(ctx context.Context, input *UploadInput) (*entity.Video
 		input.FileSize, input.UploadedBy,
 	)
 	video.ID = videoID
+	video.Duration = valueobject.NewDuration(durationSecs)
 	video.ThumbnailKey = thumbnailKey
 	video.MinimumPlanLevel = input.MinimumPlanLevel
 	video.SetGenres(input.GenreIDs)
