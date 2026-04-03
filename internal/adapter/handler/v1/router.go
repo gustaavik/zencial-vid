@@ -89,6 +89,10 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 			r.Put("/genres/{id}", genreHandler.Update)
 			r.Delete("/genres/{id}", genreHandler.Delete)
 
+			// Bulk genre operations
+			r.Post("/admin/genres/bulk-create", genreHandler.BulkCreate)
+			r.Post("/admin/genres/bulk-delete", genreHandler.BulkDelete)
+
 			// Plan management
 			r.Post("/plans", planHandler.Create)
 			r.Get("/plans/{id}", planHandler.GetByID)

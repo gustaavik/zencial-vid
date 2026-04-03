@@ -1,8 +1,10 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/mapper"
 	"github.com/zenfulcode/zencial/internal/infrastructure/persistence/postgres"
@@ -162,4 +164,89 @@ func (h *GenreHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// BulkCreate creates multiple genres.
+func (h *GenreHandler) BulkCreate(w http.ResponseWriter, r *http.Request) {
+	var req dto.BulkCreateGenreRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
+		return
+	}
+
+	if errors := h.validator.Validate(req); errors != nil {
+		httputil.ErrorWithDetails(w,
+			apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil),
+			errors,
+		)
+		return
+	}
+
+	inputs := make([]genreuc.CreateInput, len(req.Genres))
+	for i, g := range req.Genres {
+		translations := make([]genreuc.TranslationInput, len(g.Translations))
+		for j, t := range g.Translations {
+			translations[j] = genreuc.TranslationInput{
+				LanguageCode: t.LanguageCode,
+				Name:         t.Name,
+				Description:  t.Description,
+			}
+		}
+		inputs[i] = genreuc.CreateInput{
+			Slug:         g.Slug,
+			Translations: translations,
+		}
+	}
+
+	result, appErr := h.genreService.BulkCreate(r.Context(), inputs)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.BulkCreateGenreResultToResponse(result))
+}
+
+// BulkDelete removes multiple genres.
+func (h *GenreHandler) BulkDelete(w http.ResponseWriter, r *http.Request) {
+	var req dto.BulkGenreIDsRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
+		return
+	}
+
+	if errors := h.validator.Validate(req); errors != nil {
+		httputil.ErrorWithDetails(w,
+			apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil),
+			errors,
+		)
+		return
+	}
+
+	ids, err := parseGenreUUIDs(req.IDs)
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, err.Error())
+		return
+	}
+
+	result, appErr := h.genreService.BulkDelete(r.Context(), ids)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.BulkDeleteGenreResultToResponse(result))
+}
+
+// parseGenreUUIDs converts a slice of string IDs to uuid.UUID.
+func parseGenreUUIDs(ids []string) ([]uuid.UUID, error) {
+	result := make([]uuid.UUID, len(ids))
+	for i, id := range ids {
+		parsed, err := uuid.Parse(id)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ID: %s", id)
+		}
+		result[i] = parsed
+	}
+	return result, nil
 }

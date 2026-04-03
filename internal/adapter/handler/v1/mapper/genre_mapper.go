@@ -3,6 +3,7 @@ package mapper
 import (
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
+	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
 )
 
 // GenreToResponse maps a Genre entity to a GenreResponse DTO.
@@ -31,4 +32,46 @@ func GenresToResponse(genres []entity.Genre) []dto.GenreResponse {
 		result[i] = GenreToResponse(&genres[i])
 	}
 	return result
+}
+
+// BulkCreateGenreResultToResponse maps a BulkCreateResult to a BulkCreateGenreResultResponse DTO.
+func BulkCreateGenreResultToResponse(result *genreuc.BulkCreateResult) dto.BulkCreateGenreResultResponse {
+	succeeded := make([]dto.GenreResponse, len(result.Succeeded))
+	for i, g := range result.Succeeded {
+		succeeded[i] = GenreToResponse(g)
+	}
+
+	failed := make([]dto.BulkCreateGenreFailureResponse, len(result.Failed))
+	for i, f := range result.Failed {
+		failed[i] = dto.BulkCreateGenreFailureResponse{
+			Slug:  f.Slug,
+			Error: f.Error,
+		}
+	}
+
+	return dto.BulkCreateGenreResultResponse{
+		Succeeded: succeeded,
+		Failed:    failed,
+	}
+}
+
+// BulkDeleteGenreResultToResponse maps a BulkDeleteResult to a BulkDeleteGenreResultResponse DTO.
+func BulkDeleteGenreResultToResponse(result *genreuc.BulkDeleteResult) dto.BulkDeleteGenreResultResponse {
+	succeeded := make([]string, len(result.Succeeded))
+	for i, id := range result.Succeeded {
+		succeeded[i] = id.String()
+	}
+
+	failed := make([]dto.BulkDeleteGenreFailureResponse, len(result.Failed))
+	for i, f := range result.Failed {
+		failed[i] = dto.BulkDeleteGenreFailureResponse{
+			ID:    f.ID.String(),
+			Error: f.Error,
+		}
+	}
+
+	return dto.BulkDeleteGenreResultResponse{
+		Succeeded: succeeded,
+		Failed:    failed,
+	}
 }
