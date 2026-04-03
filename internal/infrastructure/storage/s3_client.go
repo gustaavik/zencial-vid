@@ -76,10 +76,21 @@ func (s *S3Service) EnsureBucket(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("creating bucket: %w", err)
 			}
-			return nil
+		} else {
+			return fmt.Errorf("checking bucket existence: %w", err)
 		}
-		return fmt.Errorf("checking bucket existence: %w", err)
 	}
+
+	// Allow anonymous GET on thumbnail objects so PublicURL works without signing.
+	policy := fmt.Sprintf(`{"Version":"2012-10-17","Statement":[{"Sid":"PublicReadThumbnails","Effect":"Allow","Principal":"*","Action":"s3:GetObject","Resource":"arn:aws:s3:::%s/videos/*/thumbnail*"}]}`, s.bucket)
+	_, err = s.client.PutBucketPolicy(ctx, &s3.PutBucketPolicyInput{
+		Bucket: &s.bucket,
+		Policy: &policy,
+	})
+	if err != nil {
+		return fmt.Errorf("setting bucket policy: %w", err)
+	}
+
 	return nil
 }
 
