@@ -122,7 +122,7 @@ func (h *VideoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusCreated, mapper.VideoToResponse(video, h.storage))
+	httputil.Success(w, http.StatusCreated, mapper.VideoToResponse(r.Context(), video, h.storage))
 }
 
 // GetByID returns a video by ID.
@@ -139,7 +139,7 @@ func (h *VideoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(video, h.storage))
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.storage))
 }
 
 // ListPublished returns a paginated list of published videos (public endpoint).
@@ -156,7 +156,7 @@ func (h *VideoHandler) ListPublished(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.SuccessWithMeta(w, mapper.VideosToResponse(videos, h.storage), &httputil.Meta{
+	httputil.SuccessWithMeta(w, mapper.VideosToResponse(r.Context(), videos, h.storage), &httputil.Meta{
 		Page:       fs.Pagination.Page,
 		PerPage:    fs.Pagination.PerPage,
 		Total:      total,
@@ -178,7 +178,7 @@ func (h *VideoHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.SuccessWithMeta(w, mapper.VideosToResponse(videos, h.storage), &httputil.Meta{
+	httputil.SuccessWithMeta(w, mapper.VideosToResponse(r.Context(), videos, h.storage), &httputil.Meta{
 		Page:       fs.Pagination.Page,
 		PerPage:    fs.Pagination.PerPage,
 		Total:      total,
@@ -236,7 +236,7 @@ func (h *VideoHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(video, h.storage))
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.storage))
 }
 
 // Publish sets a video's status to published.
@@ -253,7 +253,7 @@ func (h *VideoHandler) Publish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(video, h.storage))
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.storage))
 }
 
 // Unarchive restores a soft-deleted video back to draft status.
@@ -270,7 +270,7 @@ func (h *VideoHandler) Unarchive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(video, h.storage))
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.storage))
 }
 
 // Delete removes a video.
@@ -455,5 +455,5 @@ func (h *VideoHandler) UploadThumbnail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(video, h.storage))
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.storage))
 }

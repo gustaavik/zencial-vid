@@ -6,6 +6,9 @@ import (
 	"time"
 )
 
+// DefaultThumbnailURLExpiry is the presigned URL lifetime for thumbnails.
+const DefaultThumbnailURLExpiry = 7 * 24 * time.Hour
+
 // StorageService defines the interface for file storage.
 type StorageService interface {
 	Upload(ctx context.Context, key string, body io.Reader, contentType string) (url string, err error)

@@ -1,6 +1,9 @@
 package mapper
 
 import (
+	"context"
+	"log/slog"
+
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
@@ -8,7 +11,7 @@ import (
 )
 
 // VideoToResponse maps a Video entity to a VideoResponse DTO.
-func VideoToResponse(video *entity.Video, store storage.StorageService) dto.VideoResponse {
+func VideoToResponse(ctx context.Context, video *entity.Video, store storage.StorageService) dto.VideoResponse {
 	genreIDs := make([]string, len(video.GenreIDs))
 	for i, gid := range video.GenreIDs {
 		genreIDs[i] = gid.String()
@@ -30,14 +33,19 @@ func VideoToResponse(video *entity.Video, store storage.StorageService) dto.Vide
 		UpdatedAt:        video.UpdatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 	if video.ThumbnailKey != "" && store != nil {
-		resp.ThumbnailURL = store.PublicURL(video.ThumbnailKey)
+		url, err := store.PresignedGetURL(ctx, video.ThumbnailKey, storage.DefaultThumbnailURLExpiry)
+		if err != nil {
+			slog.Error("generating thumbnail presigned URL", "key", video.ThumbnailKey, "error", err)
+		} else {
+			resp.ThumbnailURL = url
+		}
 	}
 	return resp
 }
 
 // VideoToResponseWithAccess maps a Video entity to a VideoResponse DTO with access info.
-func VideoToResponseWithAccess(video *entity.Video, store storage.StorageService, userPlanLevel *int) dto.VideoResponse {
-	resp := VideoToResponse(video, store)
+func VideoToResponseWithAccess(ctx context.Context, video *entity.Video, store storage.StorageService, userPlanLevel *int) dto.VideoResponse {
+	resp := VideoToResponse(ctx, video, store)
 	var accessible bool
 	switch {
 	case !video.RequiresSubscription():
@@ -52,19 +60,19 @@ func VideoToResponseWithAccess(video *entity.Video, store storage.StorageService
 }
 
 // VideosToResponse maps a slice of Video entities to VideoResponse DTOs.
-func VideosToResponse(videos []entity.Video, store storage.StorageService) []dto.VideoResponse {
+func VideosToResponse(ctx context.Context, videos []entity.Video, store storage.StorageService) []dto.VideoResponse {
 	result := make([]dto.VideoResponse, len(videos))
 	for i := range videos {
-		result[i] = VideoToResponse(&videos[i], store)
+		result[i] = VideoToResponse(ctx, &videos[i], store)
 	}
 	return result
 }
 
 // VideosToResponseWithAccess maps a slice of Video entities to VideoResponse DTOs with access info.
-func VideosToResponseWithAccess(videos []entity.Video, store storage.StorageService, userPlanLevel *int) []dto.VideoResponse {
+func VideosToResponseWithAccess(ctx context.Context, videos []entity.Video, store storage.StorageService, userPlanLevel *int) []dto.VideoResponse {
 	result := make([]dto.VideoResponse, len(videos))
 	for i := range videos {
-		result[i] = VideoToResponseWithAccess(&videos[i], store, userPlanLevel)
+		result[i] = VideoToResponseWithAccess(ctx, &videos[i], store, userPlanLevel)
 	}
 	return result
 }
