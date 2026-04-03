@@ -97,8 +97,8 @@ func main() {
 	// Event dispatcher
 	dispatcher := messaging.NewEventDispatcher(appLog)
 
-	// Storage (MinIO)
-	storageService, err := storage.NewMinIOService(&cfg.Storage)
+	// Storage (S3)
+	storageService, err := storage.NewS3Service(&cfg.Storage)
 	if err != nil {
 		appLog.Error("failed to initialize storage", "error", err)
 		os.Exit(1)

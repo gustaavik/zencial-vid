@@ -2,7 +2,7 @@
 
 Go-based Video-on-Demand API following Clean Architecture, Clean Code, and SOLID principles.
 
-**Stack:** Go 1.25, chi/v5, PostgreSQL 16 (pgx), Redis 7, MinIO (S3), JWT, goose migrations, slog logging
+**Stack:** Go 1.25, chi/v5, PostgreSQL 16 (pgx), Redis 7, Minio (S3-compatible), JWT, goose migrations, slog logging
 
 ## Architecture
 
@@ -15,7 +15,7 @@ Use Cases (application services orchestrating domain logic)
   ↑
 Adapters (HTTP handlers, DTOs, mappers, event dispatcher)
   ↑
-Infrastructure (postgres repos, redis, minio, middleware, config)
+Infrastructure (postgres repos, redis, s3 storage, middleware, config)
 ```
 
 ### Layer Rules
@@ -45,7 +45,7 @@ internal/adapter/messaging/   — Event dispatcher implementation
 internal/infrastructure/persistence/postgres/  — PostgreSQL repository implementations
 internal/infrastructure/persistence/redis/     — Redis session store
 internal/infrastructure/auth/      — JWT and bcrypt implementations
-internal/infrastructure/storage/   — MinIO storage implementation
+internal/infrastructure/storage/   — S3 storage implementation
 internal/infrastructure/middleware/ — HTTP middleware (auth, RBAC, CORS, logging, rate limit)
 internal/infrastructure/config/    — Environment-based configuration
 internal/infrastructure/server/    — HTTP server with graceful shutdown
@@ -79,7 +79,7 @@ deployments/docker/            — Dockerfile, docker-compose
 
 - Repository interfaces are implemented by concrete types that fulfill the full contract
 - Value objects use separate constructors for trusted (`*FromTrusted()`) vs untrusted (`New*()`) sources — both return the same type
-- `StorageService` interface is implemented by MinIO but could be swapped for any S3-compatible service
+- `StorageService` interface is implemented by `S3Service` using AWS SDK v2, compatible with any S3-compatible backend (Garage, MinIO, AWS S3)
 
 ### Interface Segregation
 
@@ -162,7 +162,7 @@ make lint          # Run golangci-lint
 ```bash
 make build              # Build API binary
 make run                # Run API with go run
-make docker-dev         # Start full dev environment (API + Postgres + Redis + MinIO)
+make docker-dev         # Start full dev environment (API + Postgres + Redis + Minio)
 make docker-up          # Start production stack
 make docker-down        # Stop all containers
 make migrate-up         # Apply pending migrations
