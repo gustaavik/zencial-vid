@@ -1,6 +1,9 @@
 package valueobject
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // LanguageCode represents an ISO 639-1 language code.
 type LanguageCode struct {
@@ -8,11 +11,12 @@ type LanguageCode struct {
 }
 
 // NewLanguageCode creates a LanguageCode after validation.
+// The code is normalized to lowercase before storing.
 func NewLanguageCode(code string) (LanguageCode, error) {
 	if len(code) < 2 || len(code) > 5 {
 		return LanguageCode{}, fmt.Errorf("language code must be 2-5 characters, got %q", code)
 	}
-	return LanguageCode{value: code}, nil
+	return LanguageCode{value: strings.ToLower(code)}, nil
 }
 
 // LanguageCodeFromTrusted creates a LanguageCode from a trusted source without validation.
