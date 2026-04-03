@@ -34,3 +34,37 @@ type GenreResponse struct {
 	CreatedAt    string                     `json:"created_at" example:"2025-01-01T00:00:00Z"`
 	UpdatedAt    string                     `json:"updated_at" example:"2025-01-01T00:00:00Z"`
 }
+
+// BulkCreateGenreRequest represents a bulk genre creation request.
+type BulkCreateGenreRequest struct {
+	Genres []CreateGenreRequest `json:"genres" validate:"required,min=1,dive"`
+}
+
+// BulkGenreIDsRequest represents a bulk action request with a list of genre IDs.
+type BulkGenreIDsRequest struct {
+	IDs []string `json:"ids" validate:"required,min=1,dive,uuid"`
+}
+
+// BulkCreateGenreFailureResponse represents a single failure in a bulk create operation.
+type BulkCreateGenreFailureResponse struct {
+	Slug  string `json:"slug"`
+	Error string `json:"error"`
+}
+
+// BulkCreateGenreResultResponse represents the result of a bulk create operation.
+type BulkCreateGenreResultResponse struct {
+	Succeeded []GenreResponse                  `json:"succeeded"`
+	Failed    []BulkCreateGenreFailureResponse `json:"failed"`
+}
+
+// BulkDeleteGenreFailureResponse represents a single failure in a bulk delete operation.
+type BulkDeleteGenreFailureResponse struct {
+	ID    string `json:"id"`
+	Error string `json:"error"`
+}
+
+// BulkDeleteGenreResultResponse represents the result of a bulk delete operation.
+type BulkDeleteGenreResultResponse struct {
+	Succeeded []string                         `json:"succeeded"`
+	Failed    []BulkDeleteGenreFailureResponse `json:"failed"`
+}
