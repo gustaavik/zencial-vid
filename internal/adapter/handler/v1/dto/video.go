@@ -21,7 +21,7 @@ type VideoResponse struct {
 
 // VideoStreamResponse returns the streaming URL (presigned or HLS).
 type VideoStreamResponse struct {
-	URL       string `json:"url" example:"https://minio:9000/bucket/videos/..."`
+	URL       string `json:"url" example:"https://s3.example.com/bucket/videos/..."`
 	ExpiresAt string `json:"expires_at" example:"2025-01-01T04:00:00Z"`
 	Type      string `json:"type" example:"hls"`
 }
