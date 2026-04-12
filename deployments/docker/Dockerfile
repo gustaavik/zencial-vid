@@ -12,13 +12,17 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build-time version info (pass via --build-arg)
-ARG VERSION=dev
-ARG GIT_COMMIT=unknown
-ARG BUILD_TIME=unknown
+# Build-time version info (pass via --build-arg, auto-detected otherwise)
+ARG VERSION
+ARG GIT_COMMIT
+ARG BUILD_TIME
+ARG PORT=6091
 
 # Build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build \
+RUN VERSION="${VERSION:-$(git describe --tags --abbrev=0 2>/dev/null || echo '0.0.0')}" && \
+    GIT_COMMIT="${GIT_COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')}" && \
+    BUILD_TIME="${BUILD_TIME:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}" && \
+    CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-w -s \
       -X 'github.com/zenfulcode/zencial/internal/infrastructure/buildinfo.Version=${VERSION}' \
       -X 'github.com/zenfulcode/zencial/internal/infrastructure/buildinfo.Commit=${GIT_COMMIT}' \
@@ -50,6 +54,6 @@ COPY --from=builder /app/migrations /app/migrations
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 
-EXPOSE 6091
+EXPOSE ${PORT}
 
 ENTRYPOINT ["/app/api"]
