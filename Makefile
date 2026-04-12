@@ -17,6 +17,13 @@ GOBUILD := go build
 GORUN := go run
 GOFMT := gofmt
 
+# Build info
+GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+BUILD_TIME := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+VERSION    := $(shell git describe --tags --exact-match 2>/dev/null || echo dev)
+PKG        := github.com/zenfulcode/zencial/internal/infrastructure/buildinfo
+LDFLAGS    := -s -w -X '$(PKG).Version=$(VERSION)' -X '$(PKG).Commit=$(GIT_COMMIT)' -X '$(PKG).BuildTime=$(BUILD_TIME)'
+
 ## help: Show this help message
 help:
 	@echo "Usage: make [target]"
@@ -26,11 +33,11 @@ help:
 
 ## build: Build the API binary
 build:
-	$(GOBUILD) -ldflags="-s -w" -o $(BUILD_DIR)/$(APP_NAME) $(MAIN_API)
+	$(GOBUILD) -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME) $(MAIN_API)
 
 ## build-migrate: Build the migration binary
 build-migrate:
-	$(GOBUILD) -ldflags="-s -w" -o $(BUILD_DIR)/$(MIGRATE_NAME) $(MAIN_MIGRATE)
+	$(GOBUILD) -ldflags="$(LDFLAGS)" -o $(BUILD_DIR)/$(MIGRATE_NAME) $(MAIN_MIGRATE)
 
 ## run: Run the API server
 run:
