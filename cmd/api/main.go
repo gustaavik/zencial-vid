@@ -10,6 +10,7 @@ import (
 	v1 "github.com/zenfulcode/zencial/internal/adapter/handler/v1"
 	"github.com/zenfulcode/zencial/internal/adapter/messaging"
 	"github.com/zenfulcode/zencial/internal/infrastructure/auth"
+	"github.com/zenfulcode/zencial/internal/infrastructure/buildinfo"
 	"github.com/zenfulcode/zencial/internal/infrastructure/cdn"
 	"github.com/zenfulcode/zencial/internal/infrastructure/config"
 	"github.com/zenfulcode/zencial/internal/infrastructure/database"
@@ -19,6 +20,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/infrastructure/persistence/redis"
 	"github.com/zenfulcode/zencial/internal/infrastructure/server"
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
+	"github.com/zenfulcode/zencial/internal/pkg/httputil"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
 	planuc "github.com/zenfulcode/zencial/internal/usecase/plan"
@@ -63,6 +65,12 @@ func main() {
 	// Initialize logger
 	appLog := logger.New(cfg.Log.Level, cfg.Log.Format)
 	slog.SetDefault(appLog)
+
+	appLog.Info("starting Zencial VOD API",
+		"version", buildinfo.Version,
+		"commit", buildinfo.Commit,
+		"build_time", buildinfo.BuildTime,
+	)
 
 	// Connect to PostgreSQL
 	dbPool, err := database.NewPostgres(ctx, &cfg.Database)
@@ -137,6 +145,21 @@ func main() {
 	r.Use(middleware.Recovery(appLog))
 	r.Use(middleware.Logger(appLog))
 	r.Use(middleware.CORS(cfg.Server))
+
+	// API info
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		httputil.JSON(w, http.StatusOK, struct {
+			Name      string `json:"name"`
+			Version   string `json:"version"`
+			Commit    string `json:"commit"`
+			BuildTime string `json:"build_time"`
+		}{
+			Name:      "Zencial VOD API",
+			Version:   buildinfo.Version,
+			Commit:    buildinfo.Commit,
+			BuildTime: buildinfo.BuildTime,
+		})
+	})
 
 	// Health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
