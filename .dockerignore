@@ -3,7 +3,6 @@ bin/
 .claude/
 scripts/
 tmp/
-.git/
 .gitignore
 .dockerignore
 Makefile
