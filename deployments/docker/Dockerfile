@@ -23,6 +23,8 @@ RUN if [ -n "${VERSION}" ]; then \
       RESOLVED_VERSION="${VERSION}"; \
     elif DESCRIBED=$(git describe --tags 2>/dev/null) && [ -n "${DESCRIBED}" ]; then \
       RESOLVED_VERSION="${DESCRIBED}"; \
+    elif echo "${COOLIFY_BRANCH}" | grep -qE '^v[0-9]'; then \
+      RESOLVED_VERSION="${COOLIFY_BRANCH}"; \
     else \
       RESOLVED_VERSION="0.0.0-$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"; \
     fi && \
