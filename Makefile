@@ -20,7 +20,7 @@ GOFMT := gofmt
 # Build info
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 BUILD_TIME := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-VERSION    := $(shell git describe --tags 2>/dev/null || echo 0.0.0-$$(git rev-parse --short HEAD 2>/dev/null || echo unknown))
+VERSION    := $(shell git describe --tags --exact-match 2>/dev/null || echo dev)
 PKG        := github.com/zenfulcode/zencial/internal/infrastructure/buildinfo
 LDFLAGS    := -s -w -X '$(PKG).Version=$(VERSION)' -X '$(PKG).Commit=$(GIT_COMMIT)' -X '$(PKG).BuildTime=$(BUILD_TIME)'
 
