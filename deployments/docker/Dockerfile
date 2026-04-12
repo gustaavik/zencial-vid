@@ -23,10 +23,18 @@ RUN if [ -n "${VERSION}" ]; then \
       RESOLVED_VERSION="${VERSION}"; \
     elif DESCRIBED=$(git describe --tags 2>/dev/null) && [ -n "${DESCRIBED}" ]; then \
       RESOLVED_VERSION="${DESCRIBED}"; \
-    elif echo "${COOLIFY_BRANCH}" | grep -qE '^v[0-9]'; then \
-      RESOLVED_VERSION="${COOLIFY_BRANCH}"; \
     else \
-      RESOLVED_VERSION="0.0.0-$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"; \
+      BASE_VERSION=$(cat VERSION 2>/dev/null || echo "0.0.0"); \
+      if echo "${COOLIFY_BRANCH}" | grep -qE '^v[0-9]'; then \
+        RESOLVED_VERSION="${COOLIFY_BRANCH}"; \
+      elif echo "${COOLIFY_BRANCH}" | grep -qE '^pull/[0-9]+/'; then \
+        PR_NUM=$(echo "${COOLIFY_BRANCH}" | cut -d'/' -f2); \
+        RESOLVED_VERSION="${BASE_VERSION}-pr.${PR_NUM}"; \
+      elif [ -n "${COOLIFY_BRANCH}" ]; then \
+        RESOLVED_VERSION="${BASE_VERSION}-${COOLIFY_BRANCH}"; \
+      else \
+        RESOLVED_VERSION="${BASE_VERSION}-unknown"; \
+      fi; \
     fi && \
     GIT_COMMIT="${GIT_COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')}" && \
     BUILD_TIME="${BUILD_TIME:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}" && \
