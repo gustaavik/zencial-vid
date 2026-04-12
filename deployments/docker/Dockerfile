@@ -22,6 +22,7 @@ ARG PORT=6091
 RUN VERSION="${VERSION:-$(git describe --tags --abbrev=0 2>/dev/null || echo '0.0.0')}" && \
     GIT_COMMIT="${GIT_COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')}" && \
     BUILD_TIME="${BUILD_TIME:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}" && \
+    echo "Building with VERSION=${VERSION}, GIT_COMMIT=${GIT_COMMIT}, BUILD_TIME=${BUILD_TIME}" && \
     CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-w -s \
       -X 'github.com/zenfulcode/zencial/internal/infrastructure/buildinfo.Version=${VERSION}' \
