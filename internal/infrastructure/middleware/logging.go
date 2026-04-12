@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type responseWriter struct {
@@ -35,6 +37,14 @@ func Logger(log *slog.Logger) func(http.Handler) http.Handler {
 				level = slog.LevelError
 			} else if rw.statusCode >= 400 {
 				level = slog.LevelWarn
+				// Demote unmatched-route 404s (scanner/bot probes) to DEBUG.
+				// chi only populates RoutePatterns after a successful route match,
+				// so an empty slice means no registered route matched the path.
+				if rw.statusCode == http.StatusNotFound {
+					if rctx := chi.RouteContext(r.Context()); rctx == nil || len(rctx.RoutePatterns) == 0 {
+						level = slog.LevelDebug
+					}
+				}
 			}
 
 			log.Log(r.Context(), level, "http request",
