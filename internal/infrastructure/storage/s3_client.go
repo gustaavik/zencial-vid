@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go/logging"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/zenfulcode/zencial/internal/infrastructure/config"
@@ -31,17 +33,15 @@ type S3Service struct {
 func NewS3Service(cfg *config.StorageConfig) (*S3Service, error) {
 	creds := credentials.NewStaticCredentialsProvider(cfg.AccessKey, cfg.SecretKey, "")
 
-	// Garage (and older MinIO/Ceph) don't implement the STREAMING-UNSIGNED-PAYLOAD-TRAILER
-	// payload mode that aws-sdk-go-v2 v1.74+ adopted by default — it rejects them with
-	// "AccessDenied: Invalid signature". We disable both trailer checksums and the new
-	// default payload-signing mode, and replace it with a classic single-pass SigV4
-	// SHA256 of the full body (which is what mc/awscli use and Garage validates correctly).
-	forcePayloadSHA256 := func(stack *middleware.Stack) error {
-		// Remove the streaming payload middleware that sets UNSIGNED-PAYLOAD or
-		// STREAMING-* variants, then add the classic payload-SHA256 middleware.
-		_ = v4.RemoveComputePayloadSHA256Middleware(stack)
-		return v4.AddComputePayloadSHA256Middleware(stack)
+	// SeaweedFS, Garage, and older MinIO/Ceph reject the STREAMING-UNSIGNED-PAYLOAD-TRAILER
+	// payload mode that aws-sdk-go-v2 v1.74+ adopted by default for PutObject.
+	// Force UNSIGNED-PAYLOAD instead: the SDK signs headers only, the body is
+	// transferred with normal Content-Length, and integrity is left to TLS. Every
+	// S3-compatible backend supports this mode.
+	useUnsignedPayload := func(stack *middleware.Stack) error {
+		return v4.SwapComputePayloadSHA256ForUnsignedPayloadMiddleware(stack)
 	}
+	sdkLogger := logging.NewStandardLogger(os.Stderr)
 	client := s3.New(s3.Options{
 		BaseEndpoint:               aws.String(cfg.Endpoint),
 		Region:                     cfg.Region,
@@ -49,8 +49,9 @@ func NewS3Service(cfg *config.StorageConfig) (*S3Service, error) {
 		UsePathStyle:               true,
 		RequestChecksumCalculation: aws.RequestChecksumCalculationWhenRequired,
 		ResponseChecksumValidation: aws.ResponseChecksumValidationWhenRequired,
-		ClientLogMode:              aws.LogSigning | aws.LogRequest | aws.LogRequestWithBody | aws.LogResponse | aws.LogResponseWithBody | aws.LogRetries,
-		APIOptions:                 []func(*middleware.Stack) error{forcePayloadSHA256},
+		ClientLogMode:              aws.LogSigning | aws.LogRequest | aws.LogResponse | aws.LogRetries,
+		Logger:                     sdkLogger,
+		APIOptions:                 []func(*middleware.Stack) error{useUnsignedPayload},
 	})
 
 	publicEndpoint := cfg.PublicEndpoint
@@ -71,7 +72,7 @@ func NewS3Service(cfg *config.StorageConfig) (*S3Service, error) {
 			UsePathStyle:               true,
 			RequestChecksumCalculation: aws.RequestChecksumCalculationWhenRequired,
 			ResponseChecksumValidation: aws.ResponseChecksumValidationWhenRequired,
-			APIOptions:                 []func(*middleware.Stack) error{forcePayloadSHA256},
+			APIOptions:                 []func(*middleware.Stack) error{useUnsignedPayload},
 		})
 		presignClient = s3.NewPresignClient(publicClient)
 	}
