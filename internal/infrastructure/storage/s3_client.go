@@ -31,15 +31,15 @@ type S3Service struct {
 func NewS3Service(cfg *config.StorageConfig) (*S3Service, error) {
 	creds := credentials.NewStaticCredentialsProvider(cfg.AccessKey, cfg.SecretKey, "")
 
-	// Garage (and older MinIO/Ceph) don't implement flexible checksum trailers or
-	// the STREAMING-UNSIGNED-PAYLOAD-TRAILER payload mode that aws-sdk-go-v2 v1.74+
-	// adopted by default. Without these overrides, every PutObject fails signature
-	// validation with "AccessDenied: Invalid signature".
-	//
-	//   RequestChecksumCalculationWhenRequired  — disable the x-amz-sdk-checksum-algorithm trailer.
-	//   AddComputePayloadSHA256Middleware       — force single-pass SigV4 with a hex sha256
-	//                                             of the full body (classic S3 signing).
+	// Garage (and older MinIO/Ceph) don't implement the STREAMING-UNSIGNED-PAYLOAD-TRAILER
+	// payload mode that aws-sdk-go-v2 v1.74+ adopted by default — it rejects them with
+	// "AccessDenied: Invalid signature". We disable both trailer checksums and the new
+	// default payload-signing mode, and replace it with a classic single-pass SigV4
+	// SHA256 of the full body (which is what mc/awscli use and Garage validates correctly).
 	forcePayloadSHA256 := func(stack *middleware.Stack) error {
+		// Remove the streaming payload middleware that sets UNSIGNED-PAYLOAD or
+		// STREAMING-* variants, then add the classic payload-SHA256 middleware.
+		_ = v4.RemoveComputePayloadSHA256Middleware(stack)
 		return v4.AddComputePayloadSHA256Middleware(stack)
 	}
 	client := s3.New(s3.Options{
@@ -49,6 +49,7 @@ func NewS3Service(cfg *config.StorageConfig) (*S3Service, error) {
 		UsePathStyle:               true,
 		RequestChecksumCalculation: aws.RequestChecksumCalculationWhenRequired,
 		ResponseChecksumValidation: aws.ResponseChecksumValidationWhenRequired,
+		ClientLogMode:              aws.LogSigning | aws.LogRequest | aws.LogRequestWithBody | aws.LogResponse | aws.LogResponseWithBody | aws.LogRetries,
 		APIOptions:                 []func(*middleware.Stack) error{forcePayloadSHA256},
 	})
 
