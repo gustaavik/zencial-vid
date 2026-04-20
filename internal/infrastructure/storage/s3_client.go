@@ -5,13 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go/middleware"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/zenfulcode/zencial/internal/infrastructure/config"
 )
 
@@ -27,11 +31,25 @@ type S3Service struct {
 func NewS3Service(cfg *config.StorageConfig) (*S3Service, error) {
 	creds := credentials.NewStaticCredentialsProvider(cfg.AccessKey, cfg.SecretKey, "")
 
+	// Garage (and older MinIO/Ceph) don't implement flexible checksum trailers or
+	// the STREAMING-UNSIGNED-PAYLOAD-TRAILER payload mode that aws-sdk-go-v2 v1.74+
+	// adopted by default. Without these overrides, every PutObject fails signature
+	// validation with "AccessDenied: Invalid signature".
+	//
+	//   RequestChecksumCalculationWhenRequired  — disable the x-amz-sdk-checksum-algorithm trailer.
+	//   AddComputePayloadSHA256Middleware       — force single-pass SigV4 with a hex sha256
+	//                                             of the full body (classic S3 signing).
+	forcePayloadSHA256 := func(stack *middleware.Stack) error {
+		return v4.AddComputePayloadSHA256Middleware(stack)
+	}
 	client := s3.New(s3.Options{
-		BaseEndpoint: aws.String(cfg.Endpoint),
-		Region:       cfg.Region,
-		Credentials:  creds,
-		UsePathStyle: true,
+		BaseEndpoint:               aws.String(cfg.Endpoint),
+		Region:                     cfg.Region,
+		Credentials:                creds,
+		UsePathStyle:               true,
+		RequestChecksumCalculation: aws.RequestChecksumCalculationWhenRequired,
+		ResponseChecksumValidation: aws.ResponseChecksumValidationWhenRequired,
+		APIOptions:                 []func(*middleware.Stack) error{forcePayloadSHA256},
 	})
 
 	publicEndpoint := cfg.PublicEndpoint
@@ -46,10 +64,13 @@ func NewS3Service(cfg *config.StorageConfig) (*S3Service, error) {
 	presignClient := s3.NewPresignClient(client)
 	if publicEndpoint != cfg.Endpoint {
 		publicClient := s3.New(s3.Options{
-			BaseEndpoint: aws.String(publicEndpoint),
-			Region:       cfg.Region,
-			Credentials:  creds,
-			UsePathStyle: true,
+			BaseEndpoint:               aws.String(publicEndpoint),
+			Region:                     cfg.Region,
+			Credentials:                creds,
+			UsePathStyle:               true,
+			RequestChecksumCalculation: aws.RequestChecksumCalculationWhenRequired,
+			ResponseChecksumValidation: aws.ResponseChecksumValidationWhenRequired,
+			APIOptions:                 []func(*middleware.Stack) error{forcePayloadSHA256},
 		})
 		presignClient = s3.NewPresignClient(publicClient)
 	}
@@ -63,24 +84,35 @@ func NewS3Service(cfg *config.StorageConfig) (*S3Service, error) {
 }
 
 // EnsureBucket creates the bucket if it does not exist.
+//
+// A 403 Forbidden from HeadBucket is treated as "bucket exists but our
+// credentials lack s3:ListBucket": production keys are often scoped to
+// object-level operations only, so we can't verify existence but must
+// assume the bucket is already provisioned.
 func (s *S3Service) EnsureBucket(ctx context.Context) error {
 	_, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{
 		Bucket: &s.bucket,
 	})
-	if err != nil {
-		var notFound *types.NotFound
-		if errors.As(err, &notFound) {
-			_, err = s.client.CreateBucket(ctx, &s3.CreateBucketInput{
-				Bucket: &s.bucket,
-			})
-			if err != nil {
-				return fmt.Errorf("creating bucket: %w", err)
-			}
-			return nil
-		}
-		return fmt.Errorf("checking bucket existence: %w", err)
+	if err == nil {
+		return nil
 	}
-	return nil
+
+	var notFound *types.NotFound
+	if errors.As(err, &notFound) {
+		if _, err := s.client.CreateBucket(ctx, &s3.CreateBucketInput{
+			Bucket: &s.bucket,
+		}); err != nil {
+			return fmt.Errorf("creating bucket: %w", err)
+		}
+		return nil
+	}
+
+	var respErr *smithyhttp.ResponseError
+	if errors.As(err, &respErr) && respErr.HTTPStatusCode() == http.StatusForbidden {
+		return nil
+	}
+
+	return fmt.Errorf("checking bucket existence: %w", err)
 }
 
 func (s *S3Service) Upload(ctx context.Context, key string, body io.Reader, contentType string) (string, error) {
