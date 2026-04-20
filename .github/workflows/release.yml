@@ -38,7 +38,7 @@ jobs:
       - uses: docker/build-push-action@v7
         with:
           context: .
-          file: Dockerfile
+          file: deployments/docker/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
