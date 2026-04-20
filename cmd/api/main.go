@@ -115,6 +115,12 @@ func main() {
 		appLog.Error("failed to ensure storage bucket", "error", err)
 		os.Exit(1)
 	}
+	appLog.Info("S3 storage initialized",
+		"endpoint", cfg.Storage.Endpoint,
+		"public_endpoint", cfg.Storage.PublicEndpoint,
+		"bucket", cfg.Storage.Bucket,
+		"region", cfg.Storage.Region,
+	)
 
 	// Use cases
 	authService := authuc.NewService(userRepo, tokenService, hasher, sessionStore, dispatcher, appLog)
