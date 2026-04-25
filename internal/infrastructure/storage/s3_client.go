@@ -5,17 +5,22 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go/middleware"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/zenfulcode/zencial/internal/infrastructure/config"
 )
 
-// S3Service implements StorageService using an S3-compatible backend (e.g. Garage).
+// S3Service implements StorageService against any S3-compatible backend
+// (AWS S3, MinIO, SeaweedFS, Garage).
 type S3Service struct {
 	client        *s3.Client
 	presignClient *s3.PresignClient
@@ -25,83 +30,87 @@ type S3Service struct {
 
 // NewS3Service creates a new S3-backed StorageService.
 func NewS3Service(cfg *config.StorageConfig) (*S3Service, error) {
-	creds := credentials.NewStaticCredentialsProvider(cfg.AccessKey, cfg.SecretKey, "")
-
-	client := s3.New(s3.Options{
-		BaseEndpoint: aws.String(cfg.Endpoint),
-		Region:       cfg.Region,
-		Credentials:  creds,
-		UsePathStyle: true,
-	})
-
 	publicEndpoint := cfg.PublicEndpoint
 	if publicEndpoint == "" {
 		publicEndpoint = cfg.Endpoint
 	}
 
-	// Separate client for presigning URLs using the public endpoint.
-	// PresignGetObject is a local computation (no network call), so this client
-	// doesn't need to reach the public endpoint from inside Docker.
-	// This ensures the S3v4 signature matches the Host header clients will send.
-	presignClient := s3.NewPresignClient(client)
+	client := newS3Client(cfg, cfg.Endpoint)
+	presignSource := client
 	if publicEndpoint != cfg.Endpoint {
-		publicClient := s3.New(s3.Options{
-			BaseEndpoint: aws.String(publicEndpoint),
-			Region:       cfg.Region,
-			Credentials:  creds,
-			UsePathStyle: true,
-		})
-		presignClient = s3.NewPresignClient(publicClient)
+		presignSource = newS3Client(cfg, publicEndpoint)
 	}
 
 	return &S3Service{
 		client:        client,
-		presignClient: presignClient,
+		presignClient: s3.NewPresignClient(presignSource),
 		bucket:        cfg.Bucket,
 		publicBaseURL: strings.TrimRight(publicEndpoint, "/"),
 	}, nil
 }
 
-// EnsureBucket creates the bucket if it does not exist.
-func (s *S3Service) EnsureBucket(ctx context.Context) error {
-	_, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{
-		Bucket: &s.bucket,
+// newS3Client builds an s3.Client compatible with AWS S3, MinIO, and SeaweedFS.
+//
+// SwapComputePayloadSHA256ForUnsignedPayloadMiddleware replaces the default
+// STREAMING-UNSIGNED-PAYLOAD-TRAILER mode (aws-sdk-go-v2 v1.74+) which
+// MinIO/SeaweedFS/Garage reject; checksum calculation is likewise gated to
+// "when required" for the same compatibility reason.
+func newS3Client(cfg *config.StorageConfig, endpoint string) *s3.Client {
+	return s3.New(s3.Options{
+		BaseEndpoint:               aws.String(endpoint),
+		Region:                     cfg.Region,
+		Credentials:                credentials.NewStaticCredentialsProvider(cfg.AccessKey, cfg.SecretKey, ""),
+		UsePathStyle:               true,
+		RequestChecksumCalculation: aws.RequestChecksumCalculationWhenRequired,
+		ResponseChecksumValidation: aws.ResponseChecksumValidationWhenRequired,
+		APIOptions: []func(*middleware.Stack) error{
+			v4.SwapComputePayloadSHA256ForUnsignedPayloadMiddleware,
+		},
 	})
-	if err != nil {
-		var notFound *types.NotFound
-		if errors.As(err, &notFound) {
-			_, err = s.client.CreateBucket(ctx, &s3.CreateBucketInput{
-				Bucket: &s.bucket,
-			})
-			if err != nil {
-				return fmt.Errorf("creating bucket: %w", err)
-			}
-			return nil
-		}
-		return fmt.Errorf("checking bucket existence: %w", err)
+}
+
+// EnsureBucket creates the bucket if it does not exist. A 403 on HeadBucket is
+// treated as "exists but caller lacks s3:ListBucket" (common on AWS with
+// object-scoped credentials).
+func (s *S3Service) EnsureBucket(ctx context.Context) error {
+	_, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: &s.bucket})
+	if err == nil {
+		return nil
 	}
-	return nil
+
+	var notFound *types.NotFound
+	if errors.As(err, &notFound) {
+		if _, err := s.client.CreateBucket(ctx, &s3.CreateBucketInput{Bucket: &s.bucket}); err != nil {
+			return fmt.Errorf("creating bucket: %w", err)
+		}
+		return nil
+	}
+
+	var respErr *smithyhttp.ResponseError
+	if errors.As(err, &respErr) && respErr.HTTPStatusCode() == http.StatusForbidden {
+		return nil
+	}
+
+	return fmt.Errorf("checking bucket existence: %w", err)
 }
 
 func (s *S3Service) Upload(ctx context.Context, key string, body io.Reader, contentType string) (string, error) {
-	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
+	if _, err := s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      &s.bucket,
 		Key:         &key,
 		Body:        body,
 		ContentType: &contentType,
-	})
-	if err != nil {
+	}); err != nil {
 		return "", fmt.Errorf("uploading object: %w", err)
 	}
 	return s.PublicURL(key), nil
 }
 
 func (s *S3Service) Delete(ctx context.Context, key string) error {
-	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+	if _, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: &s.bucket,
 		Key:    &key,
-	})
-	if err != nil {
+	}); err != nil {
 		return fmt.Errorf("deleting object: %w", err)
 	}
 	return nil
@@ -109,24 +118,14 @@ func (s *S3Service) Delete(ctx context.Context, key string) error {
 
 func (s *S3Service) Move(ctx context.Context, srcKey, dstKey string) error {
 	copySource := s.bucket + "/" + srcKey
-	_, err := s.client.CopyObject(ctx, &s3.CopyObjectInput{
+	if _, err := s.client.CopyObject(ctx, &s3.CopyObjectInput{
 		Bucket:     &s.bucket,
 		Key:        &dstKey,
 		CopySource: &copySource,
-	})
-	if err != nil {
-		return fmt.Errorf("copying object from %s to %s: %w", srcKey, dstKey, err)
+	}); err != nil {
+		return fmt.Errorf("copying object %s to %s: %w", srcKey, dstKey, err)
 	}
-
-	_, err = s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
-		Bucket: &s.bucket,
-		Key:    &srcKey,
-	})
-	if err != nil {
-		return fmt.Errorf("removing source object %s after copy: %w", srcKey, err)
-	}
-
-	return nil
+	return s.Delete(ctx, srcKey)
 }
 
 func (s *S3Service) PublicURL(key string) string {

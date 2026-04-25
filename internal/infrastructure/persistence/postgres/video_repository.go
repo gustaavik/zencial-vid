@@ -225,7 +225,7 @@ func (r *VideoRepository) GetGenreIDs(ctx context.Context, videoID uuid.UUID) ([
 	return ids, nil
 }
 
-func (r *VideoRepository) scanVideo(ctx context.Context, db DBTX, query string, args ...interface{}) (*entity.Video, error) {
+func (r *VideoRepository) scanVideo(ctx context.Context, db DBTX, query string, args ...any) (*entity.Video, error) {
 	var v entity.Video
 	var slug, contentRating, status string
 	var duration int64

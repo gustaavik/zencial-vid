@@ -9,8 +9,8 @@ import (
 
 // Response is the standard API response envelope.
 type Response struct {
-	Data interface{} `json:"data,omitempty"`
-	Meta *Meta       `json:"meta,omitempty"`
+	Data any   `json:"data,omitempty"`
+	Meta *Meta `json:"meta,omitempty"`
 }
 
 // Meta holds pagination metadata.
@@ -28,13 +28,13 @@ type ErrorResponse struct {
 
 // ErrorBody holds error details.
 type ErrorBody struct {
-	Code    string      `json:"code"`
-	Message string      `json:"message"`
-	Details interface{} `json:"details,omitempty"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Details any    `json:"details,omitempty"`
 }
 
 // JSON writes a JSON response with the given status code.
-func JSON(w http.ResponseWriter, status int, data interface{}) {
+func JSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if data != nil {
@@ -43,12 +43,12 @@ func JSON(w http.ResponseWriter, status int, data interface{}) {
 }
 
 // Success writes a success response with data.
-func Success(w http.ResponseWriter, status int, data interface{}) {
+func Success(w http.ResponseWriter, status int, data any) {
 	JSON(w, status, Response{Data: data})
 }
 
 // SuccessWithMeta writes a success response with data and pagination metadata.
-func SuccessWithMeta(w http.ResponseWriter, data interface{}, meta *Meta) {
+func SuccessWithMeta(w http.ResponseWriter, data any, meta *Meta) {
 	JSON(w, http.StatusOK, Response{Data: data, Meta: meta})
 }
 
@@ -63,7 +63,7 @@ func Error(w http.ResponseWriter, err *apperror.AppError) {
 }
 
 // ErrorWithDetails writes an error response with additional details.
-func ErrorWithDetails(w http.ResponseWriter, err *apperror.AppError, details interface{}) {
+func ErrorWithDetails(w http.ResponseWriter, err *apperror.AppError, details any) {
 	JSON(w, err.HTTPStatus, ErrorResponse{
 		Error: ErrorBody{
 			Code:    err.Code,
