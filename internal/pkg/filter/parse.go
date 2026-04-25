@@ -69,8 +69,8 @@ func buildCondition(col ColumnDef, op Op, raw string) (Condition, error) {
 	// Comma-separated values → IN
 	if op == OpIn || (op == OpEq && strings.Contains(raw, ",")) {
 		c.Op = OpIn
-		parts := strings.Split(raw, ",")
-		for _, p := range parts {
+		parts := strings.SplitSeq(raw, ",")
+		for p := range parts {
 			p = strings.TrimSpace(p)
 			if p == "" {
 				continue
@@ -95,7 +95,7 @@ func buildCondition(col ColumnDef, op Op, raw string) (Condition, error) {
 	return c, nil
 }
 
-func coerce(raw string, vt ValueType) (interface{}, error) {
+func coerce(raw string, vt ValueType) (any, error) {
 	switch vt {
 	case TypeInt:
 		return strconv.Atoi(raw)

@@ -59,8 +59,8 @@ type Config struct {
 type Condition struct {
 	DBColumn string
 	Op       Op
-	Value    interface{}   // for eq/neq/gt/gte/lt/lte/like
-	Values   []interface{} // for in
+	Value    any   // for eq/neq/gt/gte/lt/lte/like
+	Values   []any // for in
 }
 
 // Sort holds the parsed sort directive.
@@ -86,7 +86,7 @@ type SQLResult struct {
 	// LimitClause is "LIMIT $N OFFSET $M".
 	LimitClause string
 	// Args is the ordered parameter values matching $1..$N.
-	Args []interface{}
+	Args []any
 	// NextArgIdx is the next available parameter index.
 	NextArgIdx int
 }

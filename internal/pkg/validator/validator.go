@@ -26,7 +26,7 @@ type ValidationError struct {
 }
 
 // Validate validates a struct and returns formatted errors.
-func (v *Validator) Validate(s interface{}) []ValidationError {
+func (v *Validator) Validate(s any) []ValidationError {
 	err := v.validate.Struct(s)
 	if err == nil {
 		return nil

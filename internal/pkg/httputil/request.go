@@ -11,7 +11,7 @@ import (
 )
 
 // DecodeJSON reads and decodes a JSON request body into the given destination.
-func DecodeJSON(r *http.Request, dst interface{}) error {
+func DecodeJSON(r *http.Request, dst any) error {
 	if r.Body == nil {
 		return fmt.Errorf("request body is empty")
 	}

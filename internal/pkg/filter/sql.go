@@ -80,7 +80,7 @@ func ToSQL(fs *FilterSet, baseCondition string, startArgIdx int) SQLResult {
 }
 
 // CountSQL returns the WHERE clause and args for a COUNT query (no ORDER BY or LIMIT).
-func CountSQL(fs *FilterSet, baseCondition string, startArgIdx int) (whereClause string, args []interface{}, nextArgIdx int) {
+func CountSQL(fs *FilterSet, baseCondition string, startArgIdx int) (whereClause string, args []any, nextArgIdx int) {
 	full := ToSQL(fs, baseCondition, startArgIdx)
 	// Strip the 2 LIMIT/OFFSET args from the end
 	countArgs := full.Args
