@@ -108,8 +108,8 @@ func (stubGenreRepo) GetByID(context.Context, uuid.UUID) (*entity.Genre, error) 
 func (stubGenreRepo) GetBySlug(context.Context, valueobject.Slug) (*entity.Genre, error) {
 	return nil, nil
 }
-func (stubGenreRepo) Update(context.Context, *entity.Genre) error    { return nil }
-func (stubGenreRepo) Delete(context.Context, uuid.UUID) error        { return nil }
+func (stubGenreRepo) Update(context.Context, *entity.Genre) error { return nil }
+func (stubGenreRepo) Delete(context.Context, uuid.UUID) error     { return nil }
 func (stubGenreRepo) List(context.Context, *filter.FilterSet) ([]entity.Genre, int64, error) {
 	return nil, 0, nil
 }
@@ -137,8 +137,8 @@ func (stubPlanRepo) GetByID(context.Context, uuid.UUID) (*entity.Plan, error) { 
 func (stubPlanRepo) GetBySlug(context.Context, valueobject.Slug) (*entity.Plan, error) {
 	return nil, nil
 }
-func (stubPlanRepo) Update(context.Context, *entity.Plan) error              { return nil }
-func (stubPlanRepo) Delete(context.Context, uuid.UUID) error                 { return nil }
+func (stubPlanRepo) Update(context.Context, *entity.Plan) error { return nil }
+func (stubPlanRepo) Delete(context.Context, uuid.UUID) error    { return nil }
 func (stubPlanRepo) List(context.Context, *filter.FilterSet) ([]entity.Plan, int64, error) {
 	return nil, 0, nil
 }
@@ -148,9 +148,9 @@ func (stubPlanRepo) ExistsBySlug(context.Context, valueobject.Slug) (bool, error
 type stubStorage struct{}
 
 func (stubStorage) Upload(context.Context, string, io.Reader, string) (string, error) { return "", nil }
-func (stubStorage) Delete(context.Context, string) error                               { return nil }
-func (stubStorage) Move(context.Context, string, string) error                         { return nil }
-func (stubStorage) PublicURL(string) string                                            { return "" }
+func (stubStorage) Delete(context.Context, string) error                              { return nil }
+func (stubStorage) Move(context.Context, string, string) error                        { return nil }
+func (stubStorage) PublicURL(string) string                                           { return "" }
 func (stubStorage) PresignedGetURL(context.Context, string, time.Duration) (string, error) {
 	return "", nil
 }
