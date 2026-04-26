@@ -9,14 +9,15 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Redis    RedisConfig
-	JWT      JWTConfig
-	Storage  StorageConfig
-	CDN      CDNConfig
-	Stripe   StripeConfig
-	Log      LogConfig
+	Server      ServerConfig
+	Database    DatabaseConfig
+	Redis       RedisConfig
+	JWT         JWTConfig
+	Storage     StorageConfig
+	CDN         CDNConfig
+	InternalAPI InternalAPIConfig
+	Stripe      StripeConfig
+	Log         LogConfig
 }
 
 type ServerConfig struct {
@@ -80,6 +81,12 @@ type CDNConfig struct {
 	SigningKeyID   string        `env:"CDN_SIGNING_KEY_ID"`
 	SigningKeyPath string        `env:"CDN_SIGNING_KEY_PATH"`
 	URLExpiry      time.Duration `env:"CDN_URL_EXPIRY" envDefault:"4h"`
+}
+
+// InternalAPIConfig holds settings for the internal service-to-service API surface
+// (e.g. CDN → API transcode callbacks).
+type InternalAPIConfig struct {
+	SharedSecret string `env:"INTERNAL_API_SHARED_SECRET"` // Required when CDN integration is enabled.
 }
 
 type StripeConfig struct {
