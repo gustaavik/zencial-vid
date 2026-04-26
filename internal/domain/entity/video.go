@@ -16,6 +16,7 @@ const (
 	VideoStatusProcessing VideoStatus = "processing"
 	VideoStatusPublished  VideoStatus = "published"
 	VideoStatusArchived   VideoStatus = "archived"
+	VideoStatusFailed     VideoStatus = "failed"
 )
 
 // Video is the core video entity.
@@ -35,6 +36,7 @@ type Video struct {
 	UploadedBy       uuid.UUID
 	GenreIDs         []uuid.UUID
 	MinimumPlanLevel *int
+	TranscodeError   string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }
@@ -69,9 +71,26 @@ func NewVideo(
 	}
 }
 
-// Publish marks the video as published.
+// Publish kicks off transcoding by moving the video into the processing state.
+// The video only becomes truly published once the CDN signals completion via MarkTranscoded().
 func (v *Video) Publish() {
+	v.Status = VideoStatusProcessing
+	v.TranscodeError = ""
+	v.UpdatedAt = time.Now().UTC()
+}
+
+// MarkTranscoded transitions a processing video to published.
+// No-op if the video is already published (idempotent for callback retries).
+func (v *Video) MarkTranscoded() {
 	v.Status = VideoStatusPublished
+	v.TranscodeError = ""
+	v.UpdatedAt = time.Now().UTC()
+}
+
+// MarkTranscodeFailed records a transcoding failure and sets status to failed.
+func (v *Video) MarkTranscodeFailed(reason string) {
+	v.Status = VideoStatusFailed
+	v.TranscodeError = reason
 	v.UpdatedAt = time.Now().UTC()
 }
 

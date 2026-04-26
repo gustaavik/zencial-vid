@@ -18,15 +18,16 @@ import (
 
 // Deps holds all dependencies needed by V1 handlers.
 type Deps struct {
-	Auth         *authuc.Service
-	Genre        *genreuc.Service
-	User         *useruc.Service
-	Video        *videouc.Service
-	Plan         *planuc.Service
-	Subscription *subscriptionuc.Service
-	TokenService auth.TokenService
-	Storage      storage.StorageService
-	Log          *slog.Logger
+	Auth                 *authuc.Service
+	Genre                *genreuc.Service
+	User                 *useruc.Service
+	Video                *videouc.Service
+	Plan                 *planuc.Service
+	Subscription         *subscriptionuc.Service
+	TokenService         auth.TokenService
+	Storage              storage.StorageService
+	InternalSharedSecret string
+	Log                  *slog.Logger
 }
 
 // RegisterRoutes registers all V1 API routes.
@@ -37,6 +38,13 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 	videoHandler := NewVideoHandler(deps.Video, deps.Storage)
 	planHandler := NewPlanHandler(deps.Plan)
 	subscriptionHandler := NewSubscriptionHandler(deps.Subscription)
+	transcodeCallbackHandler := NewTranscodeCallbackHandler(deps.Video)
+
+	// Internal service-to-service routes (CDN callbacks). Outside the JWT chain.
+	r.Route("/internal", func(r chi.Router) {
+		r.Use(middleware.InternalAuth(deps.InternalSharedSecret))
+		r.Post("/videos/{id}/transcode-callback", transcodeCallbackHandler.Handle)
+	})
 
 	// Public routes
 	r.Route("/auth", func(r chi.Router) {

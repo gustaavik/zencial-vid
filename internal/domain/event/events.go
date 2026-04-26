@@ -51,6 +51,16 @@ type VideoPublished struct {
 func (e VideoPublished) EventName() string     { return "video.published" }
 func (e VideoPublished) OccurredAt() time.Time { return e.Timestamp }
 
+// VideoTranscodeFailed is emitted when CDN transcoding fails for a video.
+type VideoTranscodeFailed struct {
+	VideoID   uuid.UUID
+	Reason    string
+	Timestamp time.Time
+}
+
+func (e VideoTranscodeFailed) EventName() string     { return "video.transcode_failed" }
+func (e VideoTranscodeFailed) OccurredAt() time.Time { return e.Timestamp }
+
 // VideoArchived is emitted when a video is soft-deleted (archived).
 type VideoArchived struct {
 	VideoID   uuid.UUID
