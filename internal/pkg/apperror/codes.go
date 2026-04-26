@@ -24,10 +24,11 @@ const (
 	CodeGenreNotFound = "GENRE_NOT_FOUND"
 
 	// Video
-	CodeVideoNotFound    = "VIDEO_NOT_FOUND"
-	CodeVideoNotPlayable = "VIDEO_NOT_PLAYABLE"
-	CodeStorageError     = "STORAGE_ERROR"
-	CodeUploadFailed     = "UPLOAD_FAILED"
+	CodeVideoNotFound       = "VIDEO_NOT_FOUND"
+	CodeVideoNotPlayable    = "VIDEO_NOT_PLAYABLE"
+	CodeVideoNotTranscoding = "VIDEO_NOT_TRANSCODING"
+	CodeStorageError        = "STORAGE_ERROR"
+	CodeUploadFailed        = "UPLOAD_FAILED"
 
 	// Plan
 	CodePlanNotFound     = "PLAN_NOT_FOUND"

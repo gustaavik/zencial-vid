@@ -29,6 +29,7 @@ func VideoToResponse(ctx context.Context, video *entity.Video, store storage.Sto
 		FileSize:         video.FileSize,
 		GenreIDs:         genreIDs,
 		MinimumPlanLevel: video.MinimumPlanLevel,
+		TranscodeError:   video.TranscodeError,
 		CreatedAt:        video.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		UpdatedAt:        video.UpdatedAt.Format("2006-01-02T15:04:05Z"),
 	}

@@ -15,6 +15,7 @@ type VideoResponse struct {
 	GenreIDs         []string `json:"genre_ids"`
 	MinimumPlanLevel *int     `json:"minimum_plan_level,omitempty" example:"1"`
 	IsAccessible     *bool    `json:"is_accessible,omitempty"`
+	TranscodeError   string   `json:"transcode_error,omitempty" example:"ffmpeg exited with status 1"`
 	CreatedAt        string   `json:"created_at" example:"2025-01-01T00:00:00Z"`
 	UpdatedAt        string   `json:"updated_at" example:"2025-01-01T00:00:00Z"`
 }

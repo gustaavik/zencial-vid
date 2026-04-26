@@ -139,6 +139,9 @@ func main() {
 		cdnClient := cdn.New(cdnInternalURL)
 		videoOpts = append(videoOpts, videouc.WithCDN(cdnClient, cfg.CDN.BaseURL))
 		appLog.Info("CDN integration enabled", "public_url", cfg.CDN.BaseURL, "internal_url", cdnInternalURL)
+		if cfg.InternalAPI.SharedSecret == "" {
+			appLog.Warn("CDN integration enabled but INTERNAL_API_SHARED_SECRET is unset — transcode-completion callbacks will be rejected")
+		}
 	}
 	videoService := videouc.NewService(videoRepo, genreRepo, subRepo, planRepo, storageService, dispatcher, appLog, videoOpts...)
 
@@ -181,15 +184,16 @@ func main() {
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
 		v1.RegisterRoutes(r, &v1.Deps{
-			Auth:         authService,
-			Genre:        genreService,
-			User:         userService,
-			Video:        videoService,
-			Plan:         planService,
-			Subscription: subscriptionService,
-			TokenService: tokenService,
-			Storage:      storageService,
-			Log:          appLog,
+			Auth:                 authService,
+			Genre:                genreService,
+			User:                 userService,
+			Video:                videoService,
+			Plan:                 planService,
+			Subscription:         subscriptionService,
+			TokenService:         tokenService,
+			Storage:              storageService,
+			InternalSharedSecret: cfg.InternalAPI.SharedSecret,
+			Log:                  appLog,
 		})
 	})
 
