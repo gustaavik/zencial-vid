@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,23 +16,41 @@ import (
 	"github.com/zenfulcode/zencial/internal/pkg/filter"
 	"github.com/zenfulcode/zencial/internal/pkg/httputil"
 	"github.com/zenfulcode/zencial/internal/pkg/validator"
+	subscriptionuc "github.com/zenfulcode/zencial/internal/usecase/subscription"
 	videouc "github.com/zenfulcode/zencial/internal/usecase/video"
 )
 
 // VideoHandler handles video HTTP requests.
 type VideoHandler struct {
 	videoService *videouc.Service
+	subService   *subscriptionuc.Service
 	storage      storage.StorageService
 	validator    *validator.Validator
 }
 
 // NewVideoHandler creates a new VideoHandler.
-func NewVideoHandler(videoService *videouc.Service, storageSvc storage.StorageService) *VideoHandler {
+func NewVideoHandler(videoService *videouc.Service, subService *subscriptionuc.Service, storageSvc storage.StorageService) *VideoHandler {
 	return &VideoHandler{
 		videoService: videoService,
+		subService:   subService,
 		storage:      storageSvc,
 		validator:    validator.New(),
 	}
+}
+
+// resolveUserPlanLevel returns the requester's active plan level, or nil if
+// unauthenticated, no active subscription, or lookup error (treat as locked).
+func (h *VideoHandler) resolveUserPlanLevel(ctx context.Context) *int {
+	userID, ok := middleware.GetUserID(ctx)
+	if !ok {
+		return nil
+	}
+	swp, appErr := h.subService.GetActiveByUserID(ctx, userID)
+	if appErr != nil || swp == nil || swp.Plan == nil {
+		return nil
+	}
+	level := swp.Plan.Level
+	return &level
 }
 
 // Upload handles video file upload with metadata via multipart form.
@@ -139,7 +158,8 @@ func (h *VideoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.storage))
+	planLevel := h.resolveUserPlanLevel(r.Context())
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponseWithAccess(r.Context(), video, h.storage, planLevel))
 }
 
 // ListPublished returns a paginated list of published videos (public endpoint).
@@ -156,7 +176,8 @@ func (h *VideoHandler) ListPublished(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.SuccessWithMeta(w, mapper.VideosToResponse(r.Context(), videos, h.storage), &httputil.Meta{
+	planLevel := h.resolveUserPlanLevel(r.Context())
+	httputil.SuccessWithMeta(w, mapper.VideosToResponseWithAccess(r.Context(), videos, h.storage, planLevel), &httputil.Meta{
 		Page:       fs.Pagination.Page,
 		PerPage:    fs.Pagination.PerPage,
 		Total:      total,
