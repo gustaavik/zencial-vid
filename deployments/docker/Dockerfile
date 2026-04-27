@@ -12,23 +12,33 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build-time version info (pass via --build-arg, auto-detected otherwise)
+# Build-time version info (pass via --build-arg, auto-detected otherwise).
+# SOURCE_COMMIT and COOLIFY_BRANCH are injected automatically by Coolify.
 ARG VERSION
 ARG GIT_COMMIT
 ARG BUILD_TIME
+ARG SOURCE_COMMIT
+ARG COOLIFY_BRANCH
 ARG PORT=6091
 
+# git refuses to operate on a repo it considers "dubious ownership" (e.g. when
+# COPY changes the owning UID). Mark the workdir safe so describe/rev-parse work.
+RUN git config --global --add safe.directory /app
+
 # Build the binary
-RUN if [ -n "${VERSION}" ]; then \
+RUN COMMIT_FALLBACK="${GIT_COMMIT:-${SOURCE_COMMIT}}" && \
+    SHORT_COMMIT_FALLBACK="$(printf '%s' "${COMMIT_FALLBACK}" | cut -c1-7)" && \
+    if [ -n "${VERSION}" ]; then \
       RESOLVED_VERSION="${VERSION}"; \
-    elif DESCRIBED=$(git describe --tags 2>/dev/null) && [ -n "${DESCRIBED}" ]; then \
+    elif DESCRIBED=$(git describe --tags --always 2>/dev/null) && [ -n "${DESCRIBED}" ] && printf '%s' "${DESCRIBED}" | grep -qE '^v[0-9]'; then \
       RESOLVED_VERSION="${DESCRIBED}"; \
-    elif echo "${COOLIFY_BRANCH}" | grep -qE '^v[0-9]'; then \
+    elif printf '%s' "${COOLIFY_BRANCH}" | grep -qE '^v[0-9]'; then \
       RESOLVED_VERSION="${COOLIFY_BRANCH}"; \
     else \
-      RESOLVED_VERSION="0.0.0-$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"; \
+      SHORT_SHA="$(git rev-parse --short HEAD 2>/dev/null || printf '%s' "${SHORT_COMMIT_FALLBACK}")"; \
+      RESOLVED_VERSION="0.0.0-${SHORT_SHA:-unknown}"; \
     fi && \
-    RESOLVED_COMMIT="${GIT_COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')}" && \
+    RESOLVED_COMMIT="${GIT_COMMIT:-$(git rev-parse HEAD 2>/dev/null || printf '%s' "${SOURCE_COMMIT:-unknown}")}" && \
     RESOLVED_BUILD_TIME="${BUILD_TIME:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}" && \
     echo "Building with VERSION=${RESOLVED_VERSION}, GIT_COMMIT=${RESOLVED_COMMIT}, BUILD_TIME=${RESOLVED_BUILD_TIME}" && \
     CGO_ENABLED=0 GOOS=linux go build \
