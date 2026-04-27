@@ -29,7 +29,17 @@ func NewUserHandler(userService *useruc.Service) *UserHandler {
 	}
 }
 
-// GetMe returns the authenticated user's profile.
+// GetMe godoc
+// @Summary      Get my profile
+// @Description  Return the authenticated user's profile
+// @Tags         users
+// @Produce      json
+// @Success      200 {object} httputil.Response{data=dto.UserResponse}
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /me [get]
 func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
@@ -46,7 +56,19 @@ func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusOK, mapper.UserToResponse(user))
 }
 
-// UpdateMe updates the authenticated user's profile.
+// UpdateMe godoc
+// @Summary      Update my profile
+// @Description  Update the authenticated user's profile
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Param        body body dto.UpdateProfileRequest true "Profile fields to update"
+// @Success      200 {object} httputil.Response{data=dto.UserResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /me [put]
 func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
@@ -84,7 +106,15 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusOK, mapper.UserToResponse(user))
 }
 
-// DeleteMe soft-deletes the authenticated user's account.
+// DeleteMe godoc
+// @Summary      Delete my account
+// @Description  Soft-delete the authenticated user's account
+// @Tags         users
+// @Success      204
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /me [delete]
 func (h *UserHandler) DeleteMe(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
@@ -101,7 +131,21 @@ func (h *UserHandler) DeleteMe(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// ListUsers returns a paginated list of users (admin).
+// ListUsers godoc
+// @Summary      List users
+// @Description  Return a paginated list of users (admin only)
+// @Tags         users
+// @Produce      json
+// @Param        page query int false "Page number" default(1)
+// @Param        per_page query int false "Items per page" default(20)
+// @Param        sort query string false "Sort field (e.g. -created_at)"
+// @Success      200 {object} httputil.Response{data=[]dto.UserResponse,meta=httputil.Meta}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/users [get]
 func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	fs, err := filter.FromRequest(r, postgres.UserFilterConfig())
 	if err != nil {
@@ -123,7 +167,20 @@ func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetUser returns a user by ID (admin).
+// GetUser godoc
+// @Summary      Get user by ID
+// @Description  Return a single user by their UUID (admin only)
+// @Tags         users
+// @Produce      json
+// @Param        id path string true "User ID" format(uuid)
+// @Success      200 {object} httputil.Response{data=dto.UserResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/users/{id} [get]
 func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	id, err := httputil.URLParamUUID(r, "id")
 	if err != nil {
@@ -140,7 +197,22 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusOK, mapper.UserToResponse(user))
 }
 
-// UpdateUserStatus updates a user's status (admin).
+// UpdateUserStatus godoc
+// @Summary      Update user status
+// @Description  Activate or suspend a user (admin only)
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "User ID" format(uuid)
+// @Param        body body dto.UpdateStatusRequest true "New status"
+// @Success      200 {object} httputil.Response{data=dto.UserResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/users/{id}/status [put]
 func (h *UserHandler) UpdateUserStatus(w http.ResponseWriter, r *http.Request) {
 	id, err := httputil.URLParamUUID(r, "id")
 	if err != nil {

@@ -53,7 +53,28 @@ func (h *VideoHandler) resolveUserPlanLevel(ctx context.Context) *int {
 	return &level
 }
 
-// Upload handles video file upload with metadata via multipart form.
+// Upload godoc
+// @Summary      Upload video
+// @Description  Upload a video file with metadata via multipart form (admin only). Optional thumbnail can be sent in the same request.
+// @Tags         videos
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        file formData file true "Video file"
+// @Param        thumbnail formData file false "Thumbnail image"
+// @Param        title formData string true "Video title"
+// @Param        description formData string false "Video description"
+// @Param        creator formData string false "Creator name"
+// @Param        content_rating formData string false "Content rating (G, PG, PG13, R, NC17)"
+// @Param        genre_ids formData []string false "Genre UUIDs (repeatable)" collectionFormat(multi)
+// @Param        minimum_plan_level formData int false "Minimum plan level required to watch"
+// @Success      201 {object} httputil.Response{data=dto.VideoResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      413 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /videos [post]
 func (h *VideoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	// Parse multipart form (limit: 500MB)
 	if err := r.ParseMultipartForm(500 << 20); err != nil {
@@ -144,7 +165,17 @@ func (h *VideoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusCreated, mapper.VideoToResponse(r.Context(), video, h.storage))
 }
 
-// GetByID returns a video by ID.
+// GetByID godoc
+// @Summary      Get video by ID
+// @Description  Return a single video by its UUID. With a valid bearer token the response includes is_accessible based on the user's plan.
+// @Tags         videos
+// @Produce      json
+// @Param        id path string true "Video ID" format(uuid)
+// @Success      200 {object} httputil.Response{data=dto.VideoResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Router       /videos/{id} [get]
 func (h *VideoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id, err := httputil.URLParamUUID(r, "id")
 	if err != nil {
@@ -162,7 +193,19 @@ func (h *VideoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusOK, mapper.VideoToResponseWithAccess(r.Context(), video, h.storage, planLevel))
 }
 
-// ListPublished returns a paginated list of published videos (public endpoint).
+// ListPublished godoc
+// @Summary      List published videos
+// @Description  Return a paginated list of published videos. With a valid bearer token, is_accessible is populated per item based on plan level.
+// @Tags         videos
+// @Produce      json
+// @Param        page query int false "Page number" default(1)
+// @Param        per_page query int false "Items per page" default(20)
+// @Param        sort query string false "Sort field (e.g. -created_at)"
+// @Param        genre_id query string false "Filter by genre UUID" format(uuid)
+// @Success      200 {object} httputil.Response{data=[]dto.VideoResponse,meta=httputil.Meta}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Router       /videos [get]
 func (h *VideoHandler) ListPublished(w http.ResponseWriter, r *http.Request) {
 	fs, err := filter.FromRequest(r, postgres.VideoFilterConfig())
 	if err != nil {
@@ -185,7 +228,22 @@ func (h *VideoHandler) ListPublished(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ListAll returns a paginated list of all videos (admin endpoint).
+// ListAll godoc
+// @Summary      List all videos (admin)
+// @Description  Return a paginated list of videos in any status, including drafts and archived (admin only)
+// @Tags         videos
+// @Produce      json
+// @Param        page query int false "Page number" default(1)
+// @Param        per_page query int false "Items per page" default(20)
+// @Param        sort query string false "Sort field (e.g. -created_at)"
+// @Param        status query string false "Filter by status (draft, published, archived)"
+// @Success      200 {object} httputil.Response{data=[]dto.VideoResponse,meta=httputil.Meta}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/videos [get]
 func (h *VideoHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 	fs, err := filter.FromRequest(r, postgres.VideoFilterConfig())
 	if err != nil {
@@ -207,7 +265,22 @@ func (h *VideoHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Update updates video metadata.
+// Update godoc
+// @Summary      Update video metadata
+// @Description  Update an existing video's metadata (admin only)
+// @Tags         videos
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Video ID" format(uuid)
+// @Param        body body dto.UpdateVideoRequest true "Video fields to update"
+// @Success      200 {object} httputil.Response{data=dto.VideoResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /videos/{id} [put]
 func (h *VideoHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id, err := httputil.URLParamUUID(r, "id")
 	if err != nil {
@@ -260,7 +333,21 @@ func (h *VideoHandler) Update(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.storage))
 }
 
-// Publish sets a video's status to published.
+// Publish godoc
+// @Summary      Publish video
+// @Description  Transition a video to the published state (admin only)
+// @Tags         videos
+// @Produce      json
+// @Param        id path string true "Video ID" format(uuid)
+// @Success      200 {object} httputil.Response{data=dto.VideoResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      409 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /videos/{id}/publish [post]
 func (h *VideoHandler) Publish(w http.ResponseWriter, r *http.Request) {
 	id, err := httputil.URLParamUUID(r, "id")
 	if err != nil {
@@ -277,7 +364,21 @@ func (h *VideoHandler) Publish(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.storage))
 }
 
-// Unarchive restores a soft-deleted video back to draft status.
+// Unarchive godoc
+// @Summary      Unarchive video
+// @Description  Restore a soft-deleted (archived) video back to draft status (admin only)
+// @Tags         videos
+// @Produce      json
+// @Param        id path string true "Video ID" format(uuid)
+// @Success      200 {object} httputil.Response{data=dto.VideoResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      409 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /videos/{id}/unarchive [post]
 func (h *VideoHandler) Unarchive(w http.ResponseWriter, r *http.Request) {
 	id, err := httputil.URLParamUUID(r, "id")
 	if err != nil {
@@ -294,7 +395,19 @@ func (h *VideoHandler) Unarchive(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.storage))
 }
 
-// Delete removes a video.
+// Delete godoc
+// @Summary      Archive video
+// @Description  Soft-delete a video by archiving it. Files are moved to a deleted/ prefix and the status changes to archived (admin only).
+// @Tags         videos
+// @Param        id path string true "Video ID" format(uuid)
+// @Success      204
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /videos/{id} [delete]
 func (h *VideoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := httputil.URLParamUUID(r, "id")
 	if err != nil {
@@ -311,7 +424,20 @@ func (h *VideoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Stream returns a presigned URL for streaming a video.
+// Stream godoc
+// @Summary      Get video stream URL
+// @Description  Return a presigned URL (or HLS manifest URL) the authenticated user can use to stream the video.
+// @Tags         videos
+// @Produce      json
+// @Param        id path string true "Video ID" format(uuid)
+// @Success      200 {object} httputil.Response{data=dto.VideoStreamResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /videos/{id}/stream [get]
 func (h *VideoHandler) Stream(w http.ResponseWriter, r *http.Request) {
 	id, err := httputil.URLParamUUID(r, "id")
 	if err != nil {
@@ -334,7 +460,20 @@ func (h *VideoHandler) Stream(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusOK, mapper.StreamToResponse(output))
 }
 
-// BulkPublish publishes multiple videos.
+// BulkPublish godoc
+// @Summary      Bulk publish videos
+// @Description  Publish multiple videos in a single request (admin only). Returns succeeded and failed entries.
+// @Tags         videos
+// @Accept       json
+// @Produce      json
+// @Param        body body dto.BulkVideoIDsRequest true "Video IDs to publish"
+// @Success      200 {object} httputil.Response{data=dto.BulkResultResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/videos/bulk-publish [post]
 func (h *VideoHandler) BulkPublish(w http.ResponseWriter, r *http.Request) {
 	var req dto.BulkVideoIDsRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
@@ -365,7 +504,20 @@ func (h *VideoHandler) BulkPublish(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusOK, mapper.BulkResultToResponse(result))
 }
 
-// BulkDelete archives multiple videos.
+// BulkDelete godoc
+// @Summary      Bulk archive videos
+// @Description  Archive multiple videos in a single request (admin only). Returns succeeded and failed entries.
+// @Tags         videos
+// @Accept       json
+// @Produce      json
+// @Param        body body dto.BulkVideoIDsRequest true "Video IDs to archive"
+// @Success      200 {object} httputil.Response{data=dto.BulkResultResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/videos/bulk-archive [post]
 func (h *VideoHandler) BulkDelete(w http.ResponseWriter, r *http.Request) {
 	var req dto.BulkVideoIDsRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
@@ -396,7 +548,20 @@ func (h *VideoHandler) BulkDelete(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusOK, mapper.BulkResultToResponse(result))
 }
 
-// BulkUnarchive restores multiple archived videos.
+// BulkUnarchive godoc
+// @Summary      Bulk unarchive videos
+// @Description  Restore multiple archived videos in a single request (admin only). Returns succeeded and failed entries.
+// @Tags         videos
+// @Accept       json
+// @Produce      json
+// @Param        body body dto.BulkVideoIDsRequest true "Video IDs to unarchive"
+// @Success      200 {object} httputil.Response{data=dto.BulkResultResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/videos/bulk-unarchive [post]
 func (h *VideoHandler) BulkUnarchive(w http.ResponseWriter, r *http.Request) {
 	var req dto.BulkVideoIDsRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
@@ -440,7 +605,22 @@ func parseUUIDs(ids []string) ([]uuid.UUID, error) {
 	return result, nil
 }
 
-// UploadThumbnail handles updating a video's thumbnail image.
+// UploadThumbnail godoc
+// @Summary      Update video thumbnail
+// @Description  Replace a video's thumbnail image via multipart form (admin only)
+// @Tags         videos
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        id path string true "Video ID" format(uuid)
+// @Param        thumbnail formData file true "Thumbnail image"
+// @Success      200 {object} httputil.Response{data=dto.VideoResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /videos/{id}/thumbnail [put]
 func (h *VideoHandler) UploadThumbnail(w http.ResponseWriter, r *http.Request) {
 	id, err := httputil.URLParamUUID(r, "id")
 	if err != nil {

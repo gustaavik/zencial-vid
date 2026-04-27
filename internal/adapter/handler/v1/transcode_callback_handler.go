@@ -30,8 +30,19 @@ const (
 	transcodeStatusFailed    = "failed"
 )
 
-// Handle processes the CDN's transcode-completion callback.
-// POST /api/v1/internal/videos/{id}/transcode-callback
+// Handle godoc
+// @Summary      Transcode completion callback
+// @Description  Internal CDN callback that reports the final status of a transcode job. Authenticated via the internal shared-secret middleware, not BearerAuth.
+// @Tags         internal
+// @Accept       json
+// @Param        id path string true "Video ID" format(uuid)
+// @Param        body body transcodeCallbackRequest true "Transcode result"
+// @Success      204
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Router       /internal/videos/{id}/transcode-callback [post]
 func (h *TranscodeCallbackHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	id, err := httputil.URLParamUUID(r, "id")
 	if err != nil {

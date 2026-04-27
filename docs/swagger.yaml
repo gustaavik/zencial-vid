@@ -1,5 +1,17 @@
 basePath: /api/v1
 definitions:
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AssignSubscriptionRequest:
+    properties:
+      expires_at:
+        type: string
+      plan_id:
+        type: string
+      user_id:
+        type: string
+    required:
+    - plan_id
+    - user_id
+    type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AuthResponse:
     properties:
       access_token:
@@ -13,6 +25,175 @@ definitions:
         type: string
       user:
         $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UserResponse'
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkCreateGenreFailureResponse:
+    properties:
+      error:
+        type: string
+      slug:
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkCreateGenreRequest:
+    properties:
+      genres:
+        items:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CreateGenreRequest'
+        minItems: 1
+        type: array
+    required:
+    - genres
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkCreateGenreResultResponse:
+    properties:
+      failed:
+        items:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkCreateGenreFailureResponse'
+        type: array
+      succeeded:
+        items:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.GenreResponse'
+        type: array
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkDeleteGenreFailureResponse:
+    properties:
+      error:
+        type: string
+      id:
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkDeleteGenreResultResponse:
+    properties:
+      failed:
+        items:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkDeleteGenreFailureResponse'
+        type: array
+      succeeded:
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkFailureResponse:
+    properties:
+      error:
+        type: string
+      id:
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkGenreIDsRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkResultResponse:
+    properties:
+      failed:
+        items:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkFailureResponse'
+        type: array
+      succeeded:
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkVideoIDsRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CreateGenreRequest:
+    properties:
+      slug:
+        example: action
+        maxLength: 255
+        minLength: 1
+        type: string
+      translations:
+        items:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.GenreTranslationRequest'
+        minItems: 1
+        type: array
+    required:
+    - slug
+    - translations
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CreatePlanRequest:
+    properties:
+      description:
+        maxLength: 2000
+        type: string
+      level:
+        minimum: 0
+        type: integer
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      price:
+        minimum: 0
+        type: number
+    required:
+    - name
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.GenreResponse:
+    properties:
+      created_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      slug:
+        example: action
+        type: string
+      translations:
+        items:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.GenreTranslationResponse'
+        type: array
+      updated_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.GenreTranslationRequest:
+    properties:
+      description:
+        example: Action-packed movies and series
+        maxLength: 2000
+        type: string
+      language_code:
+        example: en
+        maxLength: 5
+        minLength: 2
+        type: string
+      name:
+        example: Action
+        maxLength: 255
+        minLength: 1
+        type: string
+    required:
+    - language_code
+    - name
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.GenreTranslationResponse:
+    properties:
+      description:
+        example: Action-packed movies and series
+        type: string
+      language_code:
+        example: en
+        type: string
+      name:
+        example: Action
+        type: string
     type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.LoginRequest:
     properties:
@@ -33,6 +214,36 @@ definitions:
         type: string
     required:
     - refresh_token
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.PlanResponse:
+    properties:
+      created_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      description:
+        example: Access to all premium content
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      level:
+        example: 2
+        type: integer
+      name:
+        example: Premium
+        type: string
+      price:
+        example: 9.99
+        type: number
+      slug:
+        example: premium
+        type: string
+      updated_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
     type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfileResponse:
     properties:
@@ -80,6 +291,36 @@ definitions:
     - name
     - password
     type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SubscriptionResponse:
+    properties:
+      created_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      expires_at:
+        example: "2025-12-31T23:59:59Z"
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      plan_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      plan_level:
+        example: 2
+        type: integer
+      plan_name:
+        example: Premium
+        type: string
+      started_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      status:
+        example: active
+        type: string
+      user_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.TokenResponse:
     properties:
       access_token:
@@ -90,6 +331,98 @@ definitions:
         type: string
       refresh_token:
         example: abc123def456
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateGenreRequest:
+    properties:
+      slug:
+        example: action
+        maxLength: 255
+        minLength: 1
+        type: string
+      translations:
+        items:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.GenreTranslationRequest'
+        minItems: 1
+        type: array
+    required:
+    - translations
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdatePlanRequest:
+    properties:
+      description:
+        maxLength: 2000
+        type: string
+      is_active:
+        type: boolean
+      level:
+        minimum: 0
+        type: integer
+      name:
+        maxLength: 255
+        minLength: 1
+        type: string
+      price:
+        minimum: 0
+        type: number
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateProfileRequest:
+    properties:
+      avatar_url:
+        example: https://example.com/avatar.jpg
+        type: string
+      country:
+        example: US
+        type: string
+      date_of_birth:
+        example: "1990-01-15"
+        type: string
+      display_name:
+        example: Jane Doe
+        maxLength: 100
+        minLength: 1
+        type: string
+      language:
+        example: en
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateStatusRequest:
+    properties:
+      status:
+        enum:
+        - active
+        - suspended
+        example: suspended
+        type: string
+    required:
+    - status
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateVideoRequest:
+    properties:
+      content_rating:
+        enum:
+        - G
+        - PG
+        - PG13
+        - R
+        - NC17
+        type: string
+      creator:
+        maxLength: 255
+        type: string
+      description:
+        maxLength: 5000
+        type: string
+      genre_ids:
+        items:
+          type: string
+        type: array
+      minimum_plan_level:
+        minimum: 0
+        type: integer
+      title:
+        maxLength: 500
+        minLength: 1
         type: string
     type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UserResponse:
@@ -110,6 +443,69 @@ definitions:
         type: string
       status:
         example: active
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse:
+    properties:
+      content_rating:
+        example: PG
+        type: string
+      created_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      creator:
+        example: John Doe
+        type: string
+      description:
+        example: A great video about...
+        type: string
+      duration:
+        example: 3600
+        type: integer
+      file_size:
+        example: 104857600
+        type: integer
+      genre_ids:
+        items:
+          type: string
+        type: array
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      is_accessible:
+        type: boolean
+      minimum_plan_level:
+        example: 1
+        type: integer
+      slug:
+        example: my-awesome-video-a3f8b2c1
+        type: string
+      status:
+        example: published
+        type: string
+      thumbnail_url:
+        example: https://...
+        type: string
+      title:
+        example: My Awesome Video
+        type: string
+      transcode_error:
+        example: ffmpeg exited with status 1
+        type: string
+      updated_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoStreamResponse:
+    properties:
+      expires_at:
+        example: "2025-01-01T04:00:00Z"
+        type: string
+      type:
+        example: hls
+        type: string
+      url:
+        example: https://s3.example.com/bucket/videos/...
         type: string
     type: object
   github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorBody:
@@ -142,6 +538,15 @@ definitions:
       meta:
         $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta'
     type: object
+  internal_adapter_handler_v1.transcodeCallbackRequest:
+    properties:
+      error:
+        description: populated when status == "failed"
+        type: string
+      status:
+        description: '"completed" | "failed"'
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -155,6 +560,649 @@ info:
   title: Zencial VOD API
   version: "1.0"
 paths:
+  /admin/genres/bulk-create:
+    post:
+      consumes:
+      - application/json
+      description: Create multiple genres in a single request (admin only). Returns
+        succeeded and failed entries.
+      parameters:
+      - description: Genres to create
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkCreateGenreRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkCreateGenreResultResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Bulk create genres
+      tags:
+      - genres
+  /admin/genres/bulk-delete:
+    post:
+      consumes:
+      - application/json
+      description: Remove multiple genres in a single request (admin only). Returns
+        succeeded and failed entries.
+      parameters:
+      - description: Genre IDs to delete
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkGenreIDsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkDeleteGenreResultResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Bulk delete genres
+      tags:
+      - genres
+  /admin/plans:
+    get:
+      description: Return a paginated list of all plans, including inactive ones (admin
+        only)
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Sort field (e.g. created_at,-level)
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.PlanResponse'
+                  type: array
+                meta:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all plans (admin)
+      tags:
+      - plans
+  /admin/subscriptions:
+    post:
+      consumes:
+      - application/json
+      description: Create a new subscription for a user against a plan (admin only)
+      parameters:
+      - description: Subscription assignment
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AssignSubscriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SubscriptionResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Assign subscription
+      tags:
+      - subscriptions
+  /admin/subscriptions/{id}:
+    delete:
+      description: Cancel an existing subscription by its ID (admin only)
+      parameters:
+      - description: Subscription ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cancel subscription
+      tags:
+      - subscriptions
+  /admin/users:
+    get:
+      description: Return a paginated list of users (admin only)
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Sort field (e.g. -created_at)
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UserResponse'
+                  type: array
+                meta:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List users
+      tags:
+      - users
+  /admin/users/{id}:
+    get:
+      description: Return a single user by their UUID (admin only)
+      parameters:
+      - description: User ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UserResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user by ID
+      tags:
+      - users
+  /admin/users/{id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Activate or suspend a user (admin only)
+      parameters:
+      - description: User ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UserResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update user status
+      tags:
+      - users
+  /admin/users/{id}/subscriptions:
+    get:
+      description: Return all subscriptions for the given user (admin only)
+      parameters:
+      - description: User ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SubscriptionResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List subscriptions for user
+      tags:
+      - subscriptions
+  /admin/videos:
+    get:
+      description: Return a paginated list of videos in any status, including drafts
+        and archived (admin only)
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Sort field (e.g. -created_at)
+        in: query
+        name: sort
+        type: string
+      - description: Filter by status (draft, published, archived)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse'
+                  type: array
+                meta:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all videos (admin)
+      tags:
+      - videos
+  /admin/videos/bulk-archive:
+    post:
+      consumes:
+      - application/json
+      description: Archive multiple videos in a single request (admin only). Returns
+        succeeded and failed entries.
+      parameters:
+      - description: Video IDs to archive
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkVideoIDsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkResultResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Bulk archive videos
+      tags:
+      - videos
+  /admin/videos/bulk-publish:
+    post:
+      consumes:
+      - application/json
+      description: Publish multiple videos in a single request (admin only). Returns
+        succeeded and failed entries.
+      parameters:
+      - description: Video IDs to publish
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkVideoIDsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkResultResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Bulk publish videos
+      tags:
+      - videos
+  /admin/videos/bulk-unarchive:
+    post:
+      consumes:
+      - application/json
+      description: Restore multiple archived videos in a single request (admin only).
+        Returns succeeded and failed entries.
+      parameters:
+      - description: Video IDs to unarchive
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkVideoIDsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkResultResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Bulk unarchive videos
+      tags:
+      - videos
   /auth/login:
     post:
       consumes:
@@ -298,6 +1346,1067 @@ paths:
       summary: Register a new user
       tags:
       - auth
+  /genres:
+    get:
+      description: Return a paginated list of genres with optional filtering and sorting
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Sort field (e.g. created_at,-name)
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.GenreResponse'
+                  type: array
+                meta:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      summary: List genres
+      tags:
+      - genres
+    post:
+      consumes:
+      - application/json
+      description: Create a new genre with translations (admin only)
+      parameters:
+      - description: Genre data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CreateGenreRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.GenreResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create genre
+      tags:
+      - genres
+  /genres/{id}:
+    delete:
+      description: Remove a genre by its UUID (admin only)
+      parameters:
+      - description: Genre ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete genre
+      tags:
+      - genres
+    get:
+      description: Return a single genre by its UUID
+      parameters:
+      - description: Genre ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.GenreResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      summary: Get genre by ID
+      tags:
+      - genres
+    put:
+      consumes:
+      - application/json
+      description: Update an existing genre's slug and translations (admin only)
+      parameters:
+      - description: Genre ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated genre data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateGenreRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.GenreResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update genre
+      tags:
+      - genres
+  /internal/videos/{id}/transcode-callback:
+    post:
+      consumes:
+      - application/json
+      description: Internal CDN callback that reports the final status of a transcode
+        job. Authenticated via the internal shared-secret middleware, not BearerAuth.
+      parameters:
+      - description: Video ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Transcode result
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapter_handler_v1.transcodeCallbackRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      summary: Transcode completion callback
+      tags:
+      - internal
+  /me:
+    delete:
+      description: Soft-delete the authenticated user's account
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete my account
+      tags:
+      - users
+    get:
+      description: Return the authenticated user's profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UserResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get my profile
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update the authenticated user's profile
+      parameters:
+      - description: Profile fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UserResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update my profile
+      tags:
+      - users
+  /me/subscription:
+    get:
+      description: Return the authenticated user's currently active subscription,
+        or null if none.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SubscriptionResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get my subscription
+      tags:
+      - subscriptions
+  /plans:
+    get:
+      description: Return all currently active subscription plans
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.PlanResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      summary: List active plans
+      tags:
+      - plans
+    post:
+      consumes:
+      - application/json
+      description: Create a new subscription plan (admin only)
+      parameters:
+      - description: Plan data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CreatePlanRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.PlanResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create plan
+      tags:
+      - plans
+  /plans/{id}:
+    delete:
+      description: Soft-delete a subscription plan (admin only)
+      parameters:
+      - description: Plan ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete plan
+      tags:
+      - plans
+    get:
+      description: Return a single plan by its UUID (admin only)
+      parameters:
+      - description: Plan ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.PlanResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get plan by ID
+      tags:
+      - plans
+    put:
+      consumes:
+      - application/json
+      description: Update an existing subscription plan (admin only)
+      parameters:
+      - description: Plan ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Plan fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdatePlanRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.PlanResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update plan
+      tags:
+      - plans
+  /videos:
+    get:
+      description: Return a paginated list of published videos. With a valid bearer
+        token, is_accessible is populated per item based on plan level.
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Sort field (e.g. -created_at)
+        in: query
+        name: sort
+        type: string
+      - description: Filter by genre UUID
+        format: uuid
+        in: query
+        name: genre_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse'
+                  type: array
+                meta:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      summary: List published videos
+      tags:
+      - videos
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a video file with metadata via multipart form (admin only).
+        Optional thumbnail can be sent in the same request.
+      parameters:
+      - description: Video file
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Thumbnail image
+        in: formData
+        name: thumbnail
+        type: file
+      - description: Video title
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Video description
+        in: formData
+        name: description
+        type: string
+      - description: Creator name
+        in: formData
+        name: creator
+        type: string
+      - description: Content rating (G, PG, PG13, R, NC17)
+        in: formData
+        name: content_rating
+        type: string
+      - collectionFormat: multi
+        description: Genre UUIDs (repeatable)
+        in: formData
+        items:
+          type: string
+        name: genre_ids
+        type: array
+      - description: Minimum plan level required to watch
+        in: formData
+        name: minimum_plan_level
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload video
+      tags:
+      - videos
+  /videos/{id}:
+    delete:
+      description: Soft-delete a video by archiving it. Files are moved to a deleted/
+        prefix and the status changes to archived (admin only).
+      parameters:
+      - description: Video ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Archive video
+      tags:
+      - videos
+    get:
+      description: Return a single video by its UUID. With a valid bearer token the
+        response includes is_accessible based on the user's plan.
+      parameters:
+      - description: Video ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      summary: Get video by ID
+      tags:
+      - videos
+    put:
+      consumes:
+      - application/json
+      description: Update an existing video's metadata (admin only)
+      parameters:
+      - description: Video ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Video fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateVideoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update video metadata
+      tags:
+      - videos
+  /videos/{id}/publish:
+    post:
+      description: Transition a video to the published state (admin only)
+      parameters:
+      - description: Video ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Publish video
+      tags:
+      - videos
+  /videos/{id}/stream:
+    get:
+      description: Return a presigned URL (or HLS manifest URL) the authenticated
+        user can use to stream the video.
+      parameters:
+      - description: Video ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoStreamResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get video stream URL
+      tags:
+      - videos
+  /videos/{id}/thumbnail:
+    put:
+      consumes:
+      - multipart/form-data
+      description: Replace a video's thumbnail image via multipart form (admin only)
+      parameters:
+      - description: Video ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Thumbnail image
+        in: formData
+        name: thumbnail
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update video thumbnail
+      tags:
+      - videos
+  /videos/{id}/unarchive:
+    post:
+      description: Restore a soft-deleted (archived) video back to draft status (admin
+        only)
+      parameters:
+      - description: Video ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Unarchive video
+      tags:
+      - videos
 securityDefinitions:
   BearerAuth:
     description: 'Enter your bearer token in the format: Bearer {token}'
