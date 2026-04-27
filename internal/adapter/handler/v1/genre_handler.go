@@ -29,7 +29,21 @@ func NewGenreHandler(genreService *genreuc.Service) *GenreHandler {
 	}
 }
 
-// Create creates a new genre.
+// Create godoc
+// @Summary      Create genre
+// @Description  Create a new genre with translations (admin only)
+// @Tags         genres
+// @Accept       json
+// @Produce      json
+// @Param        body body dto.CreateGenreRequest true "Genre data"
+// @Success      201 {object} httputil.Response{data=dto.GenreResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      409 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /genres [post]
 func (h *GenreHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req dto.CreateGenreRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
@@ -66,7 +80,17 @@ func (h *GenreHandler) Create(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusCreated, mapper.GenreToResponse(genre))
 }
 
-// GetByID returns a genre by ID.
+// GetByID godoc
+// @Summary      Get genre by ID
+// @Description  Return a single genre by its UUID
+// @Tags         genres
+// @Produce      json
+// @Param        id path string true "Genre ID" format(uuid)
+// @Success      200 {object} httputil.Response{data=dto.GenreResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Router       /genres/{id} [get]
 func (h *GenreHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	id, err := httputil.URLParamUUID(r, "id")
 	if err != nil {
@@ -83,7 +107,18 @@ func (h *GenreHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusOK, mapper.GenreToResponse(genre))
 }
 
-// List returns a paginated list of genres.
+// List godoc
+// @Summary      List genres
+// @Description  Return a paginated list of genres with optional filtering and sorting
+// @Tags         genres
+// @Produce      json
+// @Param        page query int false "Page number" default(1)
+// @Param        per_page query int false "Items per page" default(20)
+// @Param        sort query string false "Sort field (e.g. created_at,-name)"
+// @Success      200 {object} httputil.Response{data=[]dto.GenreResponse,meta=httputil.Meta}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Router       /genres [get]
 func (h *GenreHandler) List(w http.ResponseWriter, r *http.Request) {
 	fs, err := filter.FromRequest(r, postgres.GenreFilterConfig())
 	if err != nil {
@@ -105,7 +140,23 @@ func (h *GenreHandler) List(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Update updates an existing genre.
+// Update godoc
+// @Summary      Update genre
+// @Description  Update an existing genre's slug and translations (admin only)
+// @Tags         genres
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Genre ID" format(uuid)
+// @Param        body body dto.UpdateGenreRequest true "Updated genre data"
+// @Success      200 {object} httputil.Response{data=dto.GenreResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      409 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /genres/{id} [put]
 func (h *GenreHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id, err := httputil.URLParamUUID(r, "id")
 	if err != nil {
@@ -149,7 +200,19 @@ func (h *GenreHandler) Update(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusOK, mapper.GenreToResponse(genre))
 }
 
-// Delete removes a genre.
+// Delete godoc
+// @Summary      Delete genre
+// @Description  Remove a genre by its UUID (admin only)
+// @Tags         genres
+// @Param        id path string true "Genre ID" format(uuid)
+// @Success      204
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /genres/{id} [delete]
 func (h *GenreHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := httputil.URLParamUUID(r, "id")
 	if err != nil {
@@ -166,7 +229,20 @@ func (h *GenreHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// BulkCreate creates multiple genres.
+// BulkCreate godoc
+// @Summary      Bulk create genres
+// @Description  Create multiple genres in a single request (admin only). Returns succeeded and failed entries.
+// @Tags         genres
+// @Accept       json
+// @Produce      json
+// @Param        body body dto.BulkCreateGenreRequest true "Genres to create"
+// @Success      200 {object} httputil.Response{data=dto.BulkCreateGenreResultResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/genres/bulk-create [post]
 func (h *GenreHandler) BulkCreate(w http.ResponseWriter, r *http.Request) {
 	var req dto.BulkCreateGenreRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
@@ -207,7 +283,20 @@ func (h *GenreHandler) BulkCreate(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusOK, mapper.BulkCreateGenreResultToResponse(result))
 }
 
-// BulkDelete removes multiple genres.
+// BulkDelete godoc
+// @Summary      Bulk delete genres
+// @Description  Remove multiple genres in a single request (admin only). Returns succeeded and failed entries.
+// @Tags         genres
+// @Accept       json
+// @Produce      json
+// @Param        body body dto.BulkGenreIDsRequest true "Genre IDs to delete"
+// @Success      200 {object} httputil.Response{data=dto.BulkDeleteGenreResultResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/genres/bulk-delete [post]
 func (h *GenreHandler) BulkDelete(w http.ResponseWriter, r *http.Request) {
 	var req dto.BulkGenreIDsRequest
 	if err := httputil.DecodeJSON(r, &req); err != nil {
