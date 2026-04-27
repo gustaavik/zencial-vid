@@ -35,7 +35,7 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 	authHandler := NewAuthHandler(deps.Auth)
 	genreHandler := NewGenreHandler(deps.Genre)
 	userHandler := NewUserHandler(deps.User)
-	videoHandler := NewVideoHandler(deps.Video, deps.Storage)
+	videoHandler := NewVideoHandler(deps.Video, deps.Subscription, deps.Storage)
 	planHandler := NewPlanHandler(deps.Plan)
 	subscriptionHandler := NewSubscriptionHandler(deps.Subscription)
 	transcodeCallbackHandler := NewTranscodeCallbackHandler(deps.Video)
