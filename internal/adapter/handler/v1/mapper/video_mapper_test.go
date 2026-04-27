@@ -11,8 +11,6 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 )
 
-func intPtr(v int) *int { return &v }
-
 func newPublishedVideo(t *testing.T, minimumPlanLevel *int) *entity.Video {
 	t.Helper()
 	slug, err := valueobject.NewSlug("test-video")
@@ -41,37 +39,37 @@ func TestVideoToResponseWithAccess(t *testing.T) {
 		{
 			name:             "free video (nil minimum) — accessible with plan",
 			minimumPlanLevel: nil,
-			userPlanLevel:    intPtr(1),
+			userPlanLevel:    new(1),
 			wantAccessible:   true,
 		},
 		{
 			name:             "free video (zero minimum) — accessible without plan",
-			minimumPlanLevel: intPtr(0),
+			minimumPlanLevel: new(0),
 			userPlanLevel:    nil,
 			wantAccessible:   true,
 		},
 		{
 			name:             "gated video — no subscription locks access",
-			minimumPlanLevel: intPtr(2),
+			minimumPlanLevel: new(2),
 			userPlanLevel:    nil,
 			wantAccessible:   false,
 		},
 		{
 			name:             "gated video — lower plan locks access",
-			minimumPlanLevel: intPtr(2),
-			userPlanLevel:    intPtr(1),
+			minimumPlanLevel: new(2),
+			userPlanLevel:    new(1),
 			wantAccessible:   false,
 		},
 		{
 			name:             "gated video — equal plan grants access",
-			minimumPlanLevel: intPtr(2),
-			userPlanLevel:    intPtr(2),
+			minimumPlanLevel: new(2),
+			userPlanLevel:    new(2),
 			wantAccessible:   true,
 		},
 		{
 			name:             "gated video — higher plan grants access",
-			minimumPlanLevel: intPtr(2),
-			userPlanLevel:    intPtr(5),
+			minimumPlanLevel: new(2),
+			userPlanLevel:    new(5),
 			wantAccessible:   true,
 		},
 	}
@@ -92,10 +90,10 @@ func TestVideosToResponseWithAccess_AppliesPlanLevelToEachItem(t *testing.T) {
 	ctx := context.Background()
 
 	free := *newPublishedVideo(t, nil)
-	gatedLow := *newPublishedVideo(t, intPtr(1))
-	gatedHigh := *newPublishedVideo(t, intPtr(5))
+	gatedLow := *newPublishedVideo(t, new(1))
+	gatedHigh := *newPublishedVideo(t, new(5))
 
-	responses := VideosToResponseWithAccess(ctx, []entity.Video{free, gatedLow, gatedHigh}, nil, intPtr(2))
+	responses := VideosToResponseWithAccess(ctx, []entity.Video{free, gatedLow, gatedHigh}, nil, new(2))
 
 	require.Len(t, responses, 3)
 	require.NotNil(t, responses[0].IsAccessible)
