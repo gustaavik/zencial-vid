@@ -508,6 +508,11 @@ definitions:
         example: https://s3.example.com/bucket/videos/...
         type: string
     type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.WatchlistStatusResponse:
+    properties:
+      in_watchlist:
+        type: boolean
+    type: object
   github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorBody:
     properties:
       code:
@@ -1731,6 +1736,162 @@ paths:
       summary: Get my subscription
       tags:
       - subscriptions
+  /me/watchlist:
+    get:
+      description: Return the authenticated user's watchlist as a paginated list of
+        videos, ordered by add date (newest first).
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse'
+                  type: array
+                meta:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List my watchlist
+      tags:
+      - watchlist
+  /me/watchlist/{video_id}:
+    delete:
+      description: Remove the given video from the authenticated user's watchlist.
+        Returns 404 when the entry does not exist.
+      parameters:
+      - description: Video ID
+        format: uuid
+        in: path
+        name: video_id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove a video from my watchlist
+      tags:
+      - watchlist
+    get:
+      description: Returns 200 with in_watchlist=true if the video is in the authenticated
+        user's watchlist, otherwise 404.
+      parameters:
+      - description: Video ID
+        format: uuid
+        in: path
+        name: video_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.WatchlistStatusResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Check watchlist membership
+      tags:
+      - watchlist
+    post:
+      description: Add the given video to the authenticated user's watchlist. Idempotent
+        — re-adding an existing entry is a no-op.
+      parameters:
+      - description: Video ID
+        format: uuid
+        in: path
+        name: video_id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add a video to my watchlist
+      tags:
+      - watchlist
   /plans:
     get:
       description: Return all currently active subscription plans
