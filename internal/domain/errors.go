@@ -47,3 +47,8 @@ var (
 	ErrRefreshTokenNotFound = errors.New("refresh token not found")
 	ErrRefreshTokenExpired  = errors.New("refresh token expired")
 )
+
+// Watchlist errors.
+var (
+	ErrWatchlistEntryNotFound = errors.New("watchlist entry not found")
+)

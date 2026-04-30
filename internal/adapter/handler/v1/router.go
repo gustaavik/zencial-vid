@@ -14,6 +14,7 @@ import (
 	subscriptionuc "github.com/zenfulcode/zencial/internal/usecase/subscription"
 	useruc "github.com/zenfulcode/zencial/internal/usecase/user"
 	videouc "github.com/zenfulcode/zencial/internal/usecase/video"
+	watchlistuc "github.com/zenfulcode/zencial/internal/usecase/watchlist"
 )
 
 // Deps holds all dependencies needed by V1 handlers.
@@ -24,6 +25,7 @@ type Deps struct {
 	Video                *videouc.Service
 	Plan                 *planuc.Service
 	Subscription         *subscriptionuc.Service
+	Watchlist            *watchlistuc.Service
 	TokenService         auth.TokenService
 	Storage              storage.StorageService
 	InternalSharedSecret string
@@ -38,6 +40,7 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 	videoHandler := NewVideoHandler(deps.Video, deps.Subscription, deps.Storage)
 	planHandler := NewPlanHandler(deps.Plan)
 	subscriptionHandler := NewSubscriptionHandler(deps.Subscription)
+	watchlistHandler := NewWatchlistHandler(deps.Watchlist, deps.Storage)
 	transcodeCallbackHandler := NewTranscodeCallbackHandler(deps.Video)
 
 	// Internal service-to-service routes (CDN callbacks). Outside the JWT chain.
@@ -84,6 +87,12 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 
 		// User subscription (self)
 		r.Get("/me/subscription", subscriptionHandler.GetMySubscription)
+
+		// Watchlist (self)
+		r.Get("/me/watchlist", watchlistHandler.List)
+		r.Get("/me/watchlist/{video_id}", watchlistHandler.GetStatus)
+		r.Post("/me/watchlist/{video_id}", watchlistHandler.Add)
+		r.Delete("/me/watchlist/{video_id}", watchlistHandler.Remove)
 
 		// Video streaming (any authenticated user)
 		r.Get("/videos/{id}/stream", videoHandler.Stream)

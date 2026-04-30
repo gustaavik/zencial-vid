@@ -39,6 +39,9 @@ const (
 	CodeActiveSubscriptionExists = "ACTIVE_SUBSCRIPTION_EXISTS"
 	CodeInsufficientPlanLevel    = "INSUFFICIENT_PLAN_LEVEL"
 
+	// Watchlist
+	CodeWatchlistEntryNotFound = "WATCHLIST_ENTRY_NOT_FOUND"
+
 	// General
 	CodeValidationFailed = "VALIDATION_FAILED"
 	CodeInternalError    = "INTERNAL_ERROR"
