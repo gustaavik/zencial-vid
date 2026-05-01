@@ -42,6 +42,9 @@ const (
 	// Watchlist
 	CodeWatchlistEntryNotFound = "WATCHLIST_ENTRY_NOT_FOUND"
 
+	// Watch progress
+	CodeWatchProgressNotFound = "WATCH_PROGRESS_NOT_FOUND"
+
 	// General
 	CodeValidationFailed = "VALIDATION_FAILED"
 	CodeInternalError    = "INTERNAL_ERROR"
