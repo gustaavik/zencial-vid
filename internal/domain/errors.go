@@ -52,3 +52,8 @@ var (
 var (
 	ErrWatchlistEntryNotFound = errors.New("watchlist entry not found")
 )
+
+// Watch progress errors.
+var (
+	ErrWatchProgressNotFound = errors.New("watch progress not found")
+)

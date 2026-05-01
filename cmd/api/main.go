@@ -28,6 +28,7 @@ import (
 	useruc "github.com/zenfulcode/zencial/internal/usecase/user"
 	videouc "github.com/zenfulcode/zencial/internal/usecase/video"
 	watchlistuc "github.com/zenfulcode/zencial/internal/usecase/watchlist"
+	watchprogressuc "github.com/zenfulcode/zencial/internal/usecase/watchprogress"
 
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
@@ -100,6 +101,7 @@ func main() {
 	planRepo := postgres.NewPlanRepository(dbPool)
 	subRepo := postgres.NewSubscriptionRepository(dbPool)
 	watchlistRepo := postgres.NewWatchlistRepository(dbPool, videoRepo)
+	watchProgressRepo := postgres.NewWatchProgressRepository(dbPool, videoRepo)
 
 	// Redis stores
 	sessionStore := redis.NewSessionStore(redisClient, cfg.JWT.RefreshDuration)
@@ -147,6 +149,7 @@ func main() {
 	}
 	videoService := videouc.NewService(videoRepo, genreRepo, subRepo, planRepo, storageService, dispatcher, appLog, videoOpts...)
 	watchlistService := watchlistuc.NewService(watchlistRepo, videoRepo, appLog)
+	watchProgressService := watchprogressuc.NewService(watchProgressRepo, videoRepo, appLog)
 
 	// Router
 	r := chi.NewRouter()
@@ -194,6 +197,7 @@ func main() {
 			Plan:                 planService,
 			Subscription:         subscriptionService,
 			Watchlist:            watchlistService,
+			WatchProgress:        watchProgressService,
 			TokenService:         tokenService,
 			Storage:              storageService,
 			InternalSharedSecret: cfg.InternalAPI.SharedSecret,
