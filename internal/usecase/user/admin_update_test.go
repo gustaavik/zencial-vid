@@ -13,9 +13,6 @@ import (
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
-func ptrStr(s string) *string                    { return &s }
-func ptrRole(r entity.UserRole) *entity.UserRole { return &r }
-
 func TestService_AdminUpdate(t *testing.T) {
 	ctx := context.Background()
 
@@ -44,9 +41,9 @@ func TestService_AdminUpdate(t *testing.T) {
 
 		result, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{
 			UserID:      user.ID,
-			DisplayName: ptrStr("New Name"),
-			Language:    ptrStr("sv"),
-			Country:     ptrStr("SE"),
+			DisplayName: new("New Name"),
+			Language:    new("sv"),
+			Country:     new("SE"),
 		})
 
 		require.Nil(t, appErr)
@@ -66,7 +63,7 @@ func TestService_AdminUpdate(t *testing.T) {
 
 		result, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{
 			UserID: user.ID,
-			Email:  ptrStr("new@example.com"),
+			Email:  new("new@example.com"),
 		})
 
 		require.Nil(t, appErr)
@@ -84,7 +81,7 @@ func TestService_AdminUpdate(t *testing.T) {
 
 		result, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{
 			UserID: user.ID,
-			Email:  ptrStr("taken@example.com"),
+			Email:  new("taken@example.com"),
 		})
 
 		assert.Nil(t, result)
@@ -100,7 +97,7 @@ func TestService_AdminUpdate(t *testing.T) {
 
 		result, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{
 			UserID: user.ID,
-			Email:  ptrStr("not-an-email"),
+			Email:  new("not-an-email"),
 		})
 
 		assert.Nil(t, result)
@@ -117,7 +114,7 @@ func TestService_AdminUpdate(t *testing.T) {
 
 		result, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{
 			UserID: user.ID,
-			Role:   ptrRole(entity.RoleAdmin),
+			Role:   new(entity.RoleAdmin),
 		})
 
 		require.Nil(t, appErr)
@@ -143,7 +140,7 @@ func TestService_AdminUpdate(t *testing.T) {
 
 		_, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{
 			UserID: user.ID,
-			Role:   ptrRole(entity.RoleUser),
+			Role:   new(entity.RoleUser),
 		})
 		require.Nil(t, appErr)
 
@@ -167,7 +164,7 @@ func TestService_AdminUpdate(t *testing.T) {
 
 		result, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{
 			UserID:   user.ID,
-			Password: ptrStr("brand-new"),
+			Password: new("brand-new"),
 		})
 
 		require.Nil(t, appErr)
