@@ -57,7 +57,7 @@ func TestService_UpdateProfile(t *testing.T) {
 	t.Run("partial update only display name", func(t *testing.T) {
 		user := newActiveUser()
 		user.Profile.Language = "en"
-		user.Profile.Country = "US"
+		user.Profile.Country = "Denmark"
 		svc := newTestService(&mockUserRepo{
 			getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.User, error) {
 				return user, nil
@@ -74,7 +74,7 @@ func TestService_UpdateProfile(t *testing.T) {
 		require.NotNil(t, result)
 		assert.Equal(t, "Updated Name", result.Profile.DisplayName)
 		assert.Equal(t, "en", result.Profile.Language)
-		assert.Equal(t, "US", result.Profile.Country)
+		assert.Equal(t, "Denmark", result.Profile.Country)
 	})
 
 	t.Run("clear date of birth with empty string", func(t *testing.T) {

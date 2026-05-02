@@ -95,6 +95,27 @@ func (m *mockDispatcher) Dispatch(evt event.Event) error {
 
 func (m *mockDispatcher) Subscribe(_ string, _ func(event.Event) error) {}
 
+// --- Mock PasswordHasher ---
+
+type mockHasher struct {
+	hashFn    func(password string) (string, error)
+	compareFn func(hashedPassword, password string) error
+}
+
+func (m *mockHasher) Hash(password string) (string, error) {
+	if m.hashFn != nil {
+		return m.hashFn(password)
+	}
+	return "hashed:" + password, nil
+}
+
+func (m *mockHasher) Compare(hashedPassword, password string) error {
+	if m.compareFn != nil {
+		return m.compareFn(hashedPassword, password)
+	}
+	return nil
+}
+
 // --- Test Helpers ---
 
 func newTestLogger() *slog.Logger {
@@ -102,13 +123,20 @@ func newTestLogger() *slog.Logger {
 }
 
 func newTestService(repo *mockUserRepo, dispatcher *mockDispatcher) *Service {
+	return newTestServiceWithHasher(repo, dispatcher, nil)
+}
+
+func newTestServiceWithHasher(repo *mockUserRepo, dispatcher *mockDispatcher, hasher *mockHasher) *Service {
 	if repo == nil {
 		repo = &mockUserRepo{}
 	}
 	if dispatcher == nil {
 		dispatcher = &mockDispatcher{}
 	}
-	return NewService(repo, dispatcher, newTestLogger())
+	if hasher == nil {
+		hasher = &mockHasher{}
+	}
+	return NewService(repo, hasher, dispatcher, newTestLogger())
 }
 
 func newActiveUser() *entity.User {
@@ -124,7 +152,7 @@ func newActiveUser() *entity.User {
 			UserID:      id,
 			DisplayName: "Test User",
 			Language:    "en",
-			Country:     "US",
+			Country:     "Denmark",
 			UpdatedAt:   now,
 		},
 		CreatedAt: now,

@@ -106,3 +106,14 @@ type UserStatusChanged struct {
 
 func (e UserStatusChanged) EventName() string     { return "user.status_changed" }
 func (e UserStatusChanged) OccurredAt() time.Time { return e.Timestamp }
+
+// UserRoleChanged is emitted when an admin changes a user's role.
+type UserRoleChanged struct {
+	UserID    uuid.UUID
+	OldRole   string
+	NewRole   string
+	Timestamp time.Time
+}
+
+func (e UserRoleChanged) EventName() string     { return "user.role_changed" }
+func (e UserRoleChanged) OccurredAt() time.Time { return e.Timestamp }

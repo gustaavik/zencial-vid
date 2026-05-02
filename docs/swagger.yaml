@@ -1,5 +1,77 @@
 basePath: /api/v1
 definitions:
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AdminCreateUserRequest:
+    properties:
+      avatar_url:
+        example: https://example.com/avatar.jpg
+        type: string
+      country:
+        example: Denmark
+        type: string
+      date_of_birth:
+        example: "1990-01-15"
+        type: string
+      display_name:
+        example: Jane Doe
+        maxLength: 100
+        minLength: 3
+        type: string
+      email:
+        example: user@example.com
+        type: string
+      language:
+        example: en
+        type: string
+      password:
+        example: securepassword
+        maxLength: 128
+        minLength: 8
+        type: string
+      role:
+        enum:
+        - user
+        - admin
+        example: user
+        type: string
+    required:
+    - display_name
+    - email
+    - password
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AdminUpdateUserRequest:
+    properties:
+      avatar_url:
+        example: https://example.com/avatar.jpg
+        type: string
+      country:
+        example: Denmark
+        type: string
+      date_of_birth:
+        example: "1990-01-15"
+        type: string
+      display_name:
+        example: Jane Doe
+        maxLength: 100
+        minLength: 1
+        type: string
+      email:
+        example: user@example.com
+        type: string
+      language:
+        example: en
+        type: string
+      password:
+        example: newpassword
+        maxLength: 128
+        minLength: 8
+        type: string
+      role:
+        enum:
+        - user
+        - admin
+        example: admin
+        type: string
+    type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AssignSubscriptionRequest:
     properties:
       expires_at:
@@ -109,6 +181,23 @@ definitions:
         type: array
     required:
     - ids
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ContinueWatchingItem:
+    properties:
+      duration_seconds:
+        example: 600
+        type: integer
+      percent_watched:
+        example: 20
+        type: number
+      position_seconds:
+        example: 120
+        type: integer
+      updated_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      video:
+        $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse'
     type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CreateGenreRequest:
     properties:
@@ -251,7 +340,7 @@ definitions:
         example: https://example.com/avatar.jpg
         type: string
       country:
-        example: US
+        example: Denmark
         type: string
       date_of_birth:
         example: "1990-01-15"
@@ -372,7 +461,7 @@ definitions:
         example: https://example.com/avatar.jpg
         type: string
       country:
-        example: US
+        example: Denmark
         type: string
       date_of_birth:
         example: "1990-01-15"
@@ -408,7 +497,8 @@ definitions:
         - NC17
         type: string
       creator:
-        maxLength: 255
+        maxLength: 24
+        minLength: 3
         type: string
       description:
         maxLength: 5000
@@ -424,6 +514,13 @@ definitions:
         maxLength: 500
         minLength: 1
         type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpsertWatchProgressRequest:
+    properties:
+      position_seconds:
+        example: 120
+        minimum: 0
+        type: integer
     type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UserResponse:
     properties:
@@ -506,6 +603,24 @@ definitions:
         type: string
       url:
         example: https://s3.example.com/bucket/videos/...
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.WatchProgressResponse:
+    properties:
+      duration_seconds:
+        example: 600
+        type: integer
+      percent_watched:
+        example: 20
+        type: number
+      position_seconds:
+        example: 120
+        type: integer
+      updated_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      video_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
         type: string
     type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.WatchlistStatusResponse:
@@ -859,7 +974,92 @@ paths:
       summary: List users
       tags:
       - users
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account (admin only)
+      parameters:
+      - description: User fields
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AdminCreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UserResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create user (admin)
+      tags:
+      - users
   /admin/users/{id}:
+    delete:
+      description: Soft-delete a user account (admin only)
+      parameters:
+      - description: User ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete user (admin)
+      tags:
+      - users
     get:
       description: Return a single user by their UUID (admin only)
       parameters:
@@ -904,6 +1104,64 @@ paths:
       security:
       - BearerAuth: []
       summary: Get user by ID
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update a user's profile, email, role, or password (admin only)
+      parameters:
+      - description: User ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AdminUpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UserResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update user (admin)
       tags:
       - users
   /admin/users/{id}/status:
@@ -1010,6 +1268,121 @@ paths:
       summary: List subscriptions for user
       tags:
       - subscriptions
+  /admin/users/{id}/watch-progress:
+    get:
+      description: Return the given user's started-but-unfinished videos (admin only).
+      parameters:
+      - description: User ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ContinueWatchingItem'
+                  type: array
+                meta:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List a user's continue-watching feed (admin)
+      tags:
+      - watch-progress
+  /admin/users/{id}/watchlist:
+    get:
+      description: Return the given user's watchlist as a paginated list of videos
+        (admin only).
+      parameters:
+      - description: User ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse'
+                  type: array
+                meta:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List a user's watchlist (admin)
+      tags:
+      - watchlist
   /admin/videos:
     get:
       description: Return a paginated list of videos in any status, including drafts
@@ -1736,6 +2109,170 @@ paths:
       summary: Get my subscription
       tags:
       - subscriptions
+  /me/watch-progress:
+    get:
+      description: Return videos the authenticated user has started but not finished,
+        ordered by most recently watched.
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ContinueWatchingItem'
+                  type: array
+                meta:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List my continue-watching feed
+      tags:
+      - watch-progress
+  /me/watch-progress/{video_id}:
+    delete:
+      description: Remove the authenticated user's saved playback position for the
+        video.
+      parameters:
+      - description: Video ID
+        format: uuid
+        in: path
+        name: video_id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Clear my progress for a video
+      tags:
+      - watch-progress
+    get:
+      description: Returns the authenticated user's last saved playback position for
+        the video.
+      parameters:
+      - description: Video ID
+        format: uuid
+        in: path
+        name: video_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.WatchProgressResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get my saved progress for a video
+      tags:
+      - watch-progress
+    put:
+      consumes:
+      - application/json
+      description: Create or update the authenticated user's playback position for
+        the video. Idempotent.
+      parameters:
+      - description: Video ID
+        format: uuid
+        in: path
+        name: video_id
+        required: true
+        type: string
+      - description: Position in seconds
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpsertWatchProgressRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Save my progress for a video
+      tags:
+      - watch-progress
   /me/watchlist:
     get:
       description: Return the authenticated user's watchlist as a paginated list of

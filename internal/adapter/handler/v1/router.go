@@ -148,9 +148,14 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 
 			// User management (admin)
 			r.Get("/admin/users", userHandler.ListUsers)
+			r.Post("/admin/users", userHandler.CreateUser)
 			r.Get("/admin/users/{id}", userHandler.GetUser)
+			r.Put("/admin/users/{id}", userHandler.UpdateUser)
+			r.Delete("/admin/users/{id}", userHandler.DeleteUser)
 			r.Put("/admin/users/{id}/status", userHandler.UpdateUserStatus)
 			r.Get("/admin/users/{id}/subscriptions", subscriptionHandler.ListByUser)
+			r.Get("/admin/users/{id}/watchlist", watchlistHandler.ListByUser)
+			r.Get("/admin/users/{id}/watch-progress", watchProgressHandler.ListByUser)
 		})
 	})
 }

@@ -234,6 +234,11 @@ func (h *UserHandler) UpdateUserStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if callerID, ok := middleware.GetUserID(r.Context()); ok && callerID == id {
+		httputil.Error(w, apperror.Forbidden(apperror.CodeForbidden, "cannot change your own status", nil))
+		return
+	}
+
 	user, appErr := h.userService.UpdateStatus(r.Context(), useruc.UpdateStatusInput{
 		UserID: id,
 		Status: entity.UserStatus(req.Status),
@@ -244,4 +249,155 @@ func (h *UserHandler) UpdateUserStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.Success(w, http.StatusOK, mapper.UserToResponse(user))
+}
+
+// CreateUser godoc
+// @Summary      Create user (admin)
+// @Description  Create a new user account (admin only)
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Param        body body dto.AdminCreateUserRequest true "User fields"
+// @Success      201 {object} httputil.Response{data=dto.UserResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      409 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/users [post]
+func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	var req dto.AdminCreateUserRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
+		return
+	}
+
+	if errors := h.validator.Validate(req); errors != nil {
+		httputil.ErrorWithDetails(w,
+			apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil),
+			errors,
+		)
+		return
+	}
+
+	user, appErr := h.userService.AdminCreate(r.Context(), &useruc.AdminCreateInput{
+		Email:       req.Email,
+		Password:    req.Password,
+		Role:        entity.UserRole(req.Role),
+		DisplayName: req.DisplayName,
+		AvatarURL:   req.AvatarURL,
+		Language:    req.Language,
+		Country:     req.Country,
+		DateOfBirth: req.DateOfBirth,
+	})
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusCreated, mapper.UserToResponse(user))
+}
+
+// UpdateUser godoc
+// @Summary      Update user (admin)
+// @Description  Update a user's profile, email, role, or password (admin only)
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "User ID" format(uuid)
+// @Param        body body dto.AdminUpdateUserRequest true "Fields to update"
+// @Success      200 {object} httputil.Response{data=dto.UserResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      409 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/users/{id} [put]
+func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	id, err := httputil.URLParamUUID(r, "id")
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid user ID")
+		return
+	}
+
+	var req dto.AdminUpdateUserRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
+		return
+	}
+
+	if errors := h.validator.Validate(req); errors != nil {
+		httputil.ErrorWithDetails(w,
+			apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil),
+			errors,
+		)
+		return
+	}
+
+	if callerID, ok := middleware.GetUserID(r.Context()); ok && callerID == id {
+		if req.Role != nil && entity.UserRole(*req.Role) != entity.RoleAdmin {
+			httputil.Error(w, apperror.Forbidden(apperror.CodeForbidden, "cannot demote yourself", nil))
+			return
+		}
+	}
+
+	var rolePtr *entity.UserRole
+	if req.Role != nil {
+		role := entity.UserRole(*req.Role)
+		rolePtr = &role
+	}
+
+	user, appErr := h.userService.AdminUpdate(r.Context(), &useruc.AdminUpdateInput{
+		UserID:      id,
+		Email:       req.Email,
+		Role:        rolePtr,
+		Password:    req.Password,
+		DisplayName: req.DisplayName,
+		AvatarURL:   req.AvatarURL,
+		DateOfBirth: req.DateOfBirth,
+		Language:    req.Language,
+		Country:     req.Country,
+	})
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.UserToResponse(user))
+}
+
+// DeleteUser godoc
+// @Summary      Delete user (admin)
+// @Description  Soft-delete a user account (admin only)
+// @Tags         users
+// @Param        id path string true "User ID" format(uuid)
+// @Success      204
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/users/{id} [delete]
+func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	id, err := httputil.URLParamUUID(r, "id")
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid user ID")
+		return
+	}
+
+	if callerID, ok := middleware.GetUserID(r.Context()); ok && callerID == id {
+		httputil.Error(w, apperror.Forbidden(apperror.CodeForbidden, "cannot delete yourself", nil))
+		return
+	}
+
+	if appErr := h.userService.AdminDelete(r.Context(), id); appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

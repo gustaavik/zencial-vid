@@ -132,6 +132,45 @@ func (h *WatchlistHandler) Add(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// ListByUser godoc
+// @Summary      List a user's watchlist (admin)
+// @Description  Return the given user's watchlist as a paginated list of videos (admin only).
+// @Tags         watchlist
+// @Produce      json
+// @Param        id path string true "User ID" format(uuid)
+// @Param        page query int false "Page number" default(1)
+// @Param        per_page query int false "Items per page" default(20)
+// @Success      200 {object} httputil.Response{data=[]dto.VideoResponse,meta=httputil.Meta}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/users/{id}/watchlist [get]
+func (h *WatchlistHandler) ListByUser(w http.ResponseWriter, r *http.Request) {
+	userID, err := httputil.URLParamUUID(r, "id")
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid user ID")
+		return
+	}
+
+	page := valueobject.NewPagination(
+		httputil.QueryInt(r, "page", valueobject.DefaultPage),
+		httputil.QueryInt(r, "per_page", valueobject.DefaultPerPage),
+	)
+
+	videos, total, appErr := h.service.List(r.Context(), userID, page)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.SuccessWithMeta(w,
+		mapper.VideosToResponse(r.Context(), videos, h.storage),
+		pagination.NewMeta(page.Page, page.PerPage, total),
+	)
+}
+
 // Remove godoc
 // @Summary      Remove a video from my watchlist
 // @Description  Remove the given video from the authenticated user's watchlist. Returns 404 when the entry does not exist.
