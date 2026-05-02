@@ -31,7 +31,7 @@ type VideoStreamResponse struct {
 type UpdateVideoRequest struct {
 	Title            *string  `json:"title,omitempty" validate:"omitempty,min=1,max=500"`
 	Description      *string  `json:"description,omitempty" validate:"omitempty,max=5000"`
-	Creator          *string  `json:"creator,omitempty" validate:"omitempty,max=255"`
+	Creator          *string  `json:"creator,omitempty" validate:"omitempty,min=3,max=24"`
 	ContentRating    *string  `json:"content_rating,omitempty" validate:"omitempty,oneof=G PG PG13 R NC17"`
 	GenreIDs         []string `json:"genre_ids,omitempty" validate:"omitempty,dive,uuid"`
 	MinimumPlanLevel *int     `json:"minimum_plan_level,omitempty" validate:"omitempty,gte=0"`
