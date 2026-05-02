@@ -129,7 +129,7 @@ func main() {
 	// Use cases
 	authService := authuc.NewService(userRepo, tokenService, hasher, sessionStore, dispatcher, appLog)
 	genreService := genreuc.NewService(genreRepo, appLog)
-	userService := useruc.NewService(userRepo, dispatcher, appLog)
+	userService := useruc.NewService(userRepo, hasher, dispatcher, appLog)
 	planService := planuc.NewService(planRepo, appLog)
 	subscriptionService := subscriptionuc.NewService(subRepo, planRepo, appLog)
 	// Video service with optional CDN integration
