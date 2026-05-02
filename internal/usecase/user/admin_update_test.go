@@ -13,7 +13,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
-func ptrStr(s string) *string         { return &s }
+func ptrStr(s string) *string                    { return &s }
 func ptrRole(r entity.UserRole) *entity.UserRole { return &r }
 
 func TestService_AdminUpdate(t *testing.T) {
@@ -26,7 +26,7 @@ func TestService_AdminUpdate(t *testing.T) {
 			getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.User, error) { return user, nil },
 		}, dispatcher, nil)
 
-		result, appErr := svc.AdminUpdate(ctx, AdminUpdateInput{UserID: user.ID})
+		result, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{UserID: user.ID})
 
 		require.Nil(t, appErr)
 		require.NotNil(t, result)
@@ -42,7 +42,7 @@ func TestService_AdminUpdate(t *testing.T) {
 			getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.User, error) { return user, nil },
 		}, nil, nil)
 
-		result, appErr := svc.AdminUpdate(ctx, AdminUpdateInput{
+		result, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{
 			UserID:      user.ID,
 			DisplayName: ptrStr("New Name"),
 			Language:    ptrStr("sv"),
@@ -64,7 +64,7 @@ func TestService_AdminUpdate(t *testing.T) {
 			},
 		}, nil, nil)
 
-		result, appErr := svc.AdminUpdate(ctx, AdminUpdateInput{
+		result, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{
 			UserID: user.ID,
 			Email:  ptrStr("new@example.com"),
 		})
@@ -82,7 +82,7 @@ func TestService_AdminUpdate(t *testing.T) {
 			},
 		}, nil, nil)
 
-		result, appErr := svc.AdminUpdate(ctx, AdminUpdateInput{
+		result, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{
 			UserID: user.ID,
 			Email:  ptrStr("taken@example.com"),
 		})
@@ -98,7 +98,7 @@ func TestService_AdminUpdate(t *testing.T) {
 			getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.User, error) { return user, nil },
 		}, nil, nil)
 
-		result, appErr := svc.AdminUpdate(ctx, AdminUpdateInput{
+		result, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{
 			UserID: user.ID,
 			Email:  ptrStr("not-an-email"),
 		})
@@ -115,7 +115,7 @@ func TestService_AdminUpdate(t *testing.T) {
 			getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.User, error) { return user, nil },
 		}, dispatcher, nil)
 
-		result, appErr := svc.AdminUpdate(ctx, AdminUpdateInput{
+		result, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{
 			UserID: user.ID,
 			Role:   ptrRole(entity.RoleAdmin),
 		})
@@ -141,7 +141,7 @@ func TestService_AdminUpdate(t *testing.T) {
 			getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.User, error) { return user, nil },
 		}, dispatcher, nil)
 
-		_, appErr := svc.AdminUpdate(ctx, AdminUpdateInput{
+		_, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{
 			UserID: user.ID,
 			Role:   ptrRole(entity.RoleUser),
 		})
@@ -165,7 +165,7 @@ func TestService_AdminUpdate(t *testing.T) {
 			},
 		})
 
-		result, appErr := svc.AdminUpdate(ctx, AdminUpdateInput{
+		result, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{
 			UserID:   user.ID,
 			Password: ptrStr("brand-new"),
 		})
@@ -179,7 +179,7 @@ func TestService_AdminUpdate(t *testing.T) {
 			getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.User, error) { return nil, nil },
 		}, nil, nil)
 
-		result, appErr := svc.AdminUpdate(ctx, AdminUpdateInput{UserID: uuid.New()})
+		result, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{UserID: uuid.New()})
 
 		assert.Nil(t, result)
 		require.NotNil(t, appErr)
@@ -193,7 +193,7 @@ func TestService_AdminUpdate(t *testing.T) {
 			getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.User, error) { return user, nil },
 		}, nil, nil)
 
-		result, appErr := svc.AdminUpdate(ctx, AdminUpdateInput{UserID: user.ID})
+		result, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{UserID: user.ID})
 
 		assert.Nil(t, result)
 		require.NotNil(t, appErr)

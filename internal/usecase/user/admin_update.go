@@ -27,7 +27,7 @@ type AdminUpdateInput struct {
 }
 
 // AdminUpdate updates a user's profile, role, email, or password on behalf of an admin.
-func (s *Service) AdminUpdate(ctx context.Context, input AdminUpdateInput) (*entity.User, *apperror.AppError) {
+func (s *Service) AdminUpdate(ctx context.Context, input *AdminUpdateInput) (*entity.User, *apperror.AppError) {
 	user, err := s.userRepo.GetByID(ctx, input.UserID)
 	if err != nil {
 		s.log.Error("getting user for admin update", "error", err, "userID", input.UserID)

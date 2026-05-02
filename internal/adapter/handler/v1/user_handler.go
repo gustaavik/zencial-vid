@@ -281,7 +281,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, appErr := h.userService.AdminCreate(r.Context(), useruc.AdminCreateInput{
+	user, appErr := h.userService.AdminCreate(r.Context(), &useruc.AdminCreateInput{
 		Email:       req.Email,
 		Password:    req.Password,
 		Role:        entity.UserRole(req.Role),
@@ -350,7 +350,7 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		rolePtr = &role
 	}
 
-	user, appErr := h.userService.AdminUpdate(r.Context(), useruc.AdminUpdateInput{
+	user, appErr := h.userService.AdminUpdate(r.Context(), &useruc.AdminUpdateInput{
 		UserID:      id,
 		Email:       req.Email,
 		Role:        rolePtr,

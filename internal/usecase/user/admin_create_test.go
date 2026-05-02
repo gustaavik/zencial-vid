@@ -29,7 +29,7 @@ func TestService_AdminCreate(t *testing.T) {
 			},
 		}, dispatcher, &mockHasher{})
 
-		result, appErr := svc.AdminCreate(ctx, AdminCreateInput{
+		result, appErr := svc.AdminCreate(ctx, &AdminCreateInput{
 			Email:       "new@example.com",
 			Password:    "supersecret",
 			DisplayName: "New User",
@@ -54,7 +54,7 @@ func TestService_AdminCreate(t *testing.T) {
 	t.Run("success creates admin when role specified", func(t *testing.T) {
 		svc := newTestServiceWithHasher(&mockUserRepo{}, nil, nil)
 
-		result, appErr := svc.AdminCreate(ctx, AdminCreateInput{
+		result, appErr := svc.AdminCreate(ctx, &AdminCreateInput{
 			Email:       "admin@example.com",
 			Password:    "supersecret",
 			Role:        entity.RoleAdmin,
@@ -68,7 +68,7 @@ func TestService_AdminCreate(t *testing.T) {
 	t.Run("invalid email", func(t *testing.T) {
 		svc := newTestServiceWithHasher(&mockUserRepo{}, nil, nil)
 
-		result, appErr := svc.AdminCreate(ctx, AdminCreateInput{
+		result, appErr := svc.AdminCreate(ctx, &AdminCreateInput{
 			Email:       "not-an-email",
 			Password:    "supersecret",
 			DisplayName: "X",
@@ -86,7 +86,7 @@ func TestService_AdminCreate(t *testing.T) {
 			},
 		}, nil, nil)
 
-		result, appErr := svc.AdminCreate(ctx, AdminCreateInput{
+		result, appErr := svc.AdminCreate(ctx, &AdminCreateInput{
 			Email:       "exists@example.com",
 			Password:    "supersecret",
 			DisplayName: "X",
@@ -104,7 +104,7 @@ func TestService_AdminCreate(t *testing.T) {
 			},
 		})
 
-		result, appErr := svc.AdminCreate(ctx, AdminCreateInput{
+		result, appErr := svc.AdminCreate(ctx, &AdminCreateInput{
 			Email:       "ok@example.com",
 			Password:    "supersecret",
 			DisplayName: "X",
@@ -119,7 +119,7 @@ func TestService_AdminCreate(t *testing.T) {
 		svc := newTestServiceWithHasher(&mockUserRepo{}, nil, nil)
 
 		bad := "not-a-date"
-		result, appErr := svc.AdminCreate(ctx, AdminCreateInput{
+		result, appErr := svc.AdminCreate(ctx, &AdminCreateInput{
 			Email:       "ok@example.com",
 			Password:    "supersecret",
 			DisplayName: "X",
@@ -138,7 +138,7 @@ func TestService_AdminCreate(t *testing.T) {
 			},
 		}, nil, nil)
 
-		result, appErr := svc.AdminCreate(ctx, AdminCreateInput{
+		result, appErr := svc.AdminCreate(ctx, &AdminCreateInput{
 			Email:       "ok@example.com",
 			Password:    "supersecret",
 			DisplayName: "X",

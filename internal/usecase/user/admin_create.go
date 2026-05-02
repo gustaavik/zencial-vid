@@ -24,7 +24,7 @@ type AdminCreateInput struct {
 }
 
 // AdminCreate creates a new user account on behalf of an admin.
-func (s *Service) AdminCreate(ctx context.Context, input AdminCreateInput) (*entity.User, *apperror.AppError) {
+func (s *Service) AdminCreate(ctx context.Context, input *AdminCreateInput) (*entity.User, *apperror.AppError) {
 	email, err := valueobject.NewEmail(input.Email)
 	if err != nil {
 		return nil, apperror.BadRequest(apperror.CodeValidationFailed, "invalid email address", err)
