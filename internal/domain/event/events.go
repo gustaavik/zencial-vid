@@ -37,9 +37,6 @@ type AuditableEvent interface {
 	AuditMetadata() map[string]any
 }
 
-//go:fix inline
-func ptrUUID(id uuid.UUID) *uuid.UUID { return new(id) }
-
 // UserRegistered is emitted when a new user registers.
 type UserRegistered struct {
 	UserID    uuid.UUID
