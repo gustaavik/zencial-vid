@@ -11,10 +11,11 @@ import (
 
 // CreateInput holds the data needed to create a plan.
 type CreateInput struct {
-	Name        string
-	Description string
-	Price       float64
-	Level       int
+	Name          string
+	Description   string
+	Price         float64
+	Level         int
+	StripePriceID string
 }
 
 // Create creates a new plan.
@@ -34,6 +35,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*entity.Plan, 
 	}
 
 	plan := entity.NewPlan(input.Name, slug, input.Description, input.Price, input.Level)
+	plan.StripePriceID = input.StripePriceID
 
 	if err := s.planRepo.Create(ctx, plan); err != nil {
 		s.log.Error("creating plan", "error", err)

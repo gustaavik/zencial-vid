@@ -121,6 +121,9 @@ func (stubSubRepo) Create(context.Context, *entity.Subscription) error { return 
 func (stubSubRepo) GetByID(context.Context, uuid.UUID) (*entity.Subscription, error) {
 	return nil, nil
 }
+func (stubSubRepo) GetByStripeSubscriptionID(context.Context, string) (*entity.Subscription, error) {
+	return nil, nil
+}
 func (stubSubRepo) GetActiveByUserID(context.Context, uuid.UUID) (*entity.Subscription, error) {
 	return nil, nil
 }

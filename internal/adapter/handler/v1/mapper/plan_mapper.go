@@ -8,15 +8,16 @@ import (
 // PlanToResponse maps a Plan entity to a PlanResponse DTO.
 func PlanToResponse(plan *entity.Plan) dto.PlanResponse {
 	return dto.PlanResponse{
-		ID:          plan.ID.String(),
-		Name:        plan.Name,
-		Slug:        plan.Slug.String(),
-		Description: plan.Description,
-		Price:       plan.Price,
-		Level:       plan.Level,
-		IsActive:    plan.IsActive,
-		CreatedAt:   plan.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		UpdatedAt:   plan.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:            plan.ID.String(),
+		Name:          plan.Name,
+		Slug:          plan.Slug.String(),
+		Description:   plan.Description,
+		Price:         plan.Price,
+		Level:         plan.Level,
+		StripePriceID: plan.StripePriceID,
+		IsActive:      plan.IsActive,
+		CreatedAt:     plan.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:     plan.UpdatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 }
 

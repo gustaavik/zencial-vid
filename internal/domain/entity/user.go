@@ -26,14 +26,15 @@ const (
 
 // User is the core user entity.
 type User struct {
-	ID           uuid.UUID
-	Email        valueobject.Email
-	PasswordHash valueobject.HashedPassword
-	Role         UserRole
-	Status       UserStatus
-	Profile      UserProfile
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID               uuid.UUID
+	Email            valueobject.Email
+	PasswordHash     valueobject.HashedPassword
+	Role             UserRole
+	Status           UserStatus
+	StripeCustomerID *string
+	Profile          UserProfile
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 // UserProfile holds additional user information.

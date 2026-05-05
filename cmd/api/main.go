@@ -22,6 +22,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	"github.com/zenfulcode/zencial/internal/pkg/httputil"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
+	billinguc "github.com/zenfulcode/zencial/internal/usecase/billing"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
 	planuc "github.com/zenfulcode/zencial/internal/usecase/plan"
 	subscriptionuc "github.com/zenfulcode/zencial/internal/usecase/subscription"
@@ -132,6 +133,11 @@ func main() {
 	userService := useruc.NewService(userRepo, hasher, dispatcher, appLog)
 	planService := planuc.NewService(planRepo, appLog)
 	subscriptionService := subscriptionuc.NewService(subRepo, planRepo, appLog)
+	billingService := billinguc.NewService(userRepo, planRepo, subRepo, billinguc.Config{
+		SecretKey:     cfg.Stripe.SecretKey,
+		WebhookSecret: cfg.Stripe.WebhookSecret,
+		Currency:      cfg.Stripe.Currency,
+	}, appLog)
 	// Video service with optional CDN integration
 	var videoOpts []videouc.Option
 	if cfg.CDN.BaseURL != "" {
@@ -196,6 +202,7 @@ func main() {
 			Video:                videoService,
 			Plan:                 planService,
 			Subscription:         subscriptionService,
+			Billing:              billingService,
 			Watchlist:            watchlistService,
 			WatchProgress:        watchProgressService,
 			TokenService:         tokenService,
