@@ -128,7 +128,7 @@ func (s *Service) CreateCheckoutSession(ctx context.Context, input CheckoutInput
 	}
 	params := &stripe.CheckoutSessionParams{
 		Params:              stripe.Params{Context: ctx},
-		AllowPromotionCodes: stripe.Bool(true),
+		AllowPromotionCodes: new(true),
 		CancelURL:           stripe.String(input.CancelURL),
 		ClientReferenceID:   stripe.String(user.ID.String()),
 		Customer:            stripe.String(customerID),
@@ -200,7 +200,7 @@ func (s *Service) ListInvoices(ctx context.Context, userID uuid.UUID, limit int6
 	}
 
 	iter := invoice.List(&stripe.InvoiceListParams{
-		ListParams: stripe.ListParams{Context: ctx, Limit: stripe.Int64(limit)},
+		ListParams: stripe.ListParams{Context: ctx, Limit: new(limit)},
 		Customer:   stripe.String(*user.StripeCustomerID),
 	})
 
@@ -331,7 +331,7 @@ func (s *Service) checkoutLineItem(plan *entity.Plan) *stripe.CheckoutSessionLin
 		Recurring: &stripe.CheckoutSessionLineItemPriceDataRecurringParams{
 			Interval: stripe.String(string(stripe.PriceRecurringIntervalMonth)),
 		},
-		UnitAmount: stripe.Int64(int64(math.Round(plan.Price * 100))),
+		UnitAmount: new(int64(math.Round(plan.Price * 100))),
 	}
 	return lineItem
 }

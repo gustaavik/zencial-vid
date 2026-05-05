@@ -37,7 +37,8 @@ type AuditableEvent interface {
 	AuditMetadata() map[string]any
 }
 
-func ptrUUID(id uuid.UUID) *uuid.UUID { return &id }
+//go:fix inline
+func ptrUUID(id uuid.UUID) *uuid.UUID { return new(id) }
 
 // UserRegistered is emitted when a new user registers.
 type UserRegistered struct {
@@ -51,7 +52,7 @@ func (e UserRegistered) EventName() string         { return "user.registered" }
 func (e UserRegistered) OccurredAt() time.Time     { return e.Timestamp }
 func (e UserRegistered) AuditActor() *uuid.UUID    { return e.ActorID }
 func (e UserRegistered) AuditEntityType() string   { return EntityUser }
-func (e UserRegistered) AuditEntityID() *uuid.UUID { return ptrUUID(e.UserID) }
+func (e UserRegistered) AuditEntityID() *uuid.UUID { return new(e.UserID) }
 func (e UserRegistered) AuditMetadata() map[string]any {
 	return map[string]any{"email": e.Email}
 }
@@ -64,9 +65,9 @@ type UserLoggedIn struct {
 
 func (e UserLoggedIn) EventName() string             { return "user.logged_in" }
 func (e UserLoggedIn) OccurredAt() time.Time         { return e.Timestamp }
-func (e UserLoggedIn) AuditActor() *uuid.UUID        { return ptrUUID(e.UserID) }
+func (e UserLoggedIn) AuditActor() *uuid.UUID        { return new(e.UserID) }
 func (e UserLoggedIn) AuditEntityType() string       { return EntityUser }
-func (e UserLoggedIn) AuditEntityID() *uuid.UUID     { return ptrUUID(e.UserID) }
+func (e UserLoggedIn) AuditEntityID() *uuid.UUID     { return new(e.UserID) }
 func (e UserLoggedIn) AuditMetadata() map[string]any { return map[string]any{} }
 
 // VideoUploaded is emitted when a new video is uploaded.
@@ -79,9 +80,9 @@ type VideoUploaded struct {
 
 func (e VideoUploaded) EventName() string         { return "video.uploaded" }
 func (e VideoUploaded) OccurredAt() time.Time     { return e.Timestamp }
-func (e VideoUploaded) AuditActor() *uuid.UUID    { return ptrUUID(e.UploadedBy) }
+func (e VideoUploaded) AuditActor() *uuid.UUID    { return new(e.UploadedBy) }
 func (e VideoUploaded) AuditEntityType() string   { return EntityVideo }
-func (e VideoUploaded) AuditEntityID() *uuid.UUID { return ptrUUID(e.VideoID) }
+func (e VideoUploaded) AuditEntityID() *uuid.UUID { return new(e.VideoID) }
 func (e VideoUploaded) AuditMetadata() map[string]any {
 	return map[string]any{"title": e.Title}
 }
@@ -98,7 +99,7 @@ func (e VideoUpdated) EventName() string         { return "video.updated" }
 func (e VideoUpdated) OccurredAt() time.Time     { return e.Timestamp }
 func (e VideoUpdated) AuditActor() *uuid.UUID    { return e.ActorID }
 func (e VideoUpdated) AuditEntityType() string   { return EntityVideo }
-func (e VideoUpdated) AuditEntityID() *uuid.UUID { return ptrUUID(e.VideoID) }
+func (e VideoUpdated) AuditEntityID() *uuid.UUID { return new(e.VideoID) }
 func (e VideoUpdated) AuditMetadata() map[string]any {
 	return map[string]any{"field": e.Field}
 }
@@ -113,7 +114,7 @@ func (e VideoPublished) EventName() string             { return "video.published
 func (e VideoPublished) OccurredAt() time.Time         { return e.Timestamp }
 func (e VideoPublished) AuditActor() *uuid.UUID        { return nil }
 func (e VideoPublished) AuditEntityType() string       { return EntityVideo }
-func (e VideoPublished) AuditEntityID() *uuid.UUID     { return ptrUUID(e.VideoID) }
+func (e VideoPublished) AuditEntityID() *uuid.UUID     { return new(e.VideoID) }
 func (e VideoPublished) AuditMetadata() map[string]any { return map[string]any{} }
 
 // VideoTranscodeFailed is emitted when CDN transcoding fails for a video.
@@ -127,7 +128,7 @@ func (e VideoTranscodeFailed) EventName() string         { return "video.transco
 func (e VideoTranscodeFailed) OccurredAt() time.Time     { return e.Timestamp }
 func (e VideoTranscodeFailed) AuditActor() *uuid.UUID    { return nil }
 func (e VideoTranscodeFailed) AuditEntityType() string   { return EntityVideo }
-func (e VideoTranscodeFailed) AuditEntityID() *uuid.UUID { return ptrUUID(e.VideoID) }
+func (e VideoTranscodeFailed) AuditEntityID() *uuid.UUID { return new(e.VideoID) }
 func (e VideoTranscodeFailed) AuditMetadata() map[string]any {
 	return map[string]any{"reason": e.Reason}
 }
@@ -143,7 +144,7 @@ func (e VideoArchived) EventName() string             { return "video.archived" 
 func (e VideoArchived) OccurredAt() time.Time         { return e.Timestamp }
 func (e VideoArchived) AuditActor() *uuid.UUID        { return e.ActorID }
 func (e VideoArchived) AuditEntityType() string       { return EntityVideo }
-func (e VideoArchived) AuditEntityID() *uuid.UUID     { return ptrUUID(e.VideoID) }
+func (e VideoArchived) AuditEntityID() *uuid.UUID     { return new(e.VideoID) }
 func (e VideoArchived) AuditMetadata() map[string]any { return map[string]any{} }
 
 // VideoRestored is emitted when an archived video is restored.
@@ -157,7 +158,7 @@ func (e VideoRestored) EventName() string             { return "video.restored" 
 func (e VideoRestored) OccurredAt() time.Time         { return e.Timestamp }
 func (e VideoRestored) AuditActor() *uuid.UUID        { return e.ActorID }
 func (e VideoRestored) AuditEntityType() string       { return EntityVideo }
-func (e VideoRestored) AuditEntityID() *uuid.UUID     { return ptrUUID(e.VideoID) }
+func (e VideoRestored) AuditEntityID() *uuid.UUID     { return new(e.VideoID) }
 func (e VideoRestored) AuditMetadata() map[string]any { return map[string]any{} }
 
 // UserProfileUpdated is emitted when a user updates their profile.
@@ -171,7 +172,7 @@ func (e UserProfileUpdated) EventName() string             { return "user.profil
 func (e UserProfileUpdated) OccurredAt() time.Time         { return e.Timestamp }
 func (e UserProfileUpdated) AuditActor() *uuid.UUID        { return e.ActorID }
 func (e UserProfileUpdated) AuditEntityType() string       { return EntityUser }
-func (e UserProfileUpdated) AuditEntityID() *uuid.UUID     { return ptrUUID(e.UserID) }
+func (e UserProfileUpdated) AuditEntityID() *uuid.UUID     { return new(e.UserID) }
 func (e UserProfileUpdated) AuditMetadata() map[string]any { return map[string]any{} }
 
 // UserAccountDeleted is emitted when a user account is soft-deleted.
@@ -185,7 +186,7 @@ func (e UserAccountDeleted) EventName() string             { return "user.accoun
 func (e UserAccountDeleted) OccurredAt() time.Time         { return e.Timestamp }
 func (e UserAccountDeleted) AuditActor() *uuid.UUID        { return e.ActorID }
 func (e UserAccountDeleted) AuditEntityType() string       { return EntityUser }
-func (e UserAccountDeleted) AuditEntityID() *uuid.UUID     { return ptrUUID(e.UserID) }
+func (e UserAccountDeleted) AuditEntityID() *uuid.UUID     { return new(e.UserID) }
 func (e UserAccountDeleted) AuditMetadata() map[string]any { return map[string]any{} }
 
 // UserStatusChanged is emitted when an admin changes a user's status.
@@ -200,7 +201,7 @@ func (e UserStatusChanged) EventName() string         { return "user.status_chan
 func (e UserStatusChanged) OccurredAt() time.Time     { return e.Timestamp }
 func (e UserStatusChanged) AuditActor() *uuid.UUID    { return e.ActorID }
 func (e UserStatusChanged) AuditEntityType() string   { return EntityUser }
-func (e UserStatusChanged) AuditEntityID() *uuid.UUID { return ptrUUID(e.UserID) }
+func (e UserStatusChanged) AuditEntityID() *uuid.UUID { return new(e.UserID) }
 func (e UserStatusChanged) AuditMetadata() map[string]any {
 	return map[string]any{"new_status": e.NewStatus}
 }
@@ -218,7 +219,7 @@ func (e UserRoleChanged) EventName() string         { return "user.role_changed"
 func (e UserRoleChanged) OccurredAt() time.Time     { return e.Timestamp }
 func (e UserRoleChanged) AuditActor() *uuid.UUID    { return e.ActorID }
 func (e UserRoleChanged) AuditEntityType() string   { return EntityUser }
-func (e UserRoleChanged) AuditEntityID() *uuid.UUID { return ptrUUID(e.UserID) }
+func (e UserRoleChanged) AuditEntityID() *uuid.UUID { return new(e.UserID) }
 func (e UserRoleChanged) AuditMetadata() map[string]any {
 	return map[string]any{"old_role": e.OldRole, "new_role": e.NewRole}
 }
@@ -235,7 +236,7 @@ func (e GenreCreated) EventName() string         { return "genre.created" }
 func (e GenreCreated) OccurredAt() time.Time     { return e.Timestamp }
 func (e GenreCreated) AuditActor() *uuid.UUID    { return e.ActorID }
 func (e GenreCreated) AuditEntityType() string   { return EntityGenre }
-func (e GenreCreated) AuditEntityID() *uuid.UUID { return ptrUUID(e.GenreID) }
+func (e GenreCreated) AuditEntityID() *uuid.UUID { return new(e.GenreID) }
 func (e GenreCreated) AuditMetadata() map[string]any {
 	return map[string]any{"name": e.Name}
 }
@@ -252,7 +253,7 @@ func (e GenreUpdated) EventName() string         { return "genre.updated" }
 func (e GenreUpdated) OccurredAt() time.Time     { return e.Timestamp }
 func (e GenreUpdated) AuditActor() *uuid.UUID    { return e.ActorID }
 func (e GenreUpdated) AuditEntityType() string   { return EntityGenre }
-func (e GenreUpdated) AuditEntityID() *uuid.UUID { return ptrUUID(e.GenreID) }
+func (e GenreUpdated) AuditEntityID() *uuid.UUID { return new(e.GenreID) }
 func (e GenreUpdated) AuditMetadata() map[string]any {
 	return map[string]any{"name": e.Name}
 }
@@ -268,7 +269,7 @@ func (e GenreDeleted) EventName() string             { return "genre.deleted" }
 func (e GenreDeleted) OccurredAt() time.Time         { return e.Timestamp }
 func (e GenreDeleted) AuditActor() *uuid.UUID        { return e.ActorID }
 func (e GenreDeleted) AuditEntityType() string       { return EntityGenre }
-func (e GenreDeleted) AuditEntityID() *uuid.UUID     { return ptrUUID(e.GenreID) }
+func (e GenreDeleted) AuditEntityID() *uuid.UUID     { return new(e.GenreID) }
 func (e GenreDeleted) AuditMetadata() map[string]any { return map[string]any{} }
 
 // PlanCreated is emitted when an admin creates a plan.
@@ -284,7 +285,7 @@ func (e PlanCreated) EventName() string         { return "plan.created" }
 func (e PlanCreated) OccurredAt() time.Time     { return e.Timestamp }
 func (e PlanCreated) AuditActor() *uuid.UUID    { return e.ActorID }
 func (e PlanCreated) AuditEntityType() string   { return EntityPlan }
-func (e PlanCreated) AuditEntityID() *uuid.UUID { return ptrUUID(e.PlanID) }
+func (e PlanCreated) AuditEntityID() *uuid.UUID { return new(e.PlanID) }
 func (e PlanCreated) AuditMetadata() map[string]any {
 	return map[string]any{"name": e.Name, "slug": e.Slug}
 }
@@ -302,7 +303,7 @@ func (e PlanUpdated) EventName() string         { return "plan.updated" }
 func (e PlanUpdated) OccurredAt() time.Time     { return e.Timestamp }
 func (e PlanUpdated) AuditActor() *uuid.UUID    { return e.ActorID }
 func (e PlanUpdated) AuditEntityType() string   { return EntityPlan }
-func (e PlanUpdated) AuditEntityID() *uuid.UUID { return ptrUUID(e.PlanID) }
+func (e PlanUpdated) AuditEntityID() *uuid.UUID { return new(e.PlanID) }
 func (e PlanUpdated) AuditMetadata() map[string]any {
 	return map[string]any{"name": e.Name, "slug": e.Slug}
 }
@@ -318,7 +319,7 @@ func (e PlanDeleted) EventName() string             { return "plan.deleted" }
 func (e PlanDeleted) OccurredAt() time.Time         { return e.Timestamp }
 func (e PlanDeleted) AuditActor() *uuid.UUID        { return e.ActorID }
 func (e PlanDeleted) AuditEntityType() string       { return EntityPlan }
-func (e PlanDeleted) AuditEntityID() *uuid.UUID     { return ptrUUID(e.PlanID) }
+func (e PlanDeleted) AuditEntityID() *uuid.UUID     { return new(e.PlanID) }
 func (e PlanDeleted) AuditMetadata() map[string]any { return map[string]any{} }
 
 // SubscriptionAssigned is emitted when an admin assigns a plan to a user.
@@ -334,7 +335,7 @@ func (e SubscriptionAssigned) EventName() string         { return "subscription.
 func (e SubscriptionAssigned) OccurredAt() time.Time     { return e.Timestamp }
 func (e SubscriptionAssigned) AuditActor() *uuid.UUID    { return e.ActorID }
 func (e SubscriptionAssigned) AuditEntityType() string   { return EntitySubscription }
-func (e SubscriptionAssigned) AuditEntityID() *uuid.UUID { return ptrUUID(e.SubscriptionID) }
+func (e SubscriptionAssigned) AuditEntityID() *uuid.UUID { return new(e.SubscriptionID) }
 func (e SubscriptionAssigned) AuditMetadata() map[string]any {
 	return map[string]any{"user_id": e.UserID.String(), "plan_id": e.PlanID.String()}
 }
@@ -351,7 +352,7 @@ func (e SubscriptionCancelled) EventName() string         { return "subscription
 func (e SubscriptionCancelled) OccurredAt() time.Time     { return e.Timestamp }
 func (e SubscriptionCancelled) AuditActor() *uuid.UUID    { return e.ActorID }
 func (e SubscriptionCancelled) AuditEntityType() string   { return EntitySubscription }
-func (e SubscriptionCancelled) AuditEntityID() *uuid.UUID { return ptrUUID(e.SubscriptionID) }
+func (e SubscriptionCancelled) AuditEntityID() *uuid.UUID { return new(e.SubscriptionID) }
 func (e SubscriptionCancelled) AuditMetadata() map[string]any {
 	return map[string]any{"user_id": e.UserID.String()}
 }
