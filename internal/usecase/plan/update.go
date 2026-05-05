@@ -13,12 +13,13 @@ import (
 
 // UpdateInput holds the data needed to update a plan.
 type UpdateInput struct {
-	ID          uuid.UUID
-	Name        *string
-	Description *string
-	Price       *float64
-	Level       *int
-	IsActive    *bool
+	ID            uuid.UUID
+	Name          *string
+	Description   *string
+	Price         *float64
+	Level         *int
+	StripePriceID *string
+	IsActive      *bool
 }
 
 // Update updates an existing plan.
@@ -59,6 +60,9 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) (*entity.Plan, 
 	}
 	if input.Level != nil {
 		plan.Level = *input.Level
+	}
+	if input.StripePriceID != nil {
+		plan.StripePriceID = *input.StripePriceID
 	}
 	if input.IsActive != nil {
 		plan.IsActive = *input.IsActive

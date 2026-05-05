@@ -11,6 +11,7 @@ import (
 type SubscriptionRepository interface {
 	Create(ctx context.Context, sub *entity.Subscription) error
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Subscription, error)
+	GetByStripeSubscriptionID(ctx context.Context, stripeSubscriptionID string) (*entity.Subscription, error)
 	GetActiveByUserID(ctx context.Context, userID uuid.UUID) (*entity.Subscription, error)
 	Update(ctx context.Context, sub *entity.Subscription) error
 	Cancel(ctx context.Context, id uuid.UUID) error

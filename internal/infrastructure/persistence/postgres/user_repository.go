@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -44,9 +45,10 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 func (r *UserRepository) Create(ctx context.Context, user *entity.User) error {
 	db := connFromCtx(ctx, r.pool)
 	_, err := db.Exec(ctx, `
-		INSERT INTO users (id, email, password_hash, role, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`, user.ID, user.Email.String(), user.PasswordHash.String(), user.Role, user.Status, user.CreatedAt, user.UpdatedAt)
+		INSERT INTO users (id, email, password_hash, role, status, stripe_customer_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, user.ID, user.Email.String(), user.PasswordHash.String(), user.Role, user.Status,
+		user.StripeCustomerID, user.CreatedAt, user.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("creating user: %w", err)
 	}
@@ -67,15 +69,16 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Use
 	db := connFromCtx(ctx, r.pool)
 	user := &entity.User{}
 	var email, passwordHash string
+	var stripeCustomerID sql.NullString
 
 	err := db.QueryRow(ctx, `
-		SELECT u.id, u.email, u.password_hash, u.role, u.status, u.created_at, u.updated_at,
+		SELECT u.id, u.email, u.password_hash, u.role, u.status, u.stripe_customer_id, u.created_at, u.updated_at,
 		       p.display_name, p.avatar_url, p.date_of_birth, p.language, p.country, p.updated_at
 		FROM users u
 		LEFT JOIN user_profiles p ON u.id = p.user_id
 		WHERE u.id = $1
 	`, id).Scan(
-		&user.ID, &email, &passwordHash, &user.Role, &user.Status, &user.CreatedAt, &user.UpdatedAt,
+		&user.ID, &email, &passwordHash, &user.Role, &user.Status, &stripeCustomerID, &user.CreatedAt, &user.UpdatedAt,
 		&user.Profile.DisplayName, &user.Profile.AvatarURL, &user.Profile.DateOfBirth,
 		&user.Profile.Language, &user.Profile.Country, &user.Profile.UpdatedAt,
 	)
@@ -88,6 +91,9 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Use
 
 	user.Email = valueobject.EmailFromTrusted(email)
 	user.PasswordHash = valueobject.NewHashedPassword(passwordHash)
+	if stripeCustomerID.Valid {
+		user.StripeCustomerID = &stripeCustomerID.String
+	}
 	user.Profile.UserID = user.ID
 	return user, nil
 }
@@ -96,15 +102,16 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email valueobject.Email
 	db := connFromCtx(ctx, r.pool)
 	user := &entity.User{}
 	var emailStr, passwordHash string
+	var stripeCustomerID sql.NullString
 
 	err := db.QueryRow(ctx, `
-		SELECT u.id, u.email, u.password_hash, u.role, u.status, u.created_at, u.updated_at,
+		SELECT u.id, u.email, u.password_hash, u.role, u.status, u.stripe_customer_id, u.created_at, u.updated_at,
 		       p.display_name, p.avatar_url, p.date_of_birth, p.language, p.country, p.updated_at
 		FROM users u
 		LEFT JOIN user_profiles p ON u.id = p.user_id
 		WHERE u.email = $1
 	`, email.String()).Scan(
-		&user.ID, &emailStr, &passwordHash, &user.Role, &user.Status, &user.CreatedAt, &user.UpdatedAt,
+		&user.ID, &emailStr, &passwordHash, &user.Role, &user.Status, &stripeCustomerID, &user.CreatedAt, &user.UpdatedAt,
 		&user.Profile.DisplayName, &user.Profile.AvatarURL, &user.Profile.DateOfBirth,
 		&user.Profile.Language, &user.Profile.Country, &user.Profile.UpdatedAt,
 	)
@@ -117,6 +124,9 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email valueobject.Email
 
 	user.Email = valueobject.EmailFromTrusted(emailStr)
 	user.PasswordHash = valueobject.NewHashedPassword(passwordHash)
+	if stripeCustomerID.Valid {
+		user.StripeCustomerID = &stripeCustomerID.String
+	}
 	user.Profile.UserID = user.ID
 	return user, nil
 }
@@ -124,9 +134,10 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email valueobject.Email
 func (r *UserRepository) Update(ctx context.Context, user *entity.User) error {
 	db := connFromCtx(ctx, r.pool)
 	_, err := db.Exec(ctx, `
-		UPDATE users SET email = $2, password_hash = $3, role = $4, status = $5, updated_at = $6
+		UPDATE users SET email = $2, password_hash = $3, role = $4, status = $5, stripe_customer_id = $6, updated_at = $7
 		WHERE id = $1
-	`, user.ID, user.Email.String(), user.PasswordHash.String(), user.Role, user.Status, user.UpdatedAt)
+	`, user.ID, user.Email.String(), user.PasswordHash.String(), user.Role, user.Status,
+		user.StripeCustomerID, user.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("updating user: %w", err)
 	}

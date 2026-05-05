@@ -17,14 +17,16 @@ const (
 
 // Subscription represents a user's subscription to a plan.
 type Subscription struct {
-	ID        uuid.UUID
-	UserID    uuid.UUID
-	PlanID    uuid.UUID
-	Status    SubscriptionStatus
-	StartedAt time.Time
-	ExpiresAt *time.Time
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID                   uuid.UUID
+	UserID               uuid.UUID
+	PlanID               uuid.UUID
+	Status               SubscriptionStatus
+	StripeSubscriptionID string
+	StripeCustomerID     string
+	StartedAt            time.Time
+	ExpiresAt            *time.Time
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 // NewSubscription creates a new active Subscription.
