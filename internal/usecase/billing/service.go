@@ -440,7 +440,7 @@ func (s *Service) syncSubscription(ctx context.Context, stripeSub *stripe.Subscr
 	return nil
 }
 
-func stripeSubscriptionIDs(stripeSub *stripe.Subscription) (uuid.UUID, uuid.UUID, bool) {
+func stripeSubscriptionIDs(stripeSub *stripe.Subscription) (userID, planID uuid.UUID, success bool) {
 	if stripeSub == nil || stripeSub.Metadata == nil {
 		return uuid.Nil, uuid.Nil, false
 	}
@@ -449,7 +449,7 @@ func stripeSubscriptionIDs(stripeSub *stripe.Subscription) (uuid.UUID, uuid.UUID
 	if err != nil {
 		return uuid.Nil, uuid.Nil, false
 	}
-	planID, err := uuid.Parse(stripeSub.Metadata["plan_id"])
+	planID, err = uuid.Parse(stripeSub.Metadata["plan_id"])
 	if err != nil {
 		return uuid.Nil, uuid.Nil, false
 	}
