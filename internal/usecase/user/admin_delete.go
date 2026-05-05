@@ -8,6 +8,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/domain/event"
+	"github.com/zenfulcode/zencial/internal/pkg/actor"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
@@ -34,6 +35,7 @@ func (s *Service) AdminDelete(ctx context.Context, userID uuid.UUID) *apperror.A
 
 	if err := s.dispatcher.Dispatch(event.UserAccountDeleted{
 		UserID:    user.ID,
+		ActorID:   actor.FromContext(ctx),
 		Timestamp: time.Now().UTC(),
 	}); err != nil {
 		s.log.Error("dispatching user account deleted event", "error", err)

@@ -188,16 +188,16 @@ func (r *UserRepository) List(ctx context.Context, fs *filter.FilterSet) ([]enti
 	}
 
 	// Data
-	sql := filter.ToSQL(fs, baseCondition, 1)
+	sqlFilter := filter.ToSQL(fs, baseCondition, 1)
 	dataQuery := fmt.Sprintf(`
 		SELECT u.id, u.email, u.role, u.status, u.created_at, u.updated_at,
 		       p.display_name, p.avatar_url, p.language, p.country
 		FROM users u
 		LEFT JOIN user_profiles p ON u.id = p.user_id
 		%s %s %s
-	`, sql.WhereClause, sql.OrderClause, sql.LimitClause)
+	`, sqlFilter.WhereClause, sqlFilter.OrderClause, sqlFilter.LimitClause)
 
-	rows, err := db.Query(ctx, dataQuery, sql.Args...)
+	rows, err := db.Query(ctx, dataQuery, sqlFilter.Args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("listing users: %w", err)
 	}

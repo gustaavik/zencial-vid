@@ -70,6 +70,7 @@ func (s *Service) UpdateProfile(ctx context.Context, input UpdateProfileInput) (
 
 	if err := s.dispatcher.Dispatch(event.UserProfileUpdated{
 		UserID:    user.ID,
+		ActorID:   &user.ID, // self-update
 		Timestamp: now,
 	}); err != nil {
 		s.log.Error("dispatching user profile updated event", "error", err)

@@ -2,10 +2,13 @@ package plan
 
 import (
 	"context"
+	"time"
 
 	"github.com/zenfulcode/zencial/internal/domain"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
+	"github.com/zenfulcode/zencial/internal/domain/event"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
+	"github.com/zenfulcode/zencial/internal/pkg/actor"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
@@ -40,6 +43,16 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*entity.Plan, 
 	if err := s.planRepo.Create(ctx, plan); err != nil {
 		s.log.Error("creating plan", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to create plan", err)
+	}
+
+	if err := s.dispatcher.Dispatch(event.PlanCreated{
+		PlanID:    plan.ID,
+		ActorID:   actor.FromContext(ctx),
+		Name:      plan.Name,
+		Slug:      plan.Slug.String(),
+		Timestamp: time.Now().UTC(),
+	}); err != nil {
+		s.log.Error("dispatching plan created event", "error", err)
 	}
 
 	return plan, nil

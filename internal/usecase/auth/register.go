@@ -69,6 +69,7 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterO
 	if err := s.dispatcher.Dispatch(event.UserRegistered{
 		UserID:    user.ID,
 		Email:     user.Email.String(),
+		ActorID:   &user.ID, // self-registration
 		Timestamp: time.Now().UTC(),
 	}); err != nil {
 		s.log.Error("dispatching user registered event", "error", err)

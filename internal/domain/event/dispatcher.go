@@ -4,4 +4,5 @@ package event
 type Dispatcher interface {
 	Dispatch(event Event) error
 	Subscribe(eventName string, handler func(Event) error)
+	SubscribeAll(handler func(Event) error)
 }

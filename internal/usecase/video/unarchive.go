@@ -8,6 +8,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/domain/event"
+	"github.com/zenfulcode/zencial/internal/pkg/actor"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
@@ -54,6 +55,7 @@ func (s *Service) Unarchive(ctx context.Context, id uuid.UUID) (*entity.Video, *
 
 	if err := s.dispatcher.Dispatch(event.VideoRestored{
 		VideoID:   video.ID,
+		ActorID:   actor.FromContext(ctx),
 		Timestamp: time.Now().UTC(),
 	}); err != nil {
 		s.log.Error("dispatching video restored event", "error", err)

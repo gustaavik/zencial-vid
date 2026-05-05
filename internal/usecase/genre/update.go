@@ -2,11 +2,14 @@ package genre
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/domain"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
+	"github.com/zenfulcode/zencial/internal/domain/event"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
+	"github.com/zenfulcode/zencial/internal/pkg/actor"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
@@ -59,6 +62,15 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) (*entity.Genre,
 	if err := s.genreRepo.Update(ctx, genre); err != nil {
 		s.log.Error("updating genre", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to update genre", err)
+	}
+
+	if err := s.dispatcher.Dispatch(event.GenreUpdated{
+		GenreID:   genre.ID,
+		ActorID:   actor.FromContext(ctx),
+		Name:      genreDisplayName(genre),
+		Timestamp: time.Now().UTC(),
+	}); err != nil {
+		s.log.Error("dispatching genre updated event", "error", err)
 	}
 
 	return genre, nil

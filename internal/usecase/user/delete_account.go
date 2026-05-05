@@ -34,6 +34,7 @@ func (s *Service) DeleteAccount(ctx context.Context, userID uuid.UUID) *apperror
 
 	if err := s.dispatcher.Dispatch(event.UserAccountDeleted{
 		UserID:    user.ID,
+		ActorID:   &user.ID, // self-delete
 		Timestamp: time.Now().UTC(),
 	}); err != nil {
 		s.log.Error("dispatching user account deleted event", "error", err)

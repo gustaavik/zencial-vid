@@ -8,6 +8,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/domain/event"
+	"github.com/zenfulcode/zencial/internal/pkg/actor"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
@@ -38,6 +39,7 @@ func (s *Service) UpdateStatus(ctx context.Context, input UpdateStatusInput) (*e
 
 	if err := s.dispatcher.Dispatch(event.UserStatusChanged{
 		UserID:    user.ID,
+		ActorID:   actor.FromContext(ctx),
 		NewStatus: string(input.Status),
 		Timestamp: time.Now().UTC(),
 	}); err != nil {

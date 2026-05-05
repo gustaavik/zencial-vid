@@ -8,6 +8,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/domain/event"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
+	"github.com/zenfulcode/zencial/internal/pkg/actor"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
@@ -74,6 +75,7 @@ func (s *Service) AdminCreate(ctx context.Context, input *AdminCreateInput) (*en
 	if err := s.dispatcher.Dispatch(event.UserRegistered{
 		UserID:    user.ID,
 		Email:     user.Email.String(),
+		ActorID:   actor.FromContext(ctx),
 		Timestamp: time.Now().UTC(),
 	}); err != nil {
 		s.log.Error("dispatching user registered event", "error", err)

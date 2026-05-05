@@ -7,7 +7,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/domain"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
+	"github.com/zenfulcode/zencial/internal/domain/event"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
+	"github.com/zenfulcode/zencial/internal/pkg/actor"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
@@ -73,6 +75,16 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) (*entity.Plan, 
 	if err := s.planRepo.Update(ctx, plan); err != nil {
 		s.log.Error("updating plan", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to update plan", err)
+	}
+
+	if err := s.dispatcher.Dispatch(event.PlanUpdated{
+		PlanID:    plan.ID,
+		ActorID:   actor.FromContext(ctx),
+		Name:      plan.Name,
+		Slug:      plan.Slug.String(),
+		Timestamp: time.Now().UTC(),
+	}); err != nil {
+		s.log.Error("dispatching plan updated event", "error", err)
 	}
 
 	return plan, nil

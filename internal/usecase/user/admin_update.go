@@ -9,6 +9,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/domain/event"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
+	"github.com/zenfulcode/zencial/internal/pkg/actor"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
@@ -111,8 +112,11 @@ func (s *Service) AdminUpdate(ctx context.Context, input *AdminUpdateInput) (*en
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to update user", err)
 	}
 
+	actorID := actor.FromContext(ctx)
+
 	if err := s.dispatcher.Dispatch(event.UserProfileUpdated{
 		UserID:    user.ID,
+		ActorID:   actorID,
 		Timestamp: now,
 	}); err != nil {
 		s.log.Error("dispatching user profile updated event", "error", err)
@@ -121,6 +125,7 @@ func (s *Service) AdminUpdate(ctx context.Context, input *AdminUpdateInput) (*en
 	if roleChanged {
 		if err := s.dispatcher.Dispatch(event.UserRoleChanged{
 			UserID:    user.ID,
+			ActorID:   actorID,
 			OldRole:   string(oldRole),
 			NewRole:   string(user.Role),
 			Timestamp: now,
