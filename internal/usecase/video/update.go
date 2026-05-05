@@ -7,7 +7,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/domain"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
+	"github.com/zenfulcode/zencial/internal/domain/event"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
+	"github.com/zenfulcode/zencial/internal/pkg/actor"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
@@ -70,6 +72,15 @@ func (s *Service) Update(ctx context.Context, input *UpdateInput) (*entity.Video
 			return nil, apperror.Internal(apperror.CodeInternalError, "failed to update video genres", err)
 		}
 		video.GenreIDs = input.GenreIDs
+	}
+
+	if err := s.dispatcher.Dispatch(event.VideoUpdated{
+		VideoID:   video.ID,
+		ActorID:   actor.FromContext(ctx),
+		Field:     "metadata",
+		Timestamp: time.Now().UTC(),
+	}); err != nil {
+		s.log.Error("dispatching video updated event", "error", err)
 	}
 
 	return video, nil

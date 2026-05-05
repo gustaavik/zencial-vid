@@ -8,7 +8,9 @@ import (
 	"github.com/zenfulcode/zencial/internal/infrastructure/auth"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
+	audituc "github.com/zenfulcode/zencial/internal/usecase/audit"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
+	billinguc "github.com/zenfulcode/zencial/internal/usecase/billing"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
 	planuc "github.com/zenfulcode/zencial/internal/usecase/plan"
 	subscriptionuc "github.com/zenfulcode/zencial/internal/usecase/subscription"
@@ -26,8 +28,10 @@ type Deps struct {
 	Video                *videouc.Service
 	Plan                 *planuc.Service
 	Subscription         *subscriptionuc.Service
+	Billing              *billinguc.Service
 	Watchlist            *watchlistuc.Service
 	WatchProgress        *watchprogressuc.Service
+	Audit                *audituc.Service
 	TokenService         auth.TokenService
 	Storage              storage.StorageService
 	InternalSharedSecret string
@@ -42,9 +46,11 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 	videoHandler := NewVideoHandler(deps.Video, deps.Subscription, deps.Storage)
 	planHandler := NewPlanHandler(deps.Plan)
 	subscriptionHandler := NewSubscriptionHandler(deps.Subscription)
+	billingHandler := NewBillingHandler(deps.Billing)
 	watchlistHandler := NewWatchlistHandler(deps.Watchlist, deps.Storage)
 	watchProgressHandler := NewWatchProgressHandler(deps.WatchProgress, deps.Storage)
 	transcodeCallbackHandler := NewTranscodeCallbackHandler(deps.Video)
+	auditLogHandler := NewAuditLogHandler(deps.Audit)
 
 	// Internal service-to-service routes (CDN callbacks). Outside the JWT chain.
 	r.Route("/internal", func(r chi.Router) {
@@ -68,6 +74,9 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 	// Public plan routes (active plans only)
 	r.Get("/plans", planHandler.ListActive)
 
+	// Stripe webhooks. Stripe signs requests, so this route stays outside JWT auth.
+	r.Post("/billing/webhook", billingHandler.HandleWebhook)
+
 	// Public video routes with optional auth (for is_accessible field)
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.OptionalAuthenticate(deps.TokenService))
@@ -90,6 +99,9 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 
 		// User subscription (self)
 		r.Get("/me/subscription", subscriptionHandler.GetMySubscription)
+		r.Post("/billing/checkout-sessions", billingHandler.CreateCheckoutSession)
+		r.Post("/billing/portal-sessions", billingHandler.CreatePortalSession)
+		r.Get("/billing/invoices", billingHandler.ListInvoices)
 
 		// Watchlist (self)
 		r.Get("/me/watchlist", watchlistHandler.List)
@@ -146,11 +158,19 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 			r.Post("/admin/videos/bulk-archive", videoHandler.BulkDelete)
 			r.Post("/admin/videos/bulk-unarchive", videoHandler.BulkUnarchive)
 
+			// Audit log (admin)
+			r.Get("/admin/audit-logs", auditLogHandler.List)
+
 			// User management (admin)
 			r.Get("/admin/users", userHandler.ListUsers)
+			r.Post("/admin/users", userHandler.CreateUser)
 			r.Get("/admin/users/{id}", userHandler.GetUser)
+			r.Put("/admin/users/{id}", userHandler.UpdateUser)
+			r.Delete("/admin/users/{id}", userHandler.DeleteUser)
 			r.Put("/admin/users/{id}/status", userHandler.UpdateUserStatus)
 			r.Get("/admin/users/{id}/subscriptions", subscriptionHandler.ListByUser)
+			r.Get("/admin/users/{id}/watchlist", watchlistHandler.ListByUser)
+			r.Get("/admin/users/{id}/watch-progress", watchProgressHandler.ListByUser)
 		})
 	})
 }

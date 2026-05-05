@@ -121,6 +121,9 @@ func (stubSubRepo) Create(context.Context, *entity.Subscription) error { return 
 func (stubSubRepo) GetByID(context.Context, uuid.UUID) (*entity.Subscription, error) {
 	return nil, nil
 }
+func (stubSubRepo) GetByStripeSubscriptionID(context.Context, string) (*entity.Subscription, error) {
+	return nil, nil
+}
 func (stubSubRepo) GetActiveByUserID(context.Context, uuid.UUID) (*entity.Subscription, error) {
 	return nil, nil
 }
@@ -167,6 +170,8 @@ func (m *mockDispatcher) Dispatch(evt event.Event) error {
 }
 
 func (m *mockDispatcher) Subscribe(_ string, _ func(event.Event) error) {}
+
+func (m *mockDispatcher) SubscribeAll(_ func(event.Event) error) {}
 
 // --- Mock CDNClient ---
 

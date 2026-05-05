@@ -7,6 +7,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/domain"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
+	"github.com/zenfulcode/zencial/internal/domain/event"
+	"github.com/zenfulcode/zencial/internal/pkg/actor"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
@@ -47,6 +49,16 @@ func (s *Service) Assign(ctx context.Context, input AssignInput) (*entity.Subscr
 	if err := s.subRepo.Create(ctx, sub); err != nil {
 		s.log.Error("creating subscription", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to create subscription", err)
+	}
+
+	if err := s.dispatcher.Dispatch(event.SubscriptionAssigned{
+		SubscriptionID: sub.ID,
+		UserID:         sub.UserID,
+		PlanID:         sub.PlanID,
+		ActorID:        actor.FromContext(ctx),
+		Timestamp:      time.Now().UTC(),
+	}); err != nil {
+		s.log.Error("dispatching subscription assigned event", "error", err)
 	}
 
 	return sub, nil

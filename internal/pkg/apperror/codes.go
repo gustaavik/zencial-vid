@@ -39,6 +39,10 @@ const (
 	CodeActiveSubscriptionExists = "ACTIVE_SUBSCRIPTION_EXISTS"
 	CodeInsufficientPlanLevel    = "INSUFFICIENT_PLAN_LEVEL"
 
+	// Billing
+	CodeBillingNotConfigured = "BILLING_NOT_CONFIGURED"
+	CodeBillingFailed        = "BILLING_FAILED"
+
 	// Watchlist
 	CodeWatchlistEntryNotFound = "WATCHLIST_ENTRY_NOT_FOUND"
 

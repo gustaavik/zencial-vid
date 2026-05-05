@@ -58,10 +58,11 @@ func (h *PlanHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	plan, appErr := h.planService.Create(r.Context(), planuc.CreateInput{
-		Name:        req.Name,
-		Description: req.Description,
-		Price:       req.Price,
-		Level:       req.Level,
+		Name:          req.Name,
+		Description:   req.Description,
+		Price:         req.Price,
+		Level:         req.Level,
+		StripePriceID: req.StripePriceID,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
@@ -193,12 +194,13 @@ func (h *PlanHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	plan, appErr := h.planService.Update(r.Context(), planuc.UpdateInput{
-		ID:          id,
-		Name:        req.Name,
-		Description: req.Description,
-		Price:       req.Price,
-		Level:       req.Level,
-		IsActive:    req.IsActive,
+		ID:            id,
+		Name:          req.Name,
+		Description:   req.Description,
+		Price:         req.Price,
+		Level:         req.Level,
+		StripePriceID: req.StripePriceID,
+		IsActive:      req.IsActive,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)

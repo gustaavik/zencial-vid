@@ -8,6 +8,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/domain/event"
+	"github.com/zenfulcode/zencial/internal/pkg/actor"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
@@ -54,6 +55,7 @@ func (s *Service) Delete(ctx context.Context, id uuid.UUID) *apperror.AppError {
 
 	if err := s.dispatcher.Dispatch(event.VideoArchived{
 		VideoID:   video.ID,
+		ActorID:   actor.FromContext(ctx),
 		Timestamp: time.Now().UTC(),
 	}); err != nil {
 		s.log.Error("dispatching video archived event", "error", err)

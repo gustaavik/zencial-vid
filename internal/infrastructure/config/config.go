@@ -93,6 +93,7 @@ type StripeConfig struct {
 	SecretKey      string `env:"STRIPE_SECRET_KEY"`
 	WebhookSecret  string `env:"STRIPE_WEBHOOK_SECRET"`
 	PublishableKey string `env:"STRIPE_PUBLISHABLE_KEY"`
+	Currency       string `env:"STRIPE_CURRENCY" envDefault:"usd"`
 }
 
 type LogConfig struct {

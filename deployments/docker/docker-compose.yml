@@ -26,7 +26,11 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY:-minioadmin}
       - S3_BUCKET=${S3_BUCKET:-zencial-videos}
       - S3_REGION=${S3_REGION:-eu-west-1}
+      - INTERNAL_API_SHARED_SECRET=${INTERNAL_API_SHARED_SECRET:-dev-internal-secret}
       - CDN_BASE_URL=${CDN_BASE_URL:-http://localhost:9000/zencial-videos}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
       - LOG_LEVEL=info
       - LOG_FORMAT=json
     depends_on:

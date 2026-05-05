@@ -9,15 +9,16 @@ import (
 
 // Plan represents a subscription plan that users can subscribe to.
 type Plan struct {
-	ID          uuid.UUID
-	Name        string
-	Slug        valueobject.Slug
-	Description string
-	Price       float64
-	Level       int
-	IsActive    bool
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID            uuid.UUID
+	Name          string
+	Slug          valueobject.Slug
+	Description   string
+	Price         float64
+	Level         int
+	StripePriceID string
+	IsActive      bool
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // NewPlan creates a new Plan entity.

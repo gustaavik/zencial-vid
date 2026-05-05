@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -45,10 +46,10 @@ func (r *PlanRepository) Create(ctx context.Context, plan *entity.Plan) error {
 	db := connFromCtx(ctx, r.pool)
 
 	_, err := db.Exec(ctx, `
-		INSERT INTO plans (id, name, slug, description, price, level, is_active, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO plans (id, name, slug, description, price, level, stripe_price_id, is_active, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`, plan.ID, plan.Name, plan.Slug.String(), plan.Description, plan.Price,
-		plan.Level, plan.IsActive, plan.CreatedAt, plan.UpdatedAt)
+		plan.Level, nullableString(plan.StripePriceID), plan.IsActive, plan.CreatedAt, plan.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("creating plan: %w", err)
 	}
@@ -61,12 +62,13 @@ func (r *PlanRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Pla
 
 	var p entity.Plan
 	var slug string
+	var stripePriceID sql.NullString
 
 	err := db.QueryRow(ctx, `
-		SELECT id, name, slug, description, price, level, is_active, created_at, updated_at
+		SELECT id, name, slug, description, price, level, stripe_price_id, is_active, created_at, updated_at
 		FROM plans WHERE id = $1
 	`, id).Scan(&p.ID, &p.Name, &slug, &p.Description, &p.Price,
-		&p.Level, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
+		&p.Level, &stripePriceID, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -75,6 +77,9 @@ func (r *PlanRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Pla
 	}
 
 	p.Slug = valueobject.SlugFromTrusted(slug)
+	if stripePriceID.Valid {
+		p.StripePriceID = stripePriceID.String
+	}
 	return &p, nil
 }
 
@@ -83,12 +88,13 @@ func (r *PlanRepository) GetBySlug(ctx context.Context, slug valueobject.Slug) (
 
 	var p entity.Plan
 	var slugStr string
+	var stripePriceID sql.NullString
 
 	err := db.QueryRow(ctx, `
-		SELECT id, name, slug, description, price, level, is_active, created_at, updated_at
+		SELECT id, name, slug, description, price, level, stripe_price_id, is_active, created_at, updated_at
 		FROM plans WHERE slug = $1
 	`, slug.String()).Scan(&p.ID, &p.Name, &slugStr, &p.Description, &p.Price,
-		&p.Level, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
+		&p.Level, &stripePriceID, &p.IsActive, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -97,6 +103,9 @@ func (r *PlanRepository) GetBySlug(ctx context.Context, slug valueobject.Slug) (
 	}
 
 	p.Slug = valueobject.SlugFromTrusted(slugStr)
+	if stripePriceID.Valid {
+		p.StripePriceID = stripePriceID.String
+	}
 	return &p, nil
 }
 
@@ -105,10 +114,10 @@ func (r *PlanRepository) Update(ctx context.Context, plan *entity.Plan) error {
 
 	_, err := db.Exec(ctx, `
 		UPDATE plans SET name = $2, slug = $3, description = $4, price = $5,
-		       level = $6, is_active = $7, updated_at = $8
+		       level = $6, stripe_price_id = $7, is_active = $8, updated_at = $9
 		WHERE id = $1
 	`, plan.ID, plan.Name, plan.Slug.String(), plan.Description, plan.Price,
-		plan.Level, plan.IsActive, plan.UpdatedAt)
+		plan.Level, nullableString(plan.StripePriceID), plan.IsActive, plan.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("updating plan: %w", err)
 	}
@@ -138,14 +147,14 @@ func (r *PlanRepository) List(ctx context.Context, fs *filter.FilterSet) ([]enti
 	}
 
 	// Data
-	sql := filter.ToSQL(fs, "", 1)
+	queryParts := filter.ToSQL(fs, "", 1)
 	dataQuery := fmt.Sprintf(`
-		SELECT id, name, slug, description, price, level, is_active, created_at, updated_at
+		SELECT id, name, slug, description, price, level, stripe_price_id, is_active, created_at, updated_at
 		FROM plans p
 		%s %s %s
-	`, sql.WhereClause, sql.OrderClause, sql.LimitClause)
+	`, queryParts.WhereClause, queryParts.OrderClause, queryParts.LimitClause)
 
-	rows, err := db.Query(ctx, dataQuery, sql.Args...)
+	rows, err := db.Query(ctx, dataQuery, queryParts.Args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("listing plans: %w", err)
 	}
@@ -155,12 +164,16 @@ func (r *PlanRepository) List(ctx context.Context, fs *filter.FilterSet) ([]enti
 	for rows.Next() {
 		var p entity.Plan
 		var slug string
+		var stripePriceID sql.NullString
 
 		if err := rows.Scan(&p.ID, &p.Name, &slug, &p.Description, &p.Price,
-			&p.Level, &p.IsActive, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			&p.Level, &stripePriceID, &p.IsActive, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, 0, fmt.Errorf("scanning plan: %w", err)
 		}
 		p.Slug = valueobject.SlugFromTrusted(slug)
+		if stripePriceID.Valid {
+			p.StripePriceID = stripePriceID.String
+		}
 		plans = append(plans, p)
 	}
 
@@ -171,7 +184,7 @@ func (r *PlanRepository) ListActive(ctx context.Context) ([]entity.Plan, error) 
 	db := connFromCtx(ctx, r.pool)
 
 	rows, err := db.Query(ctx, `
-		SELECT id, name, slug, description, price, level, is_active, created_at, updated_at
+		SELECT id, name, slug, description, price, level, stripe_price_id, is_active, created_at, updated_at
 		FROM plans WHERE is_active = true
 		ORDER BY level ASC
 	`)
@@ -184,12 +197,16 @@ func (r *PlanRepository) ListActive(ctx context.Context) ([]entity.Plan, error) 
 	for rows.Next() {
 		var p entity.Plan
 		var slug string
+		var stripePriceID sql.NullString
 
 		if err := rows.Scan(&p.ID, &p.Name, &slug, &p.Description, &p.Price,
-			&p.Level, &p.IsActive, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			&p.Level, &stripePriceID, &p.IsActive, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scanning active plan: %w", err)
 		}
 		p.Slug = valueobject.SlugFromTrusted(slug)
+		if stripePriceID.Valid {
+			p.StripePriceID = stripePriceID.String
+		}
 		plans = append(plans, p)
 	}
 

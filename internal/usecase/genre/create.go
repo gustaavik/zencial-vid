@@ -2,10 +2,13 @@ package genre
 
 import (
 	"context"
+	"time"
 
 	"github.com/zenfulcode/zencial/internal/domain"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
+	"github.com/zenfulcode/zencial/internal/domain/event"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
+	"github.com/zenfulcode/zencial/internal/pkg/actor"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
@@ -52,5 +55,28 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*entity.Genre,
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to create genre", err)
 	}
 
+	if err := s.dispatcher.Dispatch(event.GenreCreated{
+		GenreID:   genre.ID,
+		ActorID:   actor.FromContext(ctx),
+		Name:      genreDisplayName(genre),
+		Timestamp: time.Now().UTC(),
+	}); err != nil {
+		s.log.Error("dispatching genre created event", "error", err)
+	}
+
 	return genre, nil
+}
+
+// genreDisplayName picks the most useful human-readable label for audit
+// metadata: prefer English, fall back to the slug.
+func genreDisplayName(g *entity.Genre) string {
+	for _, t := range g.Translations {
+		if t.LanguageCode.String() == "en" && t.Name != "" {
+			return t.Name
+		}
+	}
+	if len(g.Translations) > 0 && g.Translations[0].Name != "" {
+		return g.Translations[0].Name
+	}
+	return g.Slug.String()
 }

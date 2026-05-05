@@ -68,6 +68,45 @@ func (h *WatchProgressHandler) List(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+// ListByUser godoc
+// @Summary      List a user's continue-watching feed (admin)
+// @Description  Return the given user's started-but-unfinished videos (admin only).
+// @Tags         watch-progress
+// @Produce      json
+// @Param        id path string true "User ID" format(uuid)
+// @Param        page query int false "Page number" default(1)
+// @Param        per_page query int false "Items per page" default(20)
+// @Success      200 {object} httputil.Response{data=[]dto.ContinueWatchingItem,meta=httputil.Meta}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/users/{id}/watch-progress [get]
+func (h *WatchProgressHandler) ListByUser(w http.ResponseWriter, r *http.Request) {
+	userID, err := httputil.URLParamUUID(r, "id")
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid user ID")
+		return
+	}
+
+	page := valueobject.NewPagination(
+		httputil.QueryInt(r, "page", valueobject.DefaultPage),
+		httputil.QueryInt(r, "per_page", valueobject.DefaultPerPage),
+	)
+
+	items, total, appErr := h.service.ListInProgress(r.Context(), userID, page)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.SuccessWithMeta(w,
+		mapper.ContinueWatchingItemsToResponse(r.Context(), items, h.storage),
+		pagination.NewMeta(page.Page, page.PerPage, total),
+	)
+}
+
 // Get godoc
 // @Summary      Get my saved progress for a video
 // @Description  Returns the authenticated user's last saved playback position for the video.
