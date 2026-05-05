@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/infrastructure/auth"
+	"github.com/zenfulcode/zencial/internal/pkg/actor"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 	"github.com/zenfulcode/zencial/internal/pkg/httputil"
 )
@@ -41,6 +42,7 @@ func Authenticate(tokenService auth.TokenService) func(http.Handler) http.Handle
 
 			ctx := context.WithValue(r.Context(), userIDKey, claims.UserID)
 			ctx = context.WithValue(ctx, userRoleKey, claims.Role)
+			ctx = actor.WithActor(ctx, claims.UserID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -82,6 +84,7 @@ func OptionalAuthenticate(tokenService auth.TokenService) func(http.Handler) htt
 
 			ctx := context.WithValue(r.Context(), userIDKey, claims.UserID)
 			ctx = context.WithValue(ctx, userRoleKey, claims.Role)
+			ctx = actor.WithActor(ctx, claims.UserID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

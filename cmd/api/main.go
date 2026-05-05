@@ -21,6 +21,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/infrastructure/server"
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	"github.com/zenfulcode/zencial/internal/pkg/httputil"
+	audituc "github.com/zenfulcode/zencial/internal/usecase/audit"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
 	billinguc "github.com/zenfulcode/zencial/internal/usecase/billing"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
@@ -103,6 +104,7 @@ func main() {
 	subRepo := postgres.NewSubscriptionRepository(dbPool)
 	watchlistRepo := postgres.NewWatchlistRepository(dbPool, videoRepo)
 	watchProgressRepo := postgres.NewWatchProgressRepository(dbPool, videoRepo)
+	auditLogRepo := postgres.NewAuditLogRepository(dbPool)
 
 	// Redis stores
 	sessionStore := redis.NewSessionStore(redisClient, cfg.JWT.RefreshDuration)
@@ -129,10 +131,10 @@ func main() {
 
 	// Use cases
 	authService := authuc.NewService(userRepo, tokenService, hasher, sessionStore, dispatcher, appLog)
-	genreService := genreuc.NewService(genreRepo, appLog)
+	genreService := genreuc.NewService(genreRepo, dispatcher, appLog)
 	userService := useruc.NewService(userRepo, hasher, dispatcher, appLog)
-	planService := planuc.NewService(planRepo, appLog)
-	subscriptionService := subscriptionuc.NewService(subRepo, planRepo, appLog)
+	planService := planuc.NewService(planRepo, dispatcher, appLog)
+	subscriptionService := subscriptionuc.NewService(subRepo, planRepo, dispatcher, appLog)
 	billingService := billinguc.NewService(userRepo, planRepo, subRepo, billinguc.Config{
 		SecretKey:     cfg.Stripe.SecretKey,
 		WebhookSecret: cfg.Stripe.WebhookSecret,
@@ -156,6 +158,10 @@ func main() {
 	videoService := videouc.NewService(videoRepo, genreRepo, subRepo, planRepo, storageService, dispatcher, appLog, videoOpts...)
 	watchlistService := watchlistuc.NewService(watchlistRepo, videoRepo, appLog)
 	watchProgressService := watchprogressuc.NewService(watchProgressRepo, videoRepo, appLog)
+	auditService := audituc.NewService(auditLogRepo, appLog)
+
+	// Persist every dispatched domain event into the audit log.
+	audituc.Register(dispatcher, auditLogRepo, appLog)
 
 	// Router
 	r := chi.NewRouter()
@@ -205,6 +211,7 @@ func main() {
 			Billing:              billingService,
 			Watchlist:            watchlistService,
 			WatchProgress:        watchProgressService,
+			Audit:                auditService,
 			TokenService:         tokenService,
 			Storage:              storageService,
 			InternalSharedSecret: cfg.InternalAPI.SharedSecret,

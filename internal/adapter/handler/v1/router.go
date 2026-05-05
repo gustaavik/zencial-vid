@@ -8,6 +8,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/infrastructure/auth"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
+	audituc "github.com/zenfulcode/zencial/internal/usecase/audit"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
 	billinguc "github.com/zenfulcode/zencial/internal/usecase/billing"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
@@ -30,6 +31,7 @@ type Deps struct {
 	Billing              *billinguc.Service
 	Watchlist            *watchlistuc.Service
 	WatchProgress        *watchprogressuc.Service
+	Audit                *audituc.Service
 	TokenService         auth.TokenService
 	Storage              storage.StorageService
 	InternalSharedSecret string
@@ -48,6 +50,7 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 	watchlistHandler := NewWatchlistHandler(deps.Watchlist, deps.Storage)
 	watchProgressHandler := NewWatchProgressHandler(deps.WatchProgress, deps.Storage)
 	transcodeCallbackHandler := NewTranscodeCallbackHandler(deps.Video)
+	auditLogHandler := NewAuditLogHandler(deps.Audit)
 
 	// Internal service-to-service routes (CDN callbacks). Outside the JWT chain.
 	r.Route("/internal", func(r chi.Router) {
@@ -154,6 +157,9 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 			r.Post("/admin/videos/bulk-publish", videoHandler.BulkPublish)
 			r.Post("/admin/videos/bulk-archive", videoHandler.BulkDelete)
 			r.Post("/admin/videos/bulk-unarchive", videoHandler.BulkUnarchive)
+
+			// Audit log (admin)
+			r.Get("/admin/audit-logs", auditLogHandler.List)
 
 			// User management (admin)
 			r.Get("/admin/users", userHandler.ListUsers)

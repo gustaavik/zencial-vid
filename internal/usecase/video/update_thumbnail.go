@@ -10,6 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/domain"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
+	"github.com/zenfulcode/zencial/internal/domain/event"
+	"github.com/zenfulcode/zencial/internal/pkg/actor"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
@@ -57,6 +59,15 @@ func (s *Service) UpdateThumbnail(ctx context.Context, input UpdateThumbnailInpu
 	if err := s.videoRepo.Update(ctx, video); err != nil {
 		s.log.Error("updating video thumbnail key", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to update video", err)
+	}
+
+	if err := s.dispatcher.Dispatch(event.VideoUpdated{
+		VideoID:   video.ID,
+		ActorID:   actor.FromContext(ctx),
+		Field:     "thumbnail",
+		Timestamp: time.Now().UTC(),
+	}); err != nil {
+		s.log.Error("dispatching video updated event", "error", err)
 	}
 
 	return video, nil

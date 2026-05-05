@@ -46,3 +46,9 @@ linters:
       - path: cmd/
         linters:
           - unparam
+      # Domain events are dispatched as values through the Event interface;
+      # some structs naturally cross gocritic's hugeParam threshold.
+      - path: internal/domain/event/events\.go
+        text: 'hugeParam'
+        linters:
+          - gocritic

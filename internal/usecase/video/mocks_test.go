@@ -171,6 +171,8 @@ func (m *mockDispatcher) Dispatch(evt event.Event) error {
 
 func (m *mockDispatcher) Subscribe(_ string, _ func(event.Event) error) {}
 
+func (m *mockDispatcher) SubscribeAll(_ func(event.Event) error) {}
+
 // --- Mock CDNClient ---
 
 type mockCDNClient struct {
