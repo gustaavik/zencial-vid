@@ -3,9 +3,8 @@ package video
 import (
 	"context"
 	"fmt"
-	"io"
-	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,104 +12,118 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain/event"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
-	"github.com/zenfulcode/zencial/internal/pkg/duration"
-	"github.com/zenfulcode/zencial/internal/pkg/thumbnail"
 )
 
-// UploadInput holds the data needed to upload a video.
-type UploadInput struct {
-	Title         string
-	Description   string
-	Creator       string
-	ContentRating string
-	GenreIDs      []uuid.UUID
-	File          io.Reader
-	FileName      string
-	ContentType   string
-	FileSize      int64
-	UploadedBy    uuid.UUID
+// PresignedUploadExpiry is the lifetime of presigned PUT URLs returned by InitiateUpload.
+const PresignedUploadExpiry = 30 * time.Minute
 
-	MinimumPlanLevel *int
-
-	// Optional thumbnail upload. If nil, a thumbnail is extracted from the video.
-	Thumbnail            io.Reader
-	ThumbnailFileName    string
-	ThumbnailContentType string
+// InitiateUploadInput holds the metadata needed to mint a presigned PUT URL.
+type InitiateUploadInput struct {
+	FileName    string
+	ContentType string
 }
 
-// Upload uploads a video file and creates its metadata record.
-func (s *Service) Upload(ctx context.Context, input *UploadInput) (*entity.Video, *apperror.AppError) {
-	contentRating := input.ContentRating
-	if contentRating == "" {
-		contentRating = "G"
-	}
+// InitiateUploadOutput is returned to the client so it can PUT the binary directly to storage.
+type InitiateUploadOutput struct {
+	UploadURL string
+	ObjectKey string
+	ExpiresAt time.Time
+}
 
-	// Generate slug from title
-	slug, err := valueobject.NewSlug(input.Title)
-	if err != nil {
-		return nil, apperror.BadRequest(apperror.CodeValidationFailed, "invalid title for slug generation", err)
+// InitiateUpload generates a presigned PUT URL the client uses to upload the binary
+// directly to object storage, bypassing this API for the bulk transfer.
+func (s *Service) InitiateUpload(ctx context.Context, input *InitiateUploadInput) (*InitiateUploadOutput, *apperror.AppError) {
+	contentType := input.ContentType
+	if contentType == "" {
+		contentType = "video/mp4"
 	}
-	slug = slug.WithRandomID()
 
 	videoID := uuid.New()
-	ext := extensionFromContentType(input.ContentType)
+	ext := extensionFromContentType(contentType)
 	if ext == "" {
 		ext = filepath.Ext(input.FileName)
 	}
 	if ext == "" {
 		ext = ".mp4"
 	}
-	storageKey := fmt.Sprintf("videos/%s/original%s", videoID.String(), ext)
+	objectKey := fmt.Sprintf("videos/%s/original%s", videoID.String(), ext)
 
-	// Save video to temp file so we can both upload to storage and extract a thumbnail.
-	tmpVideo, err := os.CreateTemp("", "video-upload-*"+ext)
+	url, err := s.storage.PresignedPutURL(ctx, objectKey, contentType, PresignedUploadExpiry)
 	if err != nil {
-		return nil, apperror.Internal(apperror.CodeInternalError, "failed to create temp file", err)
-	}
-	defer func() { _ = os.Remove(tmpVideo.Name()) }()
-	defer func() { _ = tmpVideo.Close() }()
-
-	if _, err := io.Copy(tmpVideo, input.File); err != nil {
-		return nil, apperror.Internal(apperror.CodeInternalError, "failed to write temp file", err)
+		s.log.Error("generating presigned upload URL", "error", err)
+		return nil, apperror.Internal(apperror.CodeInternalError, "failed to generate upload URL", err)
 	}
 
-	// Upload video to storage from temp file
-	if _, err := tmpVideo.Seek(0, io.SeekStart); err != nil {
-		return nil, apperror.Internal(apperror.CodeInternalError, "failed to seek temp file", err)
-	}
-	if _, err := s.storage.Upload(ctx, storageKey, tmpVideo, input.ContentType); err != nil {
-		s.log.Error("uploading video to storage", "error", err)
-		return nil, apperror.Internal(apperror.CodeUploadFailed, "failed to upload video", err)
+	return &InitiateUploadOutput{
+		UploadURL: url,
+		ObjectKey: objectKey,
+		ExpiresAt: time.Now().UTC().Add(PresignedUploadExpiry),
+	}, nil
+}
+
+// CompleteUploadInput holds the metadata needed to finalize a previously-initiated upload.
+type CompleteUploadInput struct {
+	ObjectKey        string
+	Title            string
+	Description      string
+	Creator          string
+	ContentRating    string
+	GenreIDs         []uuid.UUID
+	UploadedBy       uuid.UUID
+	MinimumPlanLevel *int
+	// DurationSeconds is an optional client-supplied hint. The async transcode
+	// pipeline can override it later with the authoritative value.
+	DurationSeconds int64
+}
+
+// CompleteUpload verifies that the binary has landed at ObjectKey and creates
+// the video metadata record. The objectKey must come from a prior InitiateUpload
+// response; the videoID is derived from the key path.
+func (s *Service) CompleteUpload(ctx context.Context, input *CompleteUploadInput) (*entity.Video, *apperror.AppError) {
+	videoID, err := videoIDFromObjectKey(input.ObjectKey)
+	if err != nil {
+		return nil, apperror.BadRequest(apperror.CodeValidationFailed, "invalid object_key", err)
 	}
 
-	// Handle thumbnail (non-fatal on failure)
-	thumbnailKey := s.handleThumbnail(ctx, input, videoID, tmpVideo.Name())
-
-	// Extract video duration (non-fatal on failure)
-	var durationSecs int64
-	if d, err := duration.Probe(tmpVideo.Name()); err != nil {
-		s.log.Warn("extracting video duration with ffprobe", "error", err)
-	} else {
-		durationSecs = d
+	info, statErr := s.storage.Stat(ctx, input.ObjectKey)
+	if statErr != nil {
+		s.log.Error("stat uploaded object", "error", statErr, "key", input.ObjectKey)
+		return nil, apperror.Internal(apperror.CodeInternalError, "failed to verify upload", statErr)
+	}
+	if info == nil {
+		return nil, apperror.BadRequest(apperror.CodeValidationFailed, "no object at object_key — upload not completed", nil)
 	}
 
-	// Create video entity
+	contentRating := input.ContentRating
+	if contentRating == "" {
+		contentRating = "G"
+	}
+
+	slug, err := valueobject.NewSlug(input.Title)
+	if err != nil {
+		return nil, apperror.BadRequest(apperror.CodeValidationFailed, "invalid title for slug generation", err)
+	}
+	slug = slug.WithRandomID()
+
+	contentType := info.ContentType
+	if contentType == "" {
+		contentType = "video/mp4"
+	}
+
 	video := entity.NewVideo(
 		input.Title, slug, input.Description, input.Creator,
-		contentRating, storageKey, input.ContentType,
-		input.FileSize, input.UploadedBy,
+		contentRating, input.ObjectKey, contentType,
+		info.Size, input.UploadedBy,
 	)
 	video.ID = videoID
-	video.Duration = valueobject.NewDuration(durationSecs)
-	video.ThumbnailKey = thumbnailKey
+	video.Duration = valueobject.NewDuration(input.DurationSeconds)
 	video.MinimumPlanLevel = input.MinimumPlanLevel
 	video.SetGenres(input.GenreIDs)
 
 	if err := s.videoRepo.Create(ctx, video); err != nil {
-		_ = s.storage.Delete(ctx, storageKey)
-		if thumbnailKey != "" {
-			_ = s.storage.Delete(ctx, thumbnailKey)
-		}
+		// Best-effort cleanup of the orphaned object — without a DB row, the
+		// transcode pipeline will never pick it up and it would leak.
+		_ = s.storage.Delete(ctx, input.ObjectKey)
 		s.log.Error("creating video record", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to save video", err)
 	}
@@ -127,57 +140,18 @@ func (s *Service) Upload(ctx context.Context, input *UploadInput) (*entity.Video
 	return video, nil
 }
 
-// handleThumbnail uploads a user-provided thumbnail or extracts one from the video.
-// Returns the storage key on success, or empty string on failure (non-fatal).
-func (s *Service) handleThumbnail(ctx context.Context, input *UploadInput, videoID uuid.UUID, videoPath string) string {
-	if input.Thumbnail != nil {
-		return s.uploadUserThumbnail(ctx, input, videoID)
+// videoIDFromObjectKey extracts the video UUID from a key of the form
+// "videos/<uuid>/original<ext>".
+func videoIDFromObjectKey(key string) (uuid.UUID, error) {
+	parts := strings.Split(key, "/")
+	if len(parts) < 3 || parts[0] != "videos" {
+		return uuid.Nil, fmt.Errorf("expected key prefix videos/<uuid>/, got %q", key)
 	}
-	return s.extractThumbnail(ctx, videoID, videoPath)
-}
-
-func (s *Service) uploadUserThumbnail(ctx context.Context, input *UploadInput, videoID uuid.UUID) string {
-	thumbExt := filepath.Ext(input.ThumbnailFileName)
-	if thumbExt == "" {
-		thumbExt = thumbnailExtFromContentType(input.ThumbnailContentType)
-	}
-
-	key := fmt.Sprintf("videos/%s/thumbnail%s", videoID.String(), thumbExt)
-	if _, err := s.storage.Upload(ctx, key, input.Thumbnail, input.ThumbnailContentType); err != nil {
-		s.log.Error("uploading user thumbnail", "error", err)
-		return ""
-	}
-	return key
-}
-
-func (s *Service) extractThumbnail(ctx context.Context, videoID uuid.UUID, videoPath string) string {
-	tmpThumb, err := os.CreateTemp("", "thumb-*.jpg")
+	id, err := uuid.Parse(parts[1])
 	if err != nil {
-		s.log.Error("creating temp thumbnail file", "error", err)
-		return ""
+		return uuid.Nil, fmt.Errorf("parsing video id from key: %w", err)
 	}
-	tmpThumbPath := tmpThumb.Name()
-	_ = tmpThumb.Close()
-	defer func() { _ = os.Remove(tmpThumbPath) }()
-
-	if err := thumbnail.ExtractFirstFrame(videoPath, tmpThumbPath); err != nil {
-		s.log.Error("extracting thumbnail with ffmpeg", "error", err)
-		return ""
-	}
-
-	thumbFile, err := os.Open(tmpThumbPath)
-	if err != nil {
-		s.log.Error("opening extracted thumbnail", "error", err)
-		return ""
-	}
-	defer func() { _ = thumbFile.Close() }()
-
-	key := fmt.Sprintf("videos/%s/thumbnail.jpg", videoID.String())
-	if _, err := s.storage.Upload(ctx, key, thumbFile, "image/jpeg"); err != nil {
-		s.log.Error("uploading extracted thumbnail", "error", err)
-		return ""
-	}
-	return key
+	return id, nil
 }
 
 func extensionFromContentType(ct string) string {
