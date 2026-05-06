@@ -143,7 +143,8 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 			r.Delete("/admin/subscriptions/{id}", subscriptionHandler.Cancel)
 
 			// Video management
-			r.Post("/videos", videoHandler.Upload)
+			r.Post("/videos/uploads", videoHandler.InitiateUpload)
+			r.Post("/videos", videoHandler.CompleteUpload)
 			r.Put("/videos/{id}", videoHandler.Update)
 			r.Put("/videos/{id}/thumbnail", videoHandler.UploadThumbnail)
 			r.Post("/videos/{id}/publish", videoHandler.Publish)
