@@ -27,31 +27,6 @@ type VideoStreamResponse struct {
 	Type      string `json:"type" example:"hls"`
 }
 
-// InitiateUploadRequest is the body for POST /videos/uploads.
-type InitiateUploadRequest struct {
-	FileName    string `json:"filename" validate:"required,min=1,max=512" example:"my-video.mp4"`
-	ContentType string `json:"content_type" validate:"required" example:"video/mp4"`
-}
-
-// InitiateUploadResponse describes how to upload the binary directly to storage.
-type InitiateUploadResponse struct {
-	UploadURL string `json:"upload_url" example:"https://pc-s3.zencial.net/zencial-videos/videos/.../original.mp4?X-Amz-Signature=..."`
-	ObjectKey string `json:"object_key" example:"videos/550e8400-e29b-41d4-a716-446655440000/original.mp4"`
-	ExpiresAt string `json:"expires_at" example:"2026-05-06T13:30:00Z"`
-}
-
-// CompleteUploadRequest is the body for POST /videos (commit).
-type CompleteUploadRequest struct {
-	ObjectKey        string   `json:"object_key" validate:"required" example:"videos/550e8400-e29b-41d4-a716-446655440000/original.mp4"`
-	Title            string   `json:"title" validate:"required,min=1,max=500" example:"My Awesome Video"`
-	Description      string   `json:"description,omitempty" validate:"omitempty,max=5000"`
-	Creator          string   `json:"creator,omitempty" validate:"omitempty,min=3,max=24"`
-	ContentRating    string   `json:"content_rating,omitempty" validate:"omitempty,oneof=G PG PG13 R NC17"`
-	GenreIDs         []string `json:"genre_ids,omitempty" validate:"omitempty,dive,uuid"`
-	MinimumPlanLevel *int     `json:"minimum_plan_level,omitempty" validate:"omitempty,gte=0"`
-	DurationSeconds  int64    `json:"duration_seconds,omitempty" validate:"omitempty,gte=0" example:"3600"`
-}
-
 // UpdateVideoRequest represents a video metadata update.
 type UpdateVideoRequest struct {
 	Title            *string  `json:"title,omitempty" validate:"omitempty,min=1,max=500"`
