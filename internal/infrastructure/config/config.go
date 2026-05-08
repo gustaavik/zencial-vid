@@ -11,8 +11,7 @@ import (
 type Config struct {
 	Server      ServerConfig
 	Database    DatabaseConfig
-	Redis       RedisConfig
-	JWT         JWTConfig
+	Session     SessionConfig
 	Storage     StorageConfig
 	CDN         CDNConfig
 	InternalAPI InternalAPIConfig
@@ -52,18 +51,16 @@ func (d *DatabaseConfig) DSN() string {
 	)
 }
 
-type RedisConfig struct {
-	Addr     string `env:"REDIS_ADDR" envDefault:"localhost:6379"`
-	Password string `env:"REDIS_PASSWORD"`
-	DB       int    `env:"REDIS_DB" envDefault:"0"`
-}
-
-type JWTConfig struct {
-	AccessSecret    string        `env:"JWT_ACCESS_SECRET,required"`
-	RefreshSecret   string        `env:"JWT_REFRESH_SECRET,required"`
-	AccessDuration  time.Duration `env:"JWT_ACCESS_DURATION" envDefault:"15m"`
-	RefreshDuration time.Duration `env:"JWT_REFRESH_DURATION" envDefault:"168h"`
-	Issuer          string        `env:"JWT_ISSUER" envDefault:"zencial"`
+// SessionConfig configures sliding-session authentication. Sessions are
+// validated by hashing the bearer token and looking it up in user_sessions
+// on every request; activity slides idle expiry forward, debounced by
+// SlideDebounce so a single session generates at most ~1 write per debounce
+// window.
+type SessionConfig struct {
+	IdleTimeout     time.Duration `env:"SESSION_IDLE_TIMEOUT"     envDefault:"720h"`  // 30d
+	AbsoluteTimeout time.Duration `env:"SESSION_ABSOLUTE_TIMEOUT" envDefault:"2160h"` // 90d
+	SlideDebounce   time.Duration `env:"SESSION_SLIDE_DEBOUNCE"   envDefault:"5m"`
+	CleanupInterval time.Duration `env:"SESSION_CLEANUP_INTERVAL" envDefault:"1h"`
 }
 
 type StorageConfig struct {

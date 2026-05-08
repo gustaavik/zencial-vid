@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	v1 "github.com/zenfulcode/zencial/internal/adapter/handler/v1"
 	"github.com/zenfulcode/zencial/internal/adapter/messaging"
@@ -17,15 +18,16 @@ import (
 	"github.com/zenfulcode/zencial/internal/infrastructure/logger"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
 	"github.com/zenfulcode/zencial/internal/infrastructure/persistence/postgres"
-	"github.com/zenfulcode/zencial/internal/infrastructure/persistence/redis"
 	"github.com/zenfulcode/zencial/internal/infrastructure/server"
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
+	"github.com/zenfulcode/zencial/internal/pkg/clock"
 	"github.com/zenfulcode/zencial/internal/pkg/httputil"
 	audituc "github.com/zenfulcode/zencial/internal/usecase/audit"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
 	billinguc "github.com/zenfulcode/zencial/internal/usecase/billing"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
 	planuc "github.com/zenfulcode/zencial/internal/usecase/plan"
+	sessionuc "github.com/zenfulcode/zencial/internal/usecase/session"
 	subscriptionuc "github.com/zenfulcode/zencial/internal/usecase/subscription"
 	useruc "github.com/zenfulcode/zencial/internal/usecase/user"
 	videouc "github.com/zenfulcode/zencial/internal/usecase/video"
@@ -58,7 +60,8 @@ import (
 // @name Authorization
 // @description Enter your bearer token in the format: Bearer {token}
 func main() {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// Load configuration
 	cfg, err := config.Load()
@@ -84,20 +87,14 @@ func main() {
 	}
 	defer dbPool.Close()
 
-	// Connect to Redis
-	redisClient, err := database.NewRedis(ctx, cfg.Redis)
-	if err != nil {
-		appLog.Error("failed to connect to redis", "error", err)
-		os.Exit(1) //nolint:gocritic // exitAfterDefer — startup failure, cleanup irrelevant
-	}
-	defer func() { _ = redisClient.Close() }()
-
 	// Infrastructure services
-	tokenService := auth.NewJWTService(cfg.JWT)
 	hasher := auth.NewBcryptHasher()
+	tokens := auth.NewSessionTokenService()
+	clk := clock.RealClock{}
 
 	// Repositories
 	userRepo := postgres.NewUserRepository(dbPool)
+	sessionRepo := postgres.NewSessionRepository(dbPool)
 	genreRepo := postgres.NewGenreRepository(dbPool)
 	videoRepo := postgres.NewVideoRepository(dbPool)
 	planRepo := postgres.NewPlanRepository(dbPool)
@@ -105,9 +102,6 @@ func main() {
 	watchlistRepo := postgres.NewWatchlistRepository(dbPool, videoRepo)
 	watchProgressRepo := postgres.NewWatchProgressRepository(dbPool, videoRepo)
 	auditLogRepo := postgres.NewAuditLogRepository(dbPool)
-
-	// Redis stores
-	sessionStore := redis.NewSessionStore(redisClient, cfg.JWT.RefreshDuration)
 
 	// Event dispatcher
 	dispatcher := messaging.NewEventDispatcher(appLog)
@@ -129,8 +123,12 @@ func main() {
 		"region", cfg.Storage.Region,
 	)
 
+	// Authentication middleware
+	authenticator := middleware.NewSessionAuthenticator(sessionRepo, userRepo, tokens, clk, cfg.Session, appLog)
+
 	// Use cases
-	authService := authuc.NewService(userRepo, tokenService, hasher, sessionStore, dispatcher, appLog)
+	authService := authuc.NewService(userRepo, sessionRepo, tokens, hasher, dispatcher, appLog, clk, cfg.Session)
+	sessionService := sessionuc.NewService(sessionRepo, dispatcher, appLog, clk)
 	genreService := genreuc.NewService(genreRepo, dispatcher, appLog)
 	userService := useruc.NewService(userRepo, hasher, dispatcher, appLog)
 	planService := planuc.NewService(planRepo, dispatcher, appLog)
@@ -162,6 +160,11 @@ func main() {
 
 	// Persist every dispatched domain event into the audit log.
 	audituc.Register(dispatcher, auditLogRepo, appLog)
+
+	// Background: purge expired/revoked sessions on a ticker. Cancelled when
+	// ctx is cancelled (during graceful shutdown), so we don't race with
+	// dbPool.Close().
+	go runSessionCleanup(ctx, sessionService, cfg.Session.CleanupInterval, appLog)
 
 	// Router
 	r := chi.NewRouter()
@@ -212,7 +215,8 @@ func main() {
 			Watchlist:            watchlistService,
 			WatchProgress:        watchProgressService,
 			Audit:                auditService,
-			TokenService:         tokenService,
+			Session:              sessionService,
+			Authenticator:        authenticator,
 			Storage:              storageService,
 			InternalSharedSecret: cfg.InternalAPI.SharedSecret,
 			Log:                  appLog,
@@ -224,5 +228,30 @@ func main() {
 	if err := srv.Start(); err != nil {
 		appLog.Error("server error", "error", err)
 		os.Exit(1)
+	}
+}
+
+// runSessionCleanup periodically deletes expired/revoked session rows.
+// Returns when ctx is cancelled.
+func runSessionCleanup(ctx context.Context, svc *sessionuc.Service, interval time.Duration, log *slog.Logger) {
+	if interval <= 0 {
+		return
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			n, err := svc.PurgeExpired(ctx)
+			if err != nil {
+				log.Error("session cleanup failed", "error", err)
+				continue
+			}
+			if n > 0 {
+				log.Info("session cleanup", "deleted", n)
+			}
+		}
 	}
 }
