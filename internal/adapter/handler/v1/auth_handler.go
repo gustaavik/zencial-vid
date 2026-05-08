@@ -69,7 +69,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	output, appErr := h.authService.Register(r.Context(), authuc.RegisterInput{
+	output, appErr := h.authService.Register(r.Context(), &authuc.RegisterInput{
 		Email:    req.Email,
 		Password: req.Password,
 		Name:     req.Name,
@@ -110,7 +110,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	output, appErr := h.authService.Login(r.Context(), authuc.LoginInput{
+	output, appErr := h.authService.Login(r.Context(), &authuc.LoginInput{
 		Email:    req.Email,
 		Password: req.Password,
 		Session:  extractSessionContext(r),

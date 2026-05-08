@@ -28,11 +28,11 @@ func TestSession_IsExpiredAndIsActive(t *testing.T) {
 	s := NewSession(uuid.New(), "h", "", "", "", now, time.Hour, 24*time.Hour)
 
 	cases := []struct {
-		name      string
-		at        time.Time
-		expired   bool
-		isActive  bool
-		revoke    bool
+		name     string
+		at       time.Time
+		expired  bool
+		isActive bool
+		revoke   bool
 	}{
 		{"fresh", now, false, true, false},
 		{"middle", now.Add(30 * time.Minute), false, true, false},
@@ -45,7 +45,7 @@ func TestSession_IsExpiredAndIsActive(t *testing.T) {
 			sess := *s
 			if tc.revoke {
 				rev := sess.Revoke(now)
-				sess = rev
+				sess = *rev
 			}
 			assert.Equal(t, tc.expired, sess.IsExpired(tc.at))
 			assert.Equal(t, tc.isActive, sess.IsActive(tc.at))

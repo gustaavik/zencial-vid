@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	logpac "log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -66,7 +66,7 @@ func main() {
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
+		logpac.Fatalf("failed to load config: %v", err)
 	}
 
 	// Initialize logger
@@ -83,7 +83,8 @@ func main() {
 	dbPool, err := database.NewPostgres(ctx, &cfg.Database)
 	if err != nil {
 		appLog.Error("failed to connect to database", "error", err)
-		os.Exit(1)
+		cancel()
+		os.Exit(1) //nolint:gocritic
 	}
 	defer dbPool.Close()
 

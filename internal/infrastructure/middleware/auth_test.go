@@ -47,7 +47,7 @@ func (s *stubSessionRepo) UpdateActivity(ctx context.Context, id uuid.UUID, last
 	}
 	return nil
 }
-func (s *stubSessionRepo) Revoke(context.Context, uuid.UUID, time.Time) error            { return nil }
+func (s *stubSessionRepo) Revoke(context.Context, uuid.UUID, time.Time) error { return nil }
 func (s *stubSessionRepo) RevokeAllForUser(context.Context, uuid.UUID, time.Time) (int64, error) {
 	return 0, nil
 }
@@ -85,7 +85,7 @@ func (u *stubUserRepo) UpdateStatus(context.Context, uuid.UUID, entity.UserStatu
 type stubTokens struct{}
 
 func (stubTokens) Generate() (string, string, error) { return "tok", "hash", nil }
-func (stubTokens) Hash(t string) string               { return "hash:" + t }
+func (stubTokens) Hash(t string) string              { return "hash:" + t }
 
 // --- helpers ---
 
@@ -168,7 +168,7 @@ func TestAuthenticate(t *testing.T) {
 		s := makeSession(now)
 		rev := s.Revoke(now)
 		repo := &stubSessionRepo{getByTokenHashFn: func(context.Context, string) (*entity.Session, error) {
-			return &rev, nil
+			return rev, nil
 		}}
 		auth := NewSessionAuthenticator(repo, &stubUserRepo{}, stubTokens{}, clk, cfg, log)
 		req := httptest.NewRequest(http.MethodGet, "/", nil)

@@ -28,7 +28,7 @@ type RegisterOutput struct {
 }
 
 // Register creates a new user account and a first session.
-func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterOutput, *apperror.AppError) {
+func (s *Service) Register(ctx context.Context, input *RegisterInput) (*RegisterOutput, *apperror.AppError) {
 	email, err := valueobject.NewEmail(input.Email)
 	if err != nil {
 		return nil, apperror.BadRequest(apperror.CodeValidationFailed, "invalid email address", err)

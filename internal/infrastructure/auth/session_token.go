@@ -29,12 +29,12 @@ func NewSessionTokenService() SessionTokenService {
 	return &sessionTokenService{}
 }
 
-func (sessionTokenService) Generate() (string, string, error) {
+func (sessionTokenService) Generate() (token, hash string, err error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
 		return "", "", fmt.Errorf("generating session token: %w", err)
 	}
-	token := base64.RawURLEncoding.EncodeToString(b)
+	token = base64.RawURLEncoding.EncodeToString(b)
 	return token, hashToken(token), nil
 }
 

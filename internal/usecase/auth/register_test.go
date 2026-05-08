@@ -28,7 +28,7 @@ func TestService_Register(t *testing.T) {
 			sessionRepo, nil, nil, dispatcher,
 		)
 
-		output, appErr := svc.Register(ctx, RegisterInput{
+		output, appErr := svc.Register(ctx, &RegisterInput{
 			Email:    "user@example.com",
 			Password: "securePassword123",
 			Name:     "John Doe",
@@ -67,7 +67,7 @@ func TestService_Register(t *testing.T) {
 	t.Run("invalid email returns validation error", func(t *testing.T) {
 		svc := newTestService(nil, nil, nil, nil, nil)
 
-		output, appErr := svc.Register(ctx, RegisterInput{
+		output, appErr := svc.Register(ctx, &RegisterInput{
 			Email:    "not-an-email",
 			Password: "password",
 		})
@@ -87,7 +87,7 @@ func TestService_Register(t *testing.T) {
 			nil, nil, nil, nil,
 		)
 
-		output, appErr := svc.Register(ctx, RegisterInput{
+		output, appErr := svc.Register(ctx, &RegisterInput{
 			Email:    "existing@example.com",
 			Password: "password",
 		})
@@ -107,7 +107,7 @@ func TestService_Register(t *testing.T) {
 			nil, nil, nil, nil,
 		)
 
-		output, appErr := svc.Register(ctx, RegisterInput{
+		output, appErr := svc.Register(ctx, &RegisterInput{
 			Email:    "user@example.com",
 			Password: "password",
 		})
@@ -133,7 +133,7 @@ func TestService_Register(t *testing.T) {
 			nil,
 		)
 
-		output, appErr := svc.Register(ctx, RegisterInput{
+		output, appErr := svc.Register(ctx, &RegisterInput{
 			Email:    "user@example.com",
 			Password: "password",
 		})
@@ -156,7 +156,7 @@ func TestService_Register(t *testing.T) {
 			nil, nil, nil, nil,
 		)
 
-		output, appErr := svc.Register(ctx, RegisterInput{
+		output, appErr := svc.Register(ctx, &RegisterInput{
 			Email:    "user@example.com",
 			Password: "password",
 		})

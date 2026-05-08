@@ -57,7 +57,7 @@ func (s *Session) IsExpired(now time.Time) bool {
 	return !now.Before(s.IdleExpiresAt) || !now.Before(s.AbsoluteExpiresAt)
 }
 
-// IsActive reports whether the session can authorise a request.
+// IsActive reports whether the session can authorize a request.
 func (s *Session) IsActive(now time.Time) bool {
 	return !s.IsRevoked() && !s.IsExpired(now)
 }
@@ -65,7 +65,7 @@ func (s *Session) IsActive(now time.Time) bool {
 // Slide returns a copy with LastActivityAt and IdleExpiresAt advanced.
 // AbsoluteExpiresAt is never moved; if sliding would push the idle deadline
 // past absolute, idle is clamped to absolute so the hard cap is preserved.
-func (s Session) Slide(now time.Time, idleTimeout time.Duration) Session {
+func (s *Session) Slide(now time.Time, idleTimeout time.Duration) *Session {
 	newIdle := now.Add(idleTimeout)
 	if newIdle.After(s.AbsoluteExpiresAt) {
 		newIdle = s.AbsoluteExpiresAt
@@ -76,7 +76,7 @@ func (s Session) Slide(now time.Time, idleTimeout time.Duration) Session {
 }
 
 // Revoke returns a copy marked revoked at the given time.
-func (s Session) Revoke(now time.Time) Session {
+func (s *Session) Revoke(now time.Time) *Session {
 	s.RevokedAt = &now
 	return s
 }
@@ -89,9 +89,9 @@ func (s *Session) ExpiresAt() time.Time {
 	return s.IdleExpiresAt
 }
 
-func truncate(s string, max int) string {
-	if len(s) <= max {
+func truncate(s string, maxLength int) string {
+	if len(s) <= maxLength {
 		return s
 	}
-	return s[:max]
+	return s[:maxLength]
 }

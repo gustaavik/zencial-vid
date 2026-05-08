@@ -23,7 +23,7 @@ func SessionToResponse(s *entity.Session, currentSessionID uuid.UUID) dto.Sessio
 		LastActivityAt:    s.LastActivityAt.Format(time.RFC3339),
 		ExpiresAt:         s.ExpiresAt().Format(time.RFC3339),
 		AbsoluteExpiresAt: s.AbsoluteExpiresAt.Format(time.RFC3339),
-		IsCurrent:        currentSessionID != uuid.Nil && s.ID == currentSessionID,
+		IsCurrent:         currentSessionID != uuid.Nil && s.ID == currentSessionID,
 	}
 }
 

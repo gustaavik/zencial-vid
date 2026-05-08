@@ -28,7 +28,7 @@ type LoginOutput struct {
 }
 
 // Login authenticates a user and creates a new session.
-func (s *Service) Login(ctx context.Context, input LoginInput) (*LoginOutput, *apperror.AppError) {
+func (s *Service) Login(ctx context.Context, input *LoginInput) (*LoginOutput, *apperror.AppError) {
 	email, err := valueobject.NewEmail(input.Email)
 	if err != nil {
 		return nil, apperror.BadRequest(apperror.CodeValidationFailed, "invalid email address", err)

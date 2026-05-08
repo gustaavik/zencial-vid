@@ -34,7 +34,7 @@ func TestService_Login(t *testing.T) {
 			sessionRepo, nil, nil, dispatcher,
 		)
 
-		output, appErr := svc.Login(ctx, LoginInput{
+		output, appErr := svc.Login(ctx, &LoginInput{
 			Email:    "user@example.com",
 			Password: "password123",
 			Session: SessionContext{
@@ -65,7 +65,7 @@ func TestService_Login(t *testing.T) {
 	t.Run("invalid email format returns bad request", func(t *testing.T) {
 		svc := newTestService(nil, nil, nil, nil, nil)
 
-		output, appErr := svc.Login(ctx, LoginInput{
+		output, appErr := svc.Login(ctx, &LoginInput{
 			Email:    "invalid",
 			Password: "password",
 		})
@@ -85,7 +85,7 @@ func TestService_Login(t *testing.T) {
 			nil, nil, nil, nil,
 		)
 
-		output, appErr := svc.Login(ctx, LoginInput{
+		output, appErr := svc.Login(ctx, &LoginInput{
 			Email:    "unknown@example.com",
 			Password: "password",
 		})
@@ -107,7 +107,7 @@ func TestService_Login(t *testing.T) {
 			nil, nil, nil, nil,
 		)
 
-		output, appErr := svc.Login(ctx, LoginInput{
+		output, appErr := svc.Login(ctx, &LoginInput{
 			Email:    "user@example.com",
 			Password: "password",
 		})
@@ -129,7 +129,7 @@ func TestService_Login(t *testing.T) {
 			nil, nil, nil, nil,
 		)
 
-		output, appErr := svc.Login(ctx, LoginInput{
+		output, appErr := svc.Login(ctx, &LoginInput{
 			Email:    "user@example.com",
 			Password: "password",
 		})
@@ -156,7 +156,7 @@ func TestService_Login(t *testing.T) {
 			nil,
 		)
 
-		output, appErr := svc.Login(ctx, LoginInput{
+		output, appErr := svc.Login(ctx, &LoginInput{
 			Email:    "user@example.com",
 			Password: "wrong-password",
 		})
@@ -176,7 +176,7 @@ func TestService_Login(t *testing.T) {
 			nil, nil, nil, nil,
 		)
 
-		output, appErr := svc.Login(ctx, LoginInput{
+		output, appErr := svc.Login(ctx, &LoginInput{
 			Email:    "user@example.com",
 			Password: "password",
 		})
