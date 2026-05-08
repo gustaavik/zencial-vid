@@ -5,11 +5,17 @@ import (
 
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/mapper"
+	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 	"github.com/zenfulcode/zencial/internal/pkg/httputil"
 	"github.com/zenfulcode/zencial/internal/pkg/validator"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
 )
+
+// deviceNameHeader is the optional header clients can set to give a session
+// a friendly label (e.g. "iPhone 15", "Chrome on macOS"). Falls back to
+// the User-Agent header if absent.
+const deviceNameHeader = "X-Device-Name"
 
 // AuthHandler handles authentication HTTP requests.
 type AuthHandler struct {
@@ -25,9 +31,20 @@ func NewAuthHandler(authService *authuc.Service) *AuthHandler {
 	}
 }
 
+// extractSessionContext pulls device/network metadata from the inbound
+// request to attach to the new session row. Relies on chi's RealIP
+// middleware having canonicalised r.RemoteAddr from X-Forwarded-For.
+func extractSessionContext(r *http.Request) authuc.SessionContext {
+	return authuc.SessionContext{
+		DeviceName: r.Header.Get(deviceNameHeader),
+		UserAgent:  r.UserAgent(),
+		IPAddress:  r.RemoteAddr,
+	}
+}
+
 // Register godoc
 // @Summary      Register a new user
-// @Description  Create a new user account and return authentication tokens
+// @Description  Create a new user account and return a session token
 // @Tags         auth
 // @Accept       json
 // @Produce      json
@@ -52,22 +69,23 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	output, appErr := h.authService.Register(r.Context(), authuc.RegisterInput{
+	output, appErr := h.authService.Register(r.Context(), &authuc.RegisterInput{
 		Email:    req.Email,
 		Password: req.Password,
 		Name:     req.Name,
+		Session:  extractSessionContext(r),
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return
 	}
 
-	httputil.Success(w, http.StatusCreated, mapper.AuthToResponse(output.User, output.TokenPair))
+	httputil.Success(w, http.StatusCreated, mapper.AuthToResponse(output.User, output.Session, output.Token))
 }
 
 // Login godoc
 // @Summary      Login
-// @Description  Authenticate with email and password, returns tokens
+// @Description  Authenticate with email and password, returns a session token
 // @Tags         auth
 // @Accept       json
 // @Produce      json
@@ -92,68 +110,44 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	output, appErr := h.authService.Login(r.Context(), authuc.LoginInput{
+	output, appErr := h.authService.Login(r.Context(), &authuc.LoginInput{
 		Email:    req.Email,
 		Password: req.Password,
+		Session:  extractSessionContext(r),
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.AuthToResponse(output.User, output.TokenPair))
-}
-
-// RefreshToken godoc
-// @Summary      Refresh access token
-// @Description  Exchange a valid refresh token for a new token pair
-// @Tags         auth
-// @Accept       json
-// @Produce      json
-// @Param        body body dto.RefreshTokenRequest true "Refresh token"
-// @Success      200 {object} httputil.Response{data=dto.TokenResponse}
-// @Failure      400 {object} httputil.ErrorResponse
-// @Failure      401 {object} httputil.ErrorResponse
-// @Router       /auth/refresh [post]
-func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
-	var req dto.RefreshTokenRequest
-	if err := httputil.DecodeJSON(r, &req); err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid request body")
-		return
-	}
-
-	output, appErr := h.authService.RefreshToken(r.Context(), authuc.RefreshInput{
-		RefreshToken: req.RefreshToken,
-	})
-	if appErr != nil {
-		httputil.Error(w, appErr)
-		return
-	}
-
-	httputil.Success(w, http.StatusOK, mapper.TokenPairToResponse(output.TokenPair))
+	httputil.Success(w, http.StatusOK, mapper.AuthToResponse(output.User, output.Session, output.Token))
 }
 
 // Logout godoc
 // @Summary      Logout
-// @Description  Invalidate the refresh token
+// @Description  Revoke the session associated with the current bearer token
 // @Tags         auth
-// @Accept       json
 // @Produce      json
-// @Param        body body dto.LogoutRequest true "Refresh token to invalidate"
 // @Success      204
-// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
 // @Failure      500 {object} httputil.ErrorResponse
 // @Security     BearerAuth
 // @Router       /auth/logout [post]
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	var req dto.LogoutRequest
-	if err := httputil.DecodeJSON(r, &req); err != nil {
-		httputil.BadRequest(w, "BAD_REQUEST", "invalid request body")
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
+		return
+	}
+	sessionID, ok := middleware.GetSessionID(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "missing session context")
 		return
 	}
 
 	appErr := h.authService.Logout(r.Context(), authuc.LogoutInput{
-		RefreshToken: req.RefreshToken,
+		UserID:    userID,
+		SessionID: sessionID,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)

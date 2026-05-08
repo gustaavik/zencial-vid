@@ -57,15 +57,53 @@ func (e UserRegistered) AuditMetadata() map[string]any {
 // UserLoggedIn is emitted when a user logs in.
 type UserLoggedIn struct {
 	UserID    uuid.UUID
+	SessionID uuid.UUID
 	Timestamp time.Time
 }
 
-func (e UserLoggedIn) EventName() string             { return "user.logged_in" }
-func (e UserLoggedIn) OccurredAt() time.Time         { return e.Timestamp }
-func (e UserLoggedIn) AuditActor() *uuid.UUID        { return new(e.UserID) }
-func (e UserLoggedIn) AuditEntityType() string       { return EntityUser }
-func (e UserLoggedIn) AuditEntityID() *uuid.UUID     { return new(e.UserID) }
-func (e UserLoggedIn) AuditMetadata() map[string]any { return map[string]any{} }
+func (e UserLoggedIn) EventName() string         { return "user.logged_in" }
+func (e UserLoggedIn) OccurredAt() time.Time     { return e.Timestamp }
+func (e UserLoggedIn) AuditActor() *uuid.UUID    { return new(e.UserID) }
+func (e UserLoggedIn) AuditEntityType() string   { return EntityUser }
+func (e UserLoggedIn) AuditEntityID() *uuid.UUID { return new(e.UserID) }
+func (e UserLoggedIn) AuditMetadata() map[string]any {
+	return map[string]any{"session_id": e.SessionID.String()}
+}
+
+// UserLoggedOut is emitted when a user explicitly logs out (session revoked
+// by the same user via /auth/logout).
+type UserLoggedOut struct {
+	UserID    uuid.UUID
+	SessionID uuid.UUID
+	Timestamp time.Time
+}
+
+func (e UserLoggedOut) EventName() string         { return "user.logged_out" }
+func (e UserLoggedOut) OccurredAt() time.Time     { return e.Timestamp }
+func (e UserLoggedOut) AuditActor() *uuid.UUID    { return new(e.UserID) }
+func (e UserLoggedOut) AuditEntityType() string   { return EntityUser }
+func (e UserLoggedOut) AuditEntityID() *uuid.UUID { return new(e.UserID) }
+func (e UserLoggedOut) AuditMetadata() map[string]any {
+	return map[string]any{"session_id": e.SessionID.String()}
+}
+
+// SessionRevoked is emitted when a session is revoked (by the user managing
+// their devices, or by an admin acting on a user's session).
+type SessionRevoked struct {
+	UserID    uuid.UUID
+	SessionID uuid.UUID
+	ActorID   *uuid.UUID // the actor that revoked it; nil = system
+	Timestamp time.Time
+}
+
+func (e SessionRevoked) EventName() string         { return "session.revoked" }
+func (e SessionRevoked) OccurredAt() time.Time     { return e.Timestamp }
+func (e SessionRevoked) AuditActor() *uuid.UUID    { return e.ActorID }
+func (e SessionRevoked) AuditEntityType() string   { return EntityUser }
+func (e SessionRevoked) AuditEntityID() *uuid.UUID { return new(e.UserID) }
+func (e SessionRevoked) AuditMetadata() map[string]any {
+	return map[string]any{"session_id": e.SessionID.String()}
+}
 
 // VideoUploaded is emitted when a new video is uploaded.
 type VideoUploaded struct {

@@ -5,7 +5,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
-	"github.com/zenfulcode/zencial/internal/infrastructure/auth"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	audituc "github.com/zenfulcode/zencial/internal/usecase/audit"
@@ -13,6 +12,7 @@ import (
 	billinguc "github.com/zenfulcode/zencial/internal/usecase/billing"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
 	planuc "github.com/zenfulcode/zencial/internal/usecase/plan"
+	sessionuc "github.com/zenfulcode/zencial/internal/usecase/session"
 	subscriptionuc "github.com/zenfulcode/zencial/internal/usecase/subscription"
 	useruc "github.com/zenfulcode/zencial/internal/usecase/user"
 	videouc "github.com/zenfulcode/zencial/internal/usecase/video"
@@ -32,7 +32,8 @@ type Deps struct {
 	Watchlist            *watchlistuc.Service
 	WatchProgress        *watchprogressuc.Service
 	Audit                *audituc.Service
-	TokenService         auth.TokenService
+	Session              *sessionuc.Service
+	Authenticator        *middleware.SessionAuthenticator
 	Storage              storage.StorageService
 	InternalSharedSecret string
 	Log                  *slog.Logger
@@ -51,8 +52,9 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 	watchProgressHandler := NewWatchProgressHandler(deps.WatchProgress, deps.Storage)
 	transcodeCallbackHandler := NewTranscodeCallbackHandler(deps.Video)
 	auditLogHandler := NewAuditLogHandler(deps.Audit)
+	sessionHandler := NewSessionHandler(deps.Session)
 
-	// Internal service-to-service routes (CDN callbacks). Outside the JWT chain.
+	// Internal service-to-service routes (CDN callbacks). Outside the session chain.
 	r.Route("/internal", func(r chi.Router) {
 		r.Use(middleware.InternalAuth(deps.InternalSharedSecret))
 		r.Post("/videos/{id}/transcode-callback", transcodeCallbackHandler.Handle)
@@ -62,7 +64,6 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", authHandler.Register)
 		r.Post("/login", authHandler.Login)
-		r.Post("/refresh", authHandler.RefreshToken)
 	})
 
 	// Public genre routes (read-only)
@@ -74,12 +75,12 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 	// Public plan routes (active plans only)
 	r.Get("/plans", planHandler.ListActive)
 
-	// Stripe webhooks. Stripe signs requests, so this route stays outside JWT auth.
+	// Stripe webhooks. Stripe signs requests, so this route stays outside session auth.
 	r.Post("/billing/webhook", billingHandler.HandleWebhook)
 
 	// Public video routes with optional auth (for is_accessible field)
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.OptionalAuthenticate(deps.TokenService))
+		r.Use(deps.Authenticator.OptionalAuthenticate)
 
 		r.Get("/videos", videoHandler.ListPublished)
 		r.Get("/videos/{id}", videoHandler.GetByID)
@@ -87,10 +88,15 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 
 	// Authenticated routes
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.Authenticate(deps.TokenService))
+		r.Use(deps.Authenticator.Authenticate)
 
-		// Auth (requires token)
+		// Auth (requires session)
 		r.Post("/auth/logout", authHandler.Logout)
+
+		// Session management (self)
+		r.Get("/me/sessions", sessionHandler.ListMine)
+		r.Delete("/me/sessions/{sessionID}", sessionHandler.RevokeMine)
+		r.Post("/me/sessions/revoke-others", sessionHandler.RevokeOthers)
 
 		// User profile (self)
 		r.Get("/me", userHandler.GetMe)
@@ -171,6 +177,11 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 			r.Get("/admin/users/{id}/subscriptions", subscriptionHandler.ListByUser)
 			r.Get("/admin/users/{id}/watchlist", watchlistHandler.ListByUser)
 			r.Get("/admin/users/{id}/watch-progress", watchProgressHandler.ListByUser)
+
+			// Session management (admin)
+			r.Get("/admin/users/{id}/sessions", sessionHandler.AdminListByUser)
+			r.Post("/admin/users/{id}/sessions/revoke-all", sessionHandler.AdminRevokeAll)
+			r.Delete("/admin/sessions/{sessionID}", sessionHandler.AdminRevoke)
 		})
 	})
 }

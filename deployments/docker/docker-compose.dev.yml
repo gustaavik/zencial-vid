@@ -20,12 +20,6 @@ services:
       - DB_NAME=${DB_NAME:-zencial}
       - DB_SSL_MODE=disable
 
-      - REDIS_ADDR=redis:6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-
-      - JWT_ACCESS_SECRET=dev-secret-key-not-for-production
-      - JWT_REFRESH_SECRET=dev-refresh-secret-key-not-for-production
-
       - S3_ENDPOINT=http://minio:9000
       - S3_PUBLIC_ENDPOINT=http://localhost:${MINIO_PORT:-9000}
       - S3_BUCKET=${S3_BUCKET:-zencial-videos}
@@ -47,8 +41,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
 
   postgres:
     image: postgres:16-alpine
@@ -62,18 +54,6 @@ services:
       - postgres_dev_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-zencial}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redis_dev_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -116,5 +96,4 @@ services:
 
 volumes:
   postgres_dev_data:
-  redis_dev_data:
   minio_dev_data:
