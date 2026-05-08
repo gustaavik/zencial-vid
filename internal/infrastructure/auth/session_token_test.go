@@ -13,7 +13,7 @@ func TestSessionTokenService_GenerateProducesUniqueTokens(t *testing.T) {
 	svc := NewSessionTokenService()
 
 	seen := make(map[string]struct{})
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		token, hash, err := svc.Generate()
 		require.NoError(t, err)
 		assert.NotEmpty(t, token)
