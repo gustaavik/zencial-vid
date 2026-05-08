@@ -56,25 +56,28 @@ func TestSession_IsExpiredAndIsActive(t *testing.T) {
 func TestSession_SlideClampsToAbsoluteExpiry(t *testing.T) {
 	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	s := NewSession(uuid.New(), "h", "", "", "", now, time.Hour, 4*time.Hour)
+	absoluteAt := s.AbsoluteExpiresAt
+	slideAt := now.Add(3*time.Hour + 10*time.Minute)
 
-	// At t+3h, idle slide normally extends to t+4h, but absolute is t+4h so they
-	// should be equal. Slide one minute later so idle would push past absolute.
-	slid := s.Slide(now.Add(3*time.Hour+10*time.Minute), time.Hour)
-	assert.Equal(t, s.AbsoluteExpiresAt, slid.IdleExpiresAt,
+	// Sliding past the absolute deadline must clamp idle to absolute, not push
+	// it past. Slide mutates in place and returns the same pointer.
+	slid := s.Slide(slideAt, time.Hour)
+	assert.Same(t, s, slid, "Slide should return the same pointer (in-place)")
+	assert.Equal(t, absoluteAt, slid.IdleExpiresAt,
 		"idle expiry must clamp to absolute")
-	// Original is unchanged (immutability).
-	assert.Equal(t, now.Add(time.Hour), s.IdleExpiresAt)
+	assert.Equal(t, slideAt, s.LastActivityAt)
 }
 
-func TestSession_RevokeReturnsCopy(t *testing.T) {
+func TestSession_RevokeMarksSession(t *testing.T) {
 	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	s := NewSession(uuid.New(), "h", "", "", "", now, time.Hour, 24*time.Hour)
 
 	r := s.Revoke(now)
 
-	assert.Nil(t, s.RevokedAt, "original must be unchanged")
-	assert.NotNil(t, r.RevokedAt)
-	assert.Equal(t, now, *r.RevokedAt)
+	assert.Same(t, s, r, "Revoke should return the same pointer (in-place)")
+	assert.NotNil(t, s.RevokedAt)
+	assert.Equal(t, now, *s.RevokedAt)
+	assert.True(t, s.IsRevoked())
 }
 
 func TestSession_ExpiresAtPicksEarlier(t *testing.T) {
