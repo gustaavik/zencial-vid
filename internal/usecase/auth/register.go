@@ -8,7 +8,6 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/domain/event"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
-	"github.com/zenfulcode/zencial/internal/infrastructure/auth"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
@@ -17,16 +16,19 @@ type RegisterInput struct {
 	Email    string
 	Password string
 	Name     string
+	Session  SessionContext
 }
 
 // RegisterOutput holds the result of a successful registration.
 type RegisterOutput struct {
 	User      *entity.User
-	TokenPair *auth.TokenPair
+	Session   *entity.Session
+	Token     string
+	ExpiresAt time.Time
 }
 
-// Register creates a new user account.
-func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterOutput, *apperror.AppError) {
+// Register creates a new user account and a first session.
+func (s *Service) Register(ctx context.Context, input *RegisterInput) (*RegisterOutput, *apperror.AppError) {
 	email, err := valueobject.NewEmail(input.Email)
 	if err != nil {
 		return nil, apperror.BadRequest(apperror.CodeValidationFailed, "invalid email address", err)
@@ -55,28 +57,32 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (*RegisterO
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to create user", err)
 	}
 
-	tokenPair, err := s.tokenService.GenerateTokenPair(user.ID, user.Role)
-	if err != nil {
-		s.log.Error("generating tokens", "error", err)
-		return nil, apperror.Internal(apperror.CodeInternalError, "failed to generate tokens", err)
-	}
-
-	if err := s.sessionStore.StoreRefreshToken(ctx, tokenPair.RefreshToken, user.ID); err != nil {
-		s.log.Error("storing refresh token", "error", err)
-		return nil, apperror.Internal(apperror.CodeInternalError, "failed to store session", err)
+	session, token, appErr := s.createSession(ctx, user.ID, input.Session)
+	if appErr != nil {
+		return nil, appErr
 	}
 
 	if err := s.dispatcher.Dispatch(event.UserRegistered{
 		UserID:    user.ID,
 		Email:     user.Email.String(),
 		ActorID:   &user.ID, // self-registration
-		Timestamp: time.Now().UTC(),
+		Timestamp: session.CreatedAt,
 	}); err != nil {
 		s.log.Error("dispatching user registered event", "error", err)
 	}
 
+	if err := s.dispatcher.Dispatch(event.UserLoggedIn{
+		UserID:    user.ID,
+		SessionID: session.ID,
+		Timestamp: session.CreatedAt,
+	}); err != nil {
+		s.log.Error("dispatching user logged in event", "error", err)
+	}
+
 	return &RegisterOutput{
 		User:      user,
-		TokenPair: tokenPair,
+		Session:   session,
+		Token:     token,
+		ExpiresAt: session.ExpiresAt(),
 	}, nil
 }

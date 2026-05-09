@@ -3,7 +3,6 @@ package mapper
 import (
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
-	authpkg "github.com/zenfulcode/zencial/internal/infrastructure/auth"
 )
 
 // UserToResponse maps a User entity to a UserResponse DTO.
@@ -32,25 +31,6 @@ func ProfileToResponse(profile *entity.UserProfile) dto.ProfileResponse {
 		resp.DateOfBirth = &dob
 	}
 	return resp
-}
-
-// AuthToResponse maps user and token pair to an AuthResponse DTO.
-func AuthToResponse(user *entity.User, tokenPair *authpkg.TokenPair) dto.AuthResponse {
-	return dto.AuthResponse{
-		User:         UserToResponse(user),
-		AccessToken:  tokenPair.AccessToken,
-		RefreshToken: tokenPair.RefreshToken,
-		ExpiresAt:    tokenPair.ExpiresAt.Format("2006-01-02T15:04:05Z"),
-	}
-}
-
-// TokenPairToResponse maps a token pair to a TokenResponse DTO.
-func TokenPairToResponse(tokenPair *authpkg.TokenPair) dto.TokenResponse {
-	return dto.TokenResponse{
-		AccessToken:  tokenPair.AccessToken,
-		RefreshToken: tokenPair.RefreshToken,
-		ExpiresAt:    tokenPair.ExpiresAt.Format("2006-01-02T15:04:05Z"),
-	}
 }
 
 // UsersToResponse maps a slice of User entities to UserResponse DTOs.

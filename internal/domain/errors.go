@@ -42,10 +42,11 @@ var (
 
 // Auth errors.
 var (
-	ErrInvalidToken         = errors.New("invalid token")
-	ErrTokenExpired         = errors.New("token expired")
-	ErrRefreshTokenNotFound = errors.New("refresh token not found")
-	ErrRefreshTokenExpired  = errors.New("refresh token expired")
+	ErrInvalidToken    = errors.New("invalid token")
+	ErrTokenExpired    = errors.New("token expired")
+	ErrSessionNotFound = errors.New("session not found")
+	ErrSessionRevoked  = errors.New("session revoked")
+	ErrSessionExpired  = errors.New("session expired")
 )
 
 // Watchlist errors.

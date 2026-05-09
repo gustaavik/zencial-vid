@@ -4,50 +4,60 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zenfulcode/zencial/internal/domain/event"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
 func TestService_Logout(t *testing.T) {
 	ctx := context.Background()
+	userID := uuid.New()
+	sessionID := uuid.New()
 
 	t.Run("success", func(t *testing.T) {
-		var deletedToken string
+		var revoked uuid.UUID
+		var revokedAt time.Time
+		dispatcher := &mockDispatcher{}
 		svc := newTestService(
-			nil, nil, nil,
-			&mockSessionStore{
-				deleteRefreshTokenFn: func(_ context.Context, token string) error {
-					deletedToken = token
+			nil,
+			&mockSessionRepo{
+				revokeFn: func(_ context.Context, id uuid.UUID, t time.Time) error {
+					revoked = id
+					revokedAt = t
 					return nil
 				},
 			},
-			nil,
+			nil, nil, dispatcher,
 		)
 
-		appErr := svc.Logout(ctx, LogoutInput{
-			RefreshToken: "my-refresh-token",
-		})
+		appErr := svc.Logout(ctx, LogoutInput{UserID: userID, SessionID: sessionID})
 
 		require.Nil(t, appErr)
-		assert.Equal(t, "my-refresh-token", deletedToken)
+		assert.Equal(t, sessionID, revoked)
+		assert.Equal(t, fixedNow, revokedAt)
+		require.Len(t, dispatcher.dispatched, 1)
+		evt, ok := dispatcher.dispatched[0].(event.UserLoggedOut)
+		require.True(t, ok)
+		assert.Equal(t, sessionID, evt.SessionID)
+		assert.Equal(t, userID, evt.UserID)
 	})
 
-	t.Run("session store error returns internal error", func(t *testing.T) {
+	t.Run("session repo error returns internal error", func(t *testing.T) {
 		svc := newTestService(
-			nil, nil, nil,
-			&mockSessionStore{
-				deleteRefreshTokenFn: func(_ context.Context, _ string) error {
-					return fmt.Errorf("redis connection failed")
+			nil,
+			&mockSessionRepo{
+				revokeFn: func(_ context.Context, _ uuid.UUID, _ time.Time) error {
+					return fmt.Errorf("db error")
 				},
 			},
-			nil,
+			nil, nil, nil,
 		)
 
-		appErr := svc.Logout(ctx, LogoutInput{
-			RefreshToken: "my-refresh-token",
-		})
+		appErr := svc.Logout(ctx, LogoutInput{UserID: userID, SessionID: sessionID})
 
 		require.NotNil(t, appErr)
 		assert.Equal(t, apperror.CodeInternalError, appErr.Code)

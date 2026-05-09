@@ -3,12 +3,14 @@ package apperror
 // Error code constants used across the application.
 const (
 	// Auth
-	CodeInvalidCredentials  = "INVALID_CREDENTIALS"
-	CodeInvalidToken        = "INVALID_TOKEN"
-	CodeTokenExpired        = "TOKEN_EXPIRED"
-	CodeUnauthorized        = "UNAUTHORIZED"
-	CodeForbidden           = "FORBIDDEN"
-	CodeRefreshTokenInvalid = "REFRESH_TOKEN_INVALID"
+	CodeInvalidCredentials = "INVALID_CREDENTIALS"
+	CodeInvalidToken       = "INVALID_TOKEN"
+	CodeTokenExpired       = "TOKEN_EXPIRED"
+	CodeUnauthorized       = "UNAUTHORIZED"
+	CodeForbidden          = "FORBIDDEN"
+	CodeSessionNotFound    = "SESSION_NOT_FOUND"
+	CodeSessionRevoked     = "SESSION_REVOKED"
+	CodeSessionExpired     = "SESSION_EXPIRED"
 
 	// User
 	CodeUserNotFound       = "USER_NOT_FOUND"
