@@ -24,35 +24,48 @@ func TestService_Login(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		user := newActiveUser()
 		dispatcher := &mockDispatcher{}
+		sessionRepo := &mockSessionRepo{}
 		svc := newTestService(
 			&mockUserRepo{
 				getByEmailFn: func(_ context.Context, _ valueobject.Email) (*entity.User, error) {
 					return user, nil
 				},
 			},
-			nil, nil, nil, dispatcher,
+			sessionRepo, nil, nil, dispatcher,
 		)
 
-		output, appErr := svc.Login(ctx, LoginInput{
+		output, appErr := svc.Login(ctx, &LoginInput{
 			Email:    "user@example.com",
 			Password: "password123",
+			Session: SessionContext{
+				DeviceName: "MacBook",
+				UserAgent:  "Mozilla/5.0",
+				IPAddress:  "10.0.0.1",
+			},
 		})
 
 		require.Nil(t, appErr)
 		require.NotNil(t, output)
 		assert.Equal(t, user.ID, output.User.ID)
-		require.NotNil(t, output.TokenPair)
+		require.NotNil(t, output.Session)
+		assert.NotEmpty(t, output.Token)
+		require.Len(t, sessionRepo.created, 1)
+		created := sessionRepo.created[0]
+		assert.Equal(t, "MacBook", created.DeviceName)
+		assert.Equal(t, "Mozilla/5.0", created.UserAgent)
+		assert.Equal(t, "10.0.0.1", created.IPAddress)
+		assert.Equal(t, fixedNow, created.CreatedAt)
 
-		// Verify login event dispatched
 		require.Len(t, dispatcher.dispatched, 1)
-		_, ok := dispatcher.dispatched[0].(event.UserLoggedIn)
-		assert.True(t, ok)
+		evt, ok := dispatcher.dispatched[0].(event.UserLoggedIn)
+		require.True(t, ok)
+		assert.Equal(t, output.Session.ID, evt.SessionID)
 	})
 
 	t.Run("invalid email format returns bad request", func(t *testing.T) {
 		svc := newTestService(nil, nil, nil, nil, nil)
 
-		output, appErr := svc.Login(ctx, LoginInput{
+		output, appErr := svc.Login(ctx, &LoginInput{
 			Email:    "invalid",
 			Password: "password",
 		})
@@ -66,13 +79,13 @@ func TestService_Login(t *testing.T) {
 		svc := newTestService(
 			&mockUserRepo{
 				getByEmailFn: func(_ context.Context, _ valueobject.Email) (*entity.User, error) {
-					return nil, nil // Not found
+					return nil, nil
 				},
 			},
 			nil, nil, nil, nil,
 		)
 
-		output, appErr := svc.Login(ctx, LoginInput{
+		output, appErr := svc.Login(ctx, &LoginInput{
 			Email:    "unknown@example.com",
 			Password: "password",
 		})
@@ -94,7 +107,7 @@ func TestService_Login(t *testing.T) {
 			nil, nil, nil, nil,
 		)
 
-		output, appErr := svc.Login(ctx, LoginInput{
+		output, appErr := svc.Login(ctx, &LoginInput{
 			Email:    "user@example.com",
 			Password: "password",
 		})
@@ -116,7 +129,7 @@ func TestService_Login(t *testing.T) {
 			nil, nil, nil, nil,
 		)
 
-		output, appErr := svc.Login(ctx, LoginInput{
+		output, appErr := svc.Login(ctx, &LoginInput{
 			Email:    "user@example.com",
 			Password: "password",
 		})
@@ -134,16 +147,16 @@ func TestService_Login(t *testing.T) {
 					return user, nil
 				},
 			},
-			nil,
+			nil, nil,
 			&mockHasher{
 				compareFn: func(_, _ string) error {
 					return fmt.Errorf("password mismatch")
 				},
 			},
-			nil, nil,
+			nil,
 		)
 
-		output, appErr := svc.Login(ctx, LoginInput{
+		output, appErr := svc.Login(ctx, &LoginInput{
 			Email:    "user@example.com",
 			Password: "wrong-password",
 		})
@@ -163,7 +176,7 @@ func TestService_Login(t *testing.T) {
 			nil, nil, nil, nil,
 		)
 
-		output, appErr := svc.Login(ctx, LoginInput{
+		output, appErr := svc.Login(ctx, &LoginInput{
 			Email:    "user@example.com",
 			Password: "password",
 		})
