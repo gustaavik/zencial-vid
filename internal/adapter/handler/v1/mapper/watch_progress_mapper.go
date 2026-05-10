@@ -6,7 +6,6 @@ import (
 
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
-	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 )
 
 const timeFormat = "2006-01-02T15:04:05Z"
@@ -35,12 +34,12 @@ func WatchProgressToResponse(progress *entity.WatchProgress, durationSeconds int
 
 // ContinueWatchingItemsToResponse maps a slice of VideoWithProgress entities
 // to the "continue watching" feed DTO.
-func ContinueWatchingItemsToResponse(ctx context.Context, items []entity.VideoWithProgress, store storage.StorageService) []dto.ContinueWatchingItem {
+func ContinueWatchingItemsToResponse(ctx context.Context, items []entity.VideoWithProgress, urls ThumbnailURLBuilder) []dto.ContinueWatchingItem {
 	result := make([]dto.ContinueWatchingItem, len(items))
 	for i := range items {
 		duration := items[i].Video.Duration.Seconds
 		result[i] = dto.ContinueWatchingItem{
-			Video:           VideoToResponse(ctx, &items[i].Video, store),
+			Video:           VideoToResponse(ctx, &items[i].Video, urls),
 			PositionSeconds: items[i].Progress.PositionSeconds,
 			DurationSeconds: duration,
 			PercentWatched:  percentWatched(items[i].Progress.PositionSeconds, duration),

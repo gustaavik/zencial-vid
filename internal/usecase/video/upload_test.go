@@ -19,16 +19,13 @@ import (
 func TestService_InitiateUpload(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("returns presigned URL with content-typed extension", func(t *testing.T) {
-		store := &stubStorage{
-			presignPutFn: func(_ context.Context, key, ct string, _ time.Duration) (string, error) {
-				assert.Equal(t, "video/mp4", ct)
-				assert.True(t, strings.HasSuffix(key, ".mp4"), "key should end with .mp4: %s", key)
-				assert.True(t, strings.HasPrefix(key, "videos/"), "key should start with videos/: %s", key)
-				return "https://s3.example/" + key + "?sig=stub", nil
-			},
-		}
-		svc := newTestServiceWithStorage(nil, nil, store)
+	newSvcWithCDN := func(cdn *mockCDNClient) *Service {
+		return newTestServiceWithStorage(nil, nil, &stubStorage{}, WithCDN(cdn, "https://cdn.test"))
+	}
+
+	t.Run("returns CDN-signed URL with content-typed extension", func(t *testing.T) {
+		cdn := &mockCDNClient{}
+		svc := newSvcWithCDN(cdn)
 
 		out, appErr := svc.InitiateUpload(ctx, &InitiateUploadInput{
 			FileName:    "my-clip.mp4",
@@ -37,19 +34,26 @@ func TestService_InitiateUpload(t *testing.T) {
 
 		require.Nil(t, appErr)
 		require.NotNil(t, out)
-		assert.Equal(t, store.presignPutCalls[0].Key, out.ObjectKey)
-		assert.Equal(t, "https://s3.example/"+out.ObjectKey+"?sig=stub", out.UploadURL)
+		require.Len(t, cdn.signVideoCalls, 1, "CDN should be asked to sign one upload URL")
+
+		call := cdn.signVideoCalls[0]
+		assert.Equal(t, "original.mp4", call.filename)
+		assert.Equal(t, PresignedUploadExpiry, call.expiry)
+
+		assert.True(t, strings.HasPrefix(out.ObjectKey, "videos/"+call.videoID+"/"), "key %s", out.ObjectKey)
+		assert.True(t, strings.HasSuffix(out.ObjectKey, "/original.mp4"), "key %s", out.ObjectKey)
+		assert.Contains(t, out.UploadURL, "cdn.test", "upload URL must point at the CDN, not S3")
+		assert.NotContains(t, out.UploadURL, "s3", "upload URL must not expose an S3 host")
 		assert.WithinDuration(t, time.Now().UTC().Add(PresignedUploadExpiry), out.ExpiresAt, time.Minute)
 
-		// Object key encodes a parseable video UUID.
 		id, err := videoIDFromObjectKey(out.ObjectKey)
 		require.NoError(t, err)
 		assert.NotEqual(t, uuid.Nil, id)
 	})
 
 	t.Run("falls back to filename extension when content type unknown", func(t *testing.T) {
-		store := &stubStorage{}
-		svc := newTestServiceWithStorage(nil, nil, store)
+		cdn := &mockCDNClient{}
+		svc := newSvcWithCDN(cdn)
 
 		out, appErr := svc.InitiateUpload(ctx, &InitiateUploadInput{
 			FileName:    "raw.mkv",
@@ -58,11 +62,13 @@ func TestService_InitiateUpload(t *testing.T) {
 
 		require.Nil(t, appErr)
 		assert.True(t, strings.HasSuffix(out.ObjectKey, ".mkv"), "key %s", out.ObjectKey)
+		require.Len(t, cdn.signVideoCalls, 1)
+		assert.Equal(t, "original.mkv", cdn.signVideoCalls[0].filename)
 	})
 
 	t.Run("defaults to .mp4 when neither content type nor filename give an extension", func(t *testing.T) {
-		store := &stubStorage{}
-		svc := newTestServiceWithStorage(nil, nil, store)
+		cdn := &mockCDNClient{}
+		svc := newSvcWithCDN(cdn)
 
 		out, appErr := svc.InitiateUpload(ctx, &InitiateUploadInput{
 			FileName:    "no-extension",
@@ -73,13 +79,20 @@ func TestService_InitiateUpload(t *testing.T) {
 		assert.True(t, strings.HasSuffix(out.ObjectKey, ".mp4"), "key %s", out.ObjectKey)
 	})
 
-	t.Run("storage error returns Internal apperror", func(t *testing.T) {
-		store := &stubStorage{
-			presignPutFn: func(context.Context, string, string, time.Duration) (string, error) {
-				return "", errors.New("network down")
-			},
-		}
-		svc := newTestServiceWithStorage(nil, nil, store)
+	t.Run("CDN signing error returns Internal apperror", func(t *testing.T) {
+		cdn := &mockCDNClient{signedVideoErr: errors.New("network down")}
+		svc := newSvcWithCDN(cdn)
+
+		out, appErr := svc.InitiateUpload(ctx, &InitiateUploadInput{FileName: "x.mp4", ContentType: "video/mp4"})
+
+		assert.Nil(t, out)
+		require.NotNil(t, appErr)
+		assert.Equal(t, apperror.CodeInternalError, appErr.Code)
+	})
+
+	t.Run("missing CDN client returns Internal apperror", func(t *testing.T) {
+		// Service constructed without WithCDN — the new contract requires CDN.
+		svc := newTestServiceWithStorage(nil, nil, &stubStorage{})
 
 		out, appErr := svc.InitiateUpload(ctx, &InitiateUploadInput{FileName: "x.mp4", ContentType: "video/mp4"})
 

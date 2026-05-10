@@ -2,16 +2,21 @@ package mapper
 
 import (
 	"context"
-	"log/slog"
 
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
-	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	videouc "github.com/zenfulcode/zencial/internal/usecase/video"
 )
 
+// ThumbnailURLBuilder produces the public CDN URL for a video thumbnail.
+// Defined here, in the mapper package, to keep the mapper free of
+// infrastructure imports — *cdn.Client satisfies it implicitly.
+type ThumbnailURLBuilder interface {
+	ThumbnailURL(videoID string) string
+}
+
 // VideoToResponse maps a Video entity to a VideoResponse DTO.
-func VideoToResponse(ctx context.Context, video *entity.Video, store storage.StorageService) dto.VideoResponse {
+func VideoToResponse(_ context.Context, video *entity.Video, urls ThumbnailURLBuilder) dto.VideoResponse {
 	genreIDs := make([]string, len(video.GenreIDs))
 	for i, gid := range video.GenreIDs {
 		genreIDs[i] = gid.String()
@@ -33,20 +38,15 @@ func VideoToResponse(ctx context.Context, video *entity.Video, store storage.Sto
 		CreatedAt:        video.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		UpdatedAt:        video.UpdatedAt.Format("2006-01-02T15:04:05Z"),
 	}
-	if video.ThumbnailKey != "" && store != nil {
-		url, err := store.PresignedGetURL(ctx, video.ThumbnailKey, storage.DefaultThumbnailURLExpiry)
-		if err != nil {
-			slog.Error("generating thumbnail presigned URL", "key", video.ThumbnailKey, "error", err)
-		} else {
-			resp.ThumbnailURL = url
-		}
+	if video.ThumbnailKey != "" && urls != nil {
+		resp.ThumbnailURL = urls.ThumbnailURL(video.ID.String())
 	}
 	return resp
 }
 
 // VideoToResponseWithAccess maps a Video entity to a VideoResponse DTO with access info.
-func VideoToResponseWithAccess(ctx context.Context, video *entity.Video, store storage.StorageService, userPlanLevel *int) dto.VideoResponse {
-	resp := VideoToResponse(ctx, video, store)
+func VideoToResponseWithAccess(ctx context.Context, video *entity.Video, urls ThumbnailURLBuilder, userPlanLevel *int) dto.VideoResponse {
+	resp := VideoToResponse(ctx, video, urls)
 	var accessible bool
 	switch {
 	case !video.RequiresSubscription():
@@ -61,19 +61,19 @@ func VideoToResponseWithAccess(ctx context.Context, video *entity.Video, store s
 }
 
 // VideosToResponse maps a slice of Video entities to VideoResponse DTOs.
-func VideosToResponse(ctx context.Context, videos []entity.Video, store storage.StorageService) []dto.VideoResponse {
+func VideosToResponse(ctx context.Context, videos []entity.Video, urls ThumbnailURLBuilder) []dto.VideoResponse {
 	result := make([]dto.VideoResponse, len(videos))
 	for i := range videos {
-		result[i] = VideoToResponse(ctx, &videos[i], store)
+		result[i] = VideoToResponse(ctx, &videos[i], urls)
 	}
 	return result
 }
 
 // VideosToResponseWithAccess maps a slice of Video entities to VideoResponse DTOs with access info.
-func VideosToResponseWithAccess(ctx context.Context, videos []entity.Video, store storage.StorageService, userPlanLevel *int) []dto.VideoResponse {
+func VideosToResponseWithAccess(ctx context.Context, videos []entity.Video, urls ThumbnailURLBuilder, userPlanLevel *int) []dto.VideoResponse {
 	result := make([]dto.VideoResponse, len(videos))
 	for i := range videos {
-		result[i] = VideoToResponseWithAccess(ctx, &videos[i], store, userPlanLevel)
+		result[i] = VideoToResponseWithAccess(ctx, &videos[i], urls, userPlanLevel)
 	}
 	return result
 }

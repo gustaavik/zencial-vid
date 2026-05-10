@@ -223,6 +223,27 @@ type mockCDNClient struct {
 	calls       []string
 	triggerErr  error
 	triggeredCh chan string
+
+	// Upload-related fields, populated when the corresponding method is called.
+	signedVideoURL           string
+	signedVideoErr           error
+	signVideoCalls           []signVideoCall
+	uploadedThumbnails       []uploadedThumbnail
+	uploadThumbnailErr       error
+	uploadThumbnailObjectKey string
+}
+
+type signVideoCall struct {
+	videoID  string
+	filename string
+	expiry   time.Duration
+}
+
+type uploadedThumbnail struct {
+	videoID     string
+	ext         string
+	contentType string
+	body        []byte
 }
 
 func (m *mockCDNClient) TriggerTranscode(videoID string) error {
@@ -231,6 +252,39 @@ func (m *mockCDNClient) TriggerTranscode(videoID string) error {
 		m.triggeredCh <- videoID
 	}
 	return m.triggerErr
+}
+
+func (m *mockCDNClient) SignVideoUploadURL(videoID, filename string, expiry time.Duration) (string, time.Time, error) {
+	m.signVideoCalls = append(m.signVideoCalls, signVideoCall{videoID: videoID, filename: filename, expiry: expiry})
+	if m.signedVideoErr != nil {
+		return "", time.Time{}, m.signedVideoErr
+	}
+	url := m.signedVideoURL
+	if url == "" {
+		url = "https://cdn.test/api/v1/uploads/videos/" + videoID + "/" + filename + "?op=video-upload&exp=0&keyId=v1&sig=fake"
+	}
+	return url, time.Now().Add(expiry), nil
+}
+
+func (m *mockCDNClient) UploadThumbnail(_ context.Context, videoID, ext, contentType string, body io.Reader) (string, error) {
+	buf, _ := io.ReadAll(body)
+	m.uploadedThumbnails = append(m.uploadedThumbnails, uploadedThumbnail{
+		videoID:     videoID,
+		ext:         ext,
+		contentType: contentType,
+		body:        buf,
+	})
+	if m.uploadThumbnailErr != nil {
+		return "", m.uploadThumbnailErr
+	}
+	if m.uploadThumbnailObjectKey != "" {
+		return m.uploadThumbnailObjectKey, nil
+	}
+	return "videos/" + videoID + "/thumbnail" + ext, nil
+}
+
+func (m *mockCDNClient) ThumbnailURL(videoID string) string {
+	return "https://cdn.test/api/v1/thumbnails/" + videoID
 }
 
 // --- Test Helpers ---

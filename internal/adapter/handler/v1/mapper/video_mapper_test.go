@@ -86,6 +86,36 @@ func TestVideoToResponseWithAccess(t *testing.T) {
 	}
 }
 
+// stubURLs implements ThumbnailURLBuilder for tests.
+type stubURLs struct{ base string }
+
+func (s stubURLs) ThumbnailURL(videoID string) string {
+	return s.base + "/api/v1/thumbnails/" + videoID
+}
+
+func TestVideoToResponse_EmitsCDNThumbnailURL(t *testing.T) {
+	ctx := context.Background()
+	v := newPublishedVideo(t, nil)
+	v.ThumbnailKey = "videos/" + v.ID.String() + "/thumbnail.jpg"
+
+	resp := VideoToResponse(ctx, v, stubURLs{base: "https://cdn.example"})
+
+	want := "https://cdn.example/api/v1/thumbnails/" + v.ID.String()
+	assert.Equal(t, want, resp.ThumbnailURL)
+	assert.NotContains(t, resp.ThumbnailURL, "s3", "frontend must never see an S3 host")
+	assert.NotContains(t, resp.ThumbnailURL, "minio", "frontend must never see a MinIO host")
+}
+
+func TestVideoToResponse_NoThumbnailKey_LeavesURLEmpty(t *testing.T) {
+	ctx := context.Background()
+	v := newPublishedVideo(t, nil)
+	v.ThumbnailKey = ""
+
+	resp := VideoToResponse(ctx, v, stubURLs{base: "https://cdn.example"})
+
+	assert.Empty(t, resp.ThumbnailURL)
+}
+
 func TestVideosToResponseWithAccess_AppliesPlanLevelToEachItem(t *testing.T) {
 	ctx := context.Background()
 

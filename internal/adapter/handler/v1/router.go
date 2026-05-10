@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/mapper"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
@@ -35,6 +36,7 @@ type Deps struct {
 	Session              *sessionuc.Service
 	Authenticator        *middleware.SessionAuthenticator
 	Storage              storage.StorageService
+	CDNURLs              mapper.ThumbnailURLBuilder
 	InternalSharedSecret string
 	Log                  *slog.Logger
 }
@@ -44,12 +46,12 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 	authHandler := NewAuthHandler(deps.Auth)
 	genreHandler := NewGenreHandler(deps.Genre)
 	userHandler := NewUserHandler(deps.User)
-	videoHandler := NewVideoHandler(deps.Video, deps.Subscription, deps.Storage)
+	videoHandler := NewVideoHandler(deps.Video, deps.Subscription, deps.Storage, deps.CDNURLs)
 	planHandler := NewPlanHandler(deps.Plan)
 	subscriptionHandler := NewSubscriptionHandler(deps.Subscription)
 	billingHandler := NewBillingHandler(deps.Billing)
-	watchlistHandler := NewWatchlistHandler(deps.Watchlist, deps.Storage)
-	watchProgressHandler := NewWatchProgressHandler(deps.WatchProgress, deps.Storage)
+	watchlistHandler := NewWatchlistHandler(deps.Watchlist, deps.CDNURLs)
+	watchProgressHandler := NewWatchProgressHandler(deps.WatchProgress, deps.CDNURLs)
 	transcodeCallbackHandler := NewTranscodeCallbackHandler(deps.Video)
 	auditLogHandler := NewAuditLogHandler(deps.Audit)
 	sessionHandler := NewSessionHandler(deps.Session)

@@ -25,15 +25,17 @@ type VideoHandler struct {
 	videoService *videouc.Service
 	subService   *subscriptionuc.Service
 	storage      storage.StorageService
+	cdnURLs      mapper.ThumbnailURLBuilder
 	validator    *validator.Validator
 }
 
 // NewVideoHandler creates a new VideoHandler.
-func NewVideoHandler(videoService *videouc.Service, subService *subscriptionuc.Service, storageSvc storage.StorageService) *VideoHandler {
+func NewVideoHandler(videoService *videouc.Service, subService *subscriptionuc.Service, storageSvc storage.StorageService, cdnURLs mapper.ThumbnailURLBuilder) *VideoHandler {
 	return &VideoHandler{
 		videoService: videoService,
 		subService:   subService,
 		storage:      storageSvc,
+		cdnURLs:      cdnURLs,
 		validator:    validator.New(),
 	}
 }
@@ -157,7 +159,7 @@ func (h *VideoHandler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusCreated, mapper.VideoToResponse(r.Context(), video, h.storage))
+	httputil.Success(w, http.StatusCreated, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
 }
 
 // GetByID godoc
@@ -185,7 +187,7 @@ func (h *VideoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	planLevel := h.resolveUserPlanLevel(r.Context())
-	httputil.Success(w, http.StatusOK, mapper.VideoToResponseWithAccess(r.Context(), video, h.storage, planLevel))
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponseWithAccess(r.Context(), video, h.cdnURLs, planLevel))
 }
 
 // ListPublished godoc
@@ -215,7 +217,7 @@ func (h *VideoHandler) ListPublished(w http.ResponseWriter, r *http.Request) {
 	}
 
 	planLevel := h.resolveUserPlanLevel(r.Context())
-	httputil.SuccessWithMeta(w, mapper.VideosToResponseWithAccess(r.Context(), videos, h.storage, planLevel), &httputil.Meta{
+	httputil.SuccessWithMeta(w, mapper.VideosToResponseWithAccess(r.Context(), videos, h.cdnURLs, planLevel), &httputil.Meta{
 		Page:       fs.Pagination.Page,
 		PerPage:    fs.Pagination.PerPage,
 		Total:      total,
@@ -252,7 +254,7 @@ func (h *VideoHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.SuccessWithMeta(w, mapper.VideosToResponse(r.Context(), videos, h.storage), &httputil.Meta{
+	httputil.SuccessWithMeta(w, mapper.VideosToResponse(r.Context(), videos, h.cdnURLs), &httputil.Meta{
 		Page:       fs.Pagination.Page,
 		PerPage:    fs.Pagination.PerPage,
 		Total:      total,
@@ -325,7 +327,7 @@ func (h *VideoHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.storage))
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
 }
 
 // Publish godoc
@@ -356,7 +358,7 @@ func (h *VideoHandler) Publish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.storage))
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
 }
 
 // Unarchive godoc
@@ -387,7 +389,7 @@ func (h *VideoHandler) Unarchive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.storage))
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
 }
 
 // Delete godoc
@@ -651,5 +653,5 @@ func (h *VideoHandler) UploadThumbnail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.storage))
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
 }

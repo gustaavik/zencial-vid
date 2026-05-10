@@ -7,7 +7,6 @@ import (
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/mapper"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
-	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 	"github.com/zenfulcode/zencial/internal/pkg/httputil"
 	"github.com/zenfulcode/zencial/internal/pkg/pagination"
@@ -19,15 +18,15 @@ import (
 // for the authenticated user.
 type WatchProgressHandler struct {
 	service   *watchprogressuc.Service
-	storage   storage.StorageService
+	cdnURLs   mapper.ThumbnailURLBuilder
 	validator *validator.Validator
 }
 
 // NewWatchProgressHandler creates a new WatchProgressHandler.
-func NewWatchProgressHandler(service *watchprogressuc.Service, storageSvc storage.StorageService) *WatchProgressHandler {
+func NewWatchProgressHandler(service *watchprogressuc.Service, cdnURLs mapper.ThumbnailURLBuilder) *WatchProgressHandler {
 	return &WatchProgressHandler{
 		service:   service,
-		storage:   storageSvc,
+		cdnURLs:   cdnURLs,
 		validator: validator.New(),
 	}
 }
@@ -63,7 +62,7 @@ func (h *WatchProgressHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.SuccessWithMeta(w,
-		mapper.ContinueWatchingItemsToResponse(r.Context(), items, h.storage),
+		mapper.ContinueWatchingItemsToResponse(r.Context(), items, h.cdnURLs),
 		pagination.NewMeta(page.Page, page.PerPage, total),
 	)
 }
@@ -102,7 +101,7 @@ func (h *WatchProgressHandler) ListByUser(w http.ResponseWriter, r *http.Request
 	}
 
 	httputil.SuccessWithMeta(w,
-		mapper.ContinueWatchingItemsToResponse(r.Context(), items, h.storage),
+		mapper.ContinueWatchingItemsToResponse(r.Context(), items, h.cdnURLs),
 		pagination.NewMeta(page.Page, page.PerPage, total),
 	)
 }

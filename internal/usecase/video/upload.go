@@ -30,9 +30,14 @@ type InitiateUploadOutput struct {
 	ExpiresAt time.Time
 }
 
-// InitiateUpload generates a presigned PUT URL the client uses to upload the binary
-// directly to object storage, bypassing this API for the bulk transfer.
+// InitiateUpload mints a short-lived signed PUT URL on the CDN that the
+// browser uploads to directly. The CDN streams the body to S3 — this API
+// process never sees the bytes — but the frontend never sees an S3 host.
 func (s *Service) InitiateUpload(ctx context.Context, input *InitiateUploadInput) (*InitiateUploadOutput, *apperror.AppError) {
+	if s.cdn == nil {
+		return nil, apperror.Internal(apperror.CodeInternalError, "CDN not configured", nil)
+	}
+
 	contentType := input.ContentType
 	if contentType == "" {
 		contentType = "video/mp4"
@@ -46,18 +51,19 @@ func (s *Service) InitiateUpload(ctx context.Context, input *InitiateUploadInput
 	if ext == "" {
 		ext = ".mp4"
 	}
-	objectKey := fmt.Sprintf("videos/%s/original%s", videoID.String(), ext)
+	filename := "original" + ext
+	objectKey := fmt.Sprintf("videos/%s/%s", videoID.String(), filename)
 
-	url, err := s.storage.PresignedPutURL(ctx, objectKey, contentType, PresignedUploadExpiry)
+	url, expiresAt, err := s.cdn.SignVideoUploadURL(videoID.String(), filename, PresignedUploadExpiry)
 	if err != nil {
-		s.log.Error("generating presigned upload URL", "error", err)
+		s.log.Error("generating CDN upload URL", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to generate upload URL", err)
 	}
 
 	return &InitiateUploadOutput{
 		UploadURL: url,
 		ObjectKey: objectKey,
-		ExpiresAt: time.Now().UTC().Add(PresignedUploadExpiry),
+		ExpiresAt: expiresAt,
 	}, nil
 }
 
