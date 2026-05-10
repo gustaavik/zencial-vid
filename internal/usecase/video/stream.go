@@ -55,25 +55,13 @@ func (s *Service) GetStreamURL(ctx context.Context, videoID, userID uuid.UUID) (
 		}
 	}
 
-	// If CDN is configured, return HLS streaming URL.
-	if s.cdnBaseURL != "" {
-		hlsURL := fmt.Sprintf("%s/api/v1/videos/%s/master.m3u8", s.cdnBaseURL, videoID)
-		return &StreamOutput{
-			URL:       hlsURL,
-			ExpiresAt: time.Now().UTC().Add(defaultStreamURLExpiry),
-			Type:      "hls",
-		}, nil
-	}
-
-	presignedURL, err := s.storage.PresignedGetURL(ctx, video.StorageKey, defaultStreamURLExpiry)
-	if err != nil {
-		s.log.Error("generating presigned URL", "error", err)
-		return nil, apperror.Internal(apperror.CodeStorageError, "failed to generate stream URL", err)
-	}
-
+	// All playback now goes through the CDN — the frontend never sees an S3
+	// host. cdnBaseURL is required at startup so it is guaranteed non-empty
+	// here.
+	hlsURL := fmt.Sprintf("%s/api/v1/videos/%s/master.m3u8", s.cdnBaseURL, videoID)
 	return &StreamOutput{
-		URL:       presignedURL,
+		URL:       hlsURL,
 		ExpiresAt: time.Now().UTC().Add(defaultStreamURLExpiry),
-		Type:      "direct",
+		Type:      "hls",
 	}, nil
 }

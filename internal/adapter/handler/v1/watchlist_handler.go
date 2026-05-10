@@ -7,7 +7,6 @@ import (
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/mapper"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
-	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 	"github.com/zenfulcode/zencial/internal/pkg/httputil"
 	"github.com/zenfulcode/zencial/internal/pkg/pagination"
@@ -17,12 +16,12 @@ import (
 // WatchlistHandler handles watchlist HTTP requests for the authenticated user.
 type WatchlistHandler struct {
 	service *watchlistuc.Service
-	storage storage.StorageService
+	cdnURLs mapper.ThumbnailURLBuilder
 }
 
 // NewWatchlistHandler creates a new WatchlistHandler.
-func NewWatchlistHandler(service *watchlistuc.Service, storageSvc storage.StorageService) *WatchlistHandler {
-	return &WatchlistHandler{service: service, storage: storageSvc}
+func NewWatchlistHandler(service *watchlistuc.Service, cdnURLs mapper.ThumbnailURLBuilder) *WatchlistHandler {
+	return &WatchlistHandler{service: service, cdnURLs: cdnURLs}
 }
 
 // List godoc
@@ -56,7 +55,7 @@ func (h *WatchlistHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.SuccessWithMeta(w,
-		mapper.VideosToResponse(r.Context(), videos, h.storage),
+		mapper.VideosToResponse(r.Context(), videos, h.cdnURLs),
 		pagination.NewMeta(page.Page, page.PerPage, total),
 	)
 }
@@ -166,7 +165,7 @@ func (h *WatchlistHandler) ListByUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.SuccessWithMeta(w,
-		mapper.VideosToResponse(r.Context(), videos, h.storage),
+		mapper.VideosToResponse(r.Context(), videos, h.cdnURLs),
 		pagination.NewMeta(page.Page, page.PerPage, total),
 	)
 }

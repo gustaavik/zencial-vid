@@ -24,6 +24,7 @@ services:
       - S3_REGION=${S3_REGION:-eu-west-1}
       - INTERNAL_API_SHARED_SECRET=${INTERNAL_API_SHARED_SECRET:-dev-internal-secret}
       - CDN_BASE_URL=${CDN_BASE_URL:-http://localhost:9000/zencial-videos}
+      - CDN_UPLOAD_SIGNING_KEY=${CDN_UPLOAD_SIGNING_KEY:-change-me-cdn-upload-signing-key}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}

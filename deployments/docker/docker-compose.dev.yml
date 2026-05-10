@@ -29,6 +29,7 @@ services:
 
       - CDN_BASE_URL=http://localhost:8090
       - CDN_INTERNAL_URL=http://cdn:8090
+      - CDN_UPLOAD_SIGNING_KEY=${CDN_UPLOAD_SIGNING_KEY:-change-me-cdn-upload-signing-key}
 
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
@@ -77,6 +78,7 @@ services:
       - TRANSCODE_MAX_JOBS=2
       - VOD_CALLBACK_URL=http://api:6091/api/v1/internal/videos/%s/transcode-callback
       - VOD_CALLBACK_SECRET=${INTERNAL_API_SHARED_SECRET:-dev-internal-secret}
+      - CDN_UPLOAD_SIGNING_KEY=${CDN_UPLOAD_SIGNING_KEY:-change-me-cdn-upload-signing-key}
       - LOG_LEVEL=debug
       - LOG_FORMAT=text
     depends_on:

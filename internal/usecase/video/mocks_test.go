@@ -11,6 +11,7 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/domain/event"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
+	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	"github.com/zenfulcode/zencial/internal/pkg/filter"
 )
 
@@ -148,14 +149,57 @@ func (stubPlanRepo) List(context.Context, *filter.FilterSet) ([]entity.Plan, int
 func (stubPlanRepo) ListActive(context.Context) ([]entity.Plan, error)            { return nil, nil }
 func (stubPlanRepo) ExistsBySlug(context.Context, valueobject.Slug) (bool, error) { return false, nil }
 
-type stubStorage struct{}
+type stubStorage struct {
+	uploadFn        func(ctx context.Context, key string, body io.Reader, contentType string) (string, error)
+	deleteFn        func(ctx context.Context, key string) error
+	presignPutFn    func(ctx context.Context, key, contentType string, expiry time.Duration) (string, error)
+	statFn          func(ctx context.Context, key string) (*storage.ObjectInfo, error)
+	deletedKeys     []string
+	presignPutCalls []presignPutCall
+}
 
-func (stubStorage) Upload(context.Context, string, io.Reader, string) (string, error) { return "", nil }
-func (stubStorage) Delete(context.Context, string) error                              { return nil }
-func (stubStorage) Move(context.Context, string, string) error                        { return nil }
-func (stubStorage) PublicURL(string) string                                           { return "" }
-func (stubStorage) PresignedGetURL(context.Context, string, time.Duration) (string, error) {
+type presignPutCall struct {
+	Key         string
+	ContentType string
+	Expiry      time.Duration
+}
+
+func (s *stubStorage) Upload(ctx context.Context, key string, body io.Reader, contentType string) (string, error) {
+	if s.uploadFn != nil {
+		return s.uploadFn(ctx, key, body, contentType)
+	}
 	return "", nil
+}
+
+func (s *stubStorage) Delete(ctx context.Context, key string) error {
+	s.deletedKeys = append(s.deletedKeys, key)
+	if s.deleteFn != nil {
+		return s.deleteFn(ctx, key)
+	}
+	return nil
+}
+
+func (s *stubStorage) Move(context.Context, string, string) error { return nil }
+
+func (s *stubStorage) PublicURL(string) string { return "" }
+
+func (s *stubStorage) PresignedGetURL(context.Context, string, time.Duration) (string, error) {
+	return "", nil
+}
+
+func (s *stubStorage) PresignedPutURL(ctx context.Context, key, contentType string, expiry time.Duration) (string, error) {
+	s.presignPutCalls = append(s.presignPutCalls, presignPutCall{Key: key, ContentType: contentType, Expiry: expiry})
+	if s.presignPutFn != nil {
+		return s.presignPutFn(ctx, key, contentType, expiry)
+	}
+	return "https://stub-storage.example/" + key, nil
+}
+
+func (s *stubStorage) Stat(ctx context.Context, key string) (*storage.ObjectInfo, error) {
+	if s.statFn != nil {
+		return s.statFn(ctx, key)
+	}
+	return nil, nil
 }
 
 // --- Mock Dispatcher ---
@@ -179,6 +223,27 @@ type mockCDNClient struct {
 	calls       []string
 	triggerErr  error
 	triggeredCh chan string
+
+	// Upload-related fields, populated when the corresponding method is called.
+	signedVideoURL           string
+	signedVideoErr           error
+	signVideoCalls           []signVideoCall
+	uploadedThumbnails       []uploadedThumbnail
+	uploadThumbnailErr       error
+	uploadThumbnailObjectKey string
+}
+
+type signVideoCall struct {
+	videoID  string
+	filename string
+	expiry   time.Duration
+}
+
+type uploadedThumbnail struct {
+	videoID     string
+	ext         string
+	contentType string
+	body        []byte
 }
 
 func (m *mockCDNClient) TriggerTranscode(videoID string) error {
@@ -189,6 +254,39 @@ func (m *mockCDNClient) TriggerTranscode(videoID string) error {
 	return m.triggerErr
 }
 
+func (m *mockCDNClient) SignVideoUploadURL(videoID, filename string, expiry time.Duration) (string, time.Time, error) {
+	m.signVideoCalls = append(m.signVideoCalls, signVideoCall{videoID: videoID, filename: filename, expiry: expiry})
+	if m.signedVideoErr != nil {
+		return "", time.Time{}, m.signedVideoErr
+	}
+	url := m.signedVideoURL
+	if url == "" {
+		url = "https://cdn.test/api/v1/uploads/videos/" + videoID + "/" + filename + "?op=video-upload&exp=0&keyId=v1&sig=fake"
+	}
+	return url, time.Now().Add(expiry), nil
+}
+
+func (m *mockCDNClient) UploadThumbnail(_ context.Context, videoID, ext, contentType string, body io.Reader) (string, error) {
+	buf, _ := io.ReadAll(body)
+	m.uploadedThumbnails = append(m.uploadedThumbnails, uploadedThumbnail{
+		videoID:     videoID,
+		ext:         ext,
+		contentType: contentType,
+		body:        buf,
+	})
+	if m.uploadThumbnailErr != nil {
+		return "", m.uploadThumbnailErr
+	}
+	if m.uploadThumbnailObjectKey != "" {
+		return m.uploadThumbnailObjectKey, nil
+	}
+	return "videos/" + videoID + "/thumbnail" + ext, nil
+}
+
+func (m *mockCDNClient) ThumbnailURL(videoID string) string {
+	return "https://cdn.test/api/v1/thumbnails/" + videoID
+}
+
 // --- Test Helpers ---
 
 func newTestLogger() *slog.Logger {
@@ -196,11 +294,18 @@ func newTestLogger() *slog.Logger {
 }
 
 func newTestService(repo *mockVideoRepo, dispatcher *mockDispatcher, opts ...Option) *Service {
+	return newTestServiceWithStorage(repo, dispatcher, &stubStorage{}, opts...)
+}
+
+func newTestServiceWithStorage(repo *mockVideoRepo, dispatcher *mockDispatcher, store *stubStorage, opts ...Option) *Service {
 	if repo == nil {
 		repo = &mockVideoRepo{}
 	}
 	if dispatcher == nil {
 		dispatcher = &mockDispatcher{}
 	}
-	return NewService(repo, stubGenreRepo{}, stubSubRepo{}, stubPlanRepo{}, stubStorage{}, dispatcher, newTestLogger(), opts...)
+	if store == nil {
+		store = &stubStorage{}
+	}
+	return NewService(repo, stubGenreRepo{}, stubSubRepo{}, stubPlanRepo{}, store, dispatcher, newTestLogger(), opts...)
 }

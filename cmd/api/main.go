@@ -139,20 +139,27 @@ func main() {
 		WebhookSecret: cfg.Stripe.WebhookSecret,
 		Currency:      cfg.Stripe.Currency,
 	}, appLog)
-	// Video service with optional CDN integration
-	var videoOpts []videouc.Option
-	if cfg.CDN.BaseURL != "" {
-		// Use internal URL for backend→CDN calls, fall back to base URL.
-		cdnInternalURL := cfg.CDN.InternalURL
-		if cdnInternalURL == "" {
-			cdnInternalURL = cfg.CDN.BaseURL
-		}
-		cdnClient := cdn.New(cdnInternalURL)
-		videoOpts = append(videoOpts, videouc.WithCDN(cdnClient, cfg.CDN.BaseURL))
-		appLog.Info("CDN integration enabled", "public_url", cfg.CDN.BaseURL, "internal_url", cdnInternalURL)
-		if cfg.InternalAPI.SharedSecret == "" {
-			appLog.Warn("CDN integration enabled but INTERNAL_API_SHARED_SECRET is unset — transcode-completion callbacks will be rejected")
-		}
+	// Video service with optional CDN integration. The CDN is now the single
+	// front door for all media bytes — uploads (signed PUTs) and reads
+	// (thumbnails, HLS) — so when CDN_BASE_URL is set we wire it everywhere.
+	videoOpts := make([]videouc.Option, 0, 1)
+	if cfg.CDN.BaseURL == "" {
+		appLog.Error("CDN_BASE_URL is required — the API can no longer serve media without the CDN")
+		os.Exit(1)
+	}
+	cdnClient := cdn.New(cfg.CDN.BaseURL, cfg.CDN.InternalURL, cfg.CDN.UploadSigningKey, cfg.CDN.UploadKeyID)
+	if !cdnClient.HasSigningKey() {
+		appLog.Error("CDN_UPLOAD_SIGNING_KEY is required when CDN integration is enabled")
+		os.Exit(1)
+	}
+	videoOpts = append(videoOpts, videouc.WithCDN(cdnClient, cfg.CDN.BaseURL))
+	appLog.Info("CDN integration enabled",
+		"public_url", cfg.CDN.BaseURL,
+		"internal_url", cfg.CDN.InternalURL,
+		"upload_key_id", cfg.CDN.UploadKeyID,
+	)
+	if cfg.InternalAPI.SharedSecret == "" {
+		appLog.Warn("INTERNAL_API_SHARED_SECRET is unset — transcode-completion callbacks will be rejected")
 	}
 	videoService := videouc.NewService(videoRepo, genreRepo, subRepo, planRepo, storageService, dispatcher, appLog, videoOpts...)
 	watchlistService := watchlistuc.NewService(watchlistRepo, videoRepo, appLog)
@@ -219,6 +226,7 @@ func main() {
 			Session:              sessionService,
 			Authenticator:        authenticator,
 			Storage:              storageService,
+			CDNURLs:              cdnClient,
 			InternalSharedSecret: cfg.InternalAPI.SharedSecret,
 			Log:                  appLog,
 		})

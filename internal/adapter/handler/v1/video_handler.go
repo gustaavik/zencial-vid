@@ -3,8 +3,8 @@ package v1
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
@@ -25,15 +25,17 @@ type VideoHandler struct {
 	videoService *videouc.Service
 	subService   *subscriptionuc.Service
 	storage      storage.StorageService
+	cdnURLs      mapper.ThumbnailURLBuilder
 	validator    *validator.Validator
 }
 
 // NewVideoHandler creates a new VideoHandler.
-func NewVideoHandler(videoService *videouc.Service, subService *subscriptionuc.Service, storageSvc storage.StorageService) *VideoHandler {
+func NewVideoHandler(videoService *videouc.Service, subService *subscriptionuc.Service, storageSvc storage.StorageService, cdnURLs mapper.ThumbnailURLBuilder) *VideoHandler {
 	return &VideoHandler{
 		videoService: videoService,
 		subService:   subService,
 		storage:      storageSvc,
+		cdnURLs:      cdnURLs,
 		validator:    validator.New(),
 	}
 }
@@ -53,55 +55,76 @@ func (h *VideoHandler) resolveUserPlanLevel(ctx context.Context) *int {
 	return &level
 }
 
-// Upload godoc
-// @Summary      Upload video
-// @Description  Upload a video file with metadata via multipart form (admin only). Optional thumbnail can be sent in the same request.
+// InitiateUpload godoc
+// @Summary      Initiate video upload
+// @Description  Returns a presigned PUT URL the admin client uses to upload the video binary directly to object storage. Bypasses CDN body-size limits. Follow up with POST /videos to commit the metadata.
 // @Tags         videos
-// @Accept       multipart/form-data
+// @Accept       json
 // @Produce      json
-// @Param        file formData file true "Video file"
-// @Param        thumbnail formData file false "Thumbnail image"
-// @Param        title formData string true "Video title"
-// @Param        description formData string false "Video description"
-// @Param        creator formData string false "Creator name"
-// @Param        content_rating formData string false "Content rating (G, PG, PG13, R, NC17)"
-// @Param        genre_ids formData []string false "Genre UUIDs (repeatable)" collectionFormat(multi)
-// @Param        minimum_plan_level formData int false "Minimum plan level required to watch"
+// @Param        body body dto.InitiateUploadRequest true "File metadata"
+// @Success      200 {object} httputil.Response{data=dto.InitiateUploadResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /videos/uploads [post]
+func (h *VideoHandler) InitiateUpload(w http.ResponseWriter, r *http.Request) {
+	var req dto.InitiateUploadRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
+		return
+	}
+	if errs := h.validator.Validate(req); errs != nil {
+		httputil.ErrorWithDetails(w,
+			apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil),
+			errs,
+		)
+		return
+	}
+
+	out, appErr := h.videoService.InitiateUpload(r.Context(), &videouc.InitiateUploadInput{
+		FileName:    req.FileName,
+		ContentType: req.ContentType,
+	})
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, dto.InitiateUploadResponse{
+		UploadURL: out.UploadURL,
+		ObjectKey: out.ObjectKey,
+		ExpiresAt: out.ExpiresAt.Format(time.RFC3339),
+	})
+}
+
+// CompleteUpload godoc
+// @Summary      Commit a video upload
+// @Description  Finalizes a video upload after the client has PUT the binary to the presigned URL returned by /videos/uploads. Verifies the object exists and creates the metadata record (admin only).
+// @Tags         videos
+// @Accept       json
+// @Produce      json
+// @Param        body body dto.CompleteUploadRequest true "Upload metadata"
 // @Success      201 {object} httputil.Response{data=dto.VideoResponse}
 // @Failure      400 {object} httputil.ErrorResponse
 // @Failure      401 {object} httputil.ErrorResponse
 // @Failure      403 {object} httputil.ErrorResponse
-// @Failure      413 {object} httputil.ErrorResponse
 // @Failure      500 {object} httputil.ErrorResponse
 // @Security     BearerAuth
 // @Router       /videos [post]
-func (h *VideoHandler) Upload(w http.ResponseWriter, r *http.Request) {
-	// Parse multipart form (limit: 500MB)
-	if err := r.ParseMultipartForm(500 << 20); err != nil {
-		httputil.BadRequest(w, apperror.CodeBadRequest, "failed to parse multipart form")
+func (h *VideoHandler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
+	var req dto.CompleteUploadRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
 		return
 	}
-
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		httputil.BadRequest(w, apperror.CodeBadRequest, "video file is required")
+	if errs := h.validator.Validate(req); errs != nil {
+		httputil.ErrorWithDetails(w,
+			apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil),
+			errs,
+		)
 		return
-	}
-	defer func() { _ = file.Close() }()
-
-	// Optional thumbnail file
-	var thumbnailReader io.Reader
-	var thumbnailFileName string
-	var thumbnailContentType string
-	thumbnailFile, thumbnailHeader, thumbnailErr := r.FormFile("thumbnail")
-	if thumbnailErr == nil {
-		defer func() { _ = thumbnailFile.Close() }()
-		thumbnailReader = thumbnailFile
-		thumbnailFileName = thumbnailHeader.Filename
-		thumbnailContentType = thumbnailHeader.Header.Get("Content-Type")
-		if thumbnailContentType == "" {
-			thumbnailContentType = "image/jpeg"
-		}
 	}
 
 	userID, ok := middleware.GetUserID(r.Context())
@@ -110,9 +133,8 @@ func (h *VideoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse genre IDs from repeated form values
-	var genreIDs []uuid.UUID
-	for _, gid := range r.MultipartForm.Value["genre_ids"] {
+	genreIDs := make([]uuid.UUID, 0, len(req.GenreIDs))
+	for _, gid := range req.GenreIDs {
 		parsed, err := uuid.Parse(gid)
 		if err != nil {
 			httputil.BadRequest(w, apperror.CodeValidationFailed, "invalid genre ID: "+gid)
@@ -121,48 +143,23 @@ func (h *VideoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		genreIDs = append(genreIDs, parsed)
 	}
 
-	contentType := header.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "video/mp4"
-	}
-
-	title := r.FormValue("title")
-	if title == "" {
-		httputil.BadRequest(w, apperror.CodeValidationFailed, "title is required")
-		return
-	}
-
-	// Parse optional minimum plan level
-	var minimumPlanLevel *int
-	if mpl := r.FormValue("minimum_plan_level"); mpl != "" {
-		var level int
-		if _, err := fmt.Sscanf(mpl, "%d", &level); err == nil {
-			minimumPlanLevel = &level
-		}
-	}
-
-	video, appErr := h.videoService.Upload(r.Context(), &videouc.UploadInput{
-		Title:                title,
-		Description:          r.FormValue("description"),
-		Creator:              r.FormValue("creator"),
-		ContentRating:        r.FormValue("content_rating"),
-		GenreIDs:             genreIDs,
-		MinimumPlanLevel:     minimumPlanLevel,
-		File:                 file,
-		FileName:             header.Filename,
-		ContentType:          contentType,
-		FileSize:             header.Size,
-		UploadedBy:           userID,
-		Thumbnail:            thumbnailReader,
-		ThumbnailFileName:    thumbnailFileName,
-		ThumbnailContentType: thumbnailContentType,
+	video, appErr := h.videoService.CompleteUpload(r.Context(), &videouc.CompleteUploadInput{
+		ObjectKey:        req.ObjectKey,
+		Title:            req.Title,
+		Description:      req.Description,
+		Creator:          req.Creator,
+		ContentRating:    req.ContentRating,
+		GenreIDs:         genreIDs,
+		UploadedBy:       userID,
+		MinimumPlanLevel: req.MinimumPlanLevel,
+		DurationSeconds:  req.DurationSeconds,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return
 	}
 
-	httputil.Success(w, http.StatusCreated, mapper.VideoToResponse(r.Context(), video, h.storage))
+	httputil.Success(w, http.StatusCreated, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
 }
 
 // GetByID godoc
@@ -190,7 +187,7 @@ func (h *VideoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	planLevel := h.resolveUserPlanLevel(r.Context())
-	httputil.Success(w, http.StatusOK, mapper.VideoToResponseWithAccess(r.Context(), video, h.storage, planLevel))
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponseWithAccess(r.Context(), video, h.cdnURLs, planLevel))
 }
 
 // ListPublished godoc
@@ -220,7 +217,7 @@ func (h *VideoHandler) ListPublished(w http.ResponseWriter, r *http.Request) {
 	}
 
 	planLevel := h.resolveUserPlanLevel(r.Context())
-	httputil.SuccessWithMeta(w, mapper.VideosToResponseWithAccess(r.Context(), videos, h.storage, planLevel), &httputil.Meta{
+	httputil.SuccessWithMeta(w, mapper.VideosToResponseWithAccess(r.Context(), videos, h.cdnURLs, planLevel), &httputil.Meta{
 		Page:       fs.Pagination.Page,
 		PerPage:    fs.Pagination.PerPage,
 		Total:      total,
@@ -257,7 +254,7 @@ func (h *VideoHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.SuccessWithMeta(w, mapper.VideosToResponse(r.Context(), videos, h.storage), &httputil.Meta{
+	httputil.SuccessWithMeta(w, mapper.VideosToResponse(r.Context(), videos, h.cdnURLs), &httputil.Meta{
 		Page:       fs.Pagination.Page,
 		PerPage:    fs.Pagination.PerPage,
 		Total:      total,
@@ -330,7 +327,7 @@ func (h *VideoHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.storage))
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
 }
 
 // Publish godoc
@@ -361,7 +358,7 @@ func (h *VideoHandler) Publish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.storage))
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
 }
 
 // Unarchive godoc
@@ -392,7 +389,7 @@ func (h *VideoHandler) Unarchive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.storage))
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
 }
 
 // Delete godoc
@@ -656,5 +653,5 @@ func (h *VideoHandler) UploadThumbnail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.storage))
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
 }

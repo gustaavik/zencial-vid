@@ -2,7 +2,6 @@ package video
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"path/filepath"
 	"time"
@@ -23,8 +22,14 @@ type UpdateThumbnailInput struct {
 	ContentType string
 }
 
-// UpdateThumbnail replaces a video's thumbnail image.
+// UpdateThumbnail replaces a video's thumbnail image. Bytes are streamed to
+// the CDN over the internal network — this API never writes thumbnails to S3
+// directly, so the frontend never needs an S3 host for reads or writes.
 func (s *Service) UpdateThumbnail(ctx context.Context, input UpdateThumbnailInput) (*entity.Video, *apperror.AppError) {
+	if s.cdn == nil {
+		return nil, apperror.Internal(apperror.CodeInternalError, "CDN not configured", nil)
+	}
+
 	video, err := s.videoRepo.GetByID(ctx, input.VideoID)
 	if err != nil {
 		s.log.Error("getting video for thumbnail update", "error", err)
@@ -40,15 +45,14 @@ func (s *Service) UpdateThumbnail(ctx context.Context, input UpdateThumbnailInpu
 		thumbExt = thumbnailExtFromContentType(input.ContentType)
 	}
 
-	thumbnailKey := fmt.Sprintf("videos/%s/thumbnail%s", input.VideoID.String(), thumbExt)
-
-	// Upload new thumbnail
-	if _, err := s.storage.Upload(ctx, thumbnailKey, input.File, input.ContentType); err != nil {
-		s.log.Error("uploading thumbnail", "error", err)
-		return nil, apperror.Internal(apperror.CodeUploadFailed, "failed to upload thumbnail", err)
+	thumbnailKey, uploadErr := s.cdn.UploadThumbnail(ctx, input.VideoID.String(), thumbExt, input.ContentType, input.File)
+	if uploadErr != nil {
+		s.log.Error("uploading thumbnail to CDN", "error", uploadErr)
+		return nil, apperror.Internal(apperror.CodeUploadFailed, "failed to upload thumbnail", uploadErr)
 	}
 
-	// Delete old thumbnail if it exists and is different
+	// Delete old thumbnail if the extension changed (resulting in a new key).
+	// Same-key replacement is handled by the new PUT overwriting in S3.
 	if video.ThumbnailKey != "" && video.ThumbnailKey != thumbnailKey {
 		_ = s.storage.Delete(ctx, video.ThumbnailKey)
 	}

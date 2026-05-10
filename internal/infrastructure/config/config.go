@@ -78,6 +78,12 @@ type CDNConfig struct {
 	SigningKeyID   string        `env:"CDN_SIGNING_KEY_ID"`
 	SigningKeyPath string        `env:"CDN_SIGNING_KEY_PATH"`
 	URLExpiry      time.Duration `env:"CDN_URL_EXPIRY" envDefault:"4h"`
+	// UploadSigningKey is the shared HMAC secret used to sign CDN upload URLs.
+	// Must match CDN_UPLOAD_SIGNING_KEY on the zencial-cdn service.
+	UploadSigningKey string `env:"CDN_UPLOAD_SIGNING_KEY"`
+	// UploadKeyID identifies which signing key version is in use, embedded in
+	// the URL so future key rotation is non-breaking.
+	UploadKeyID string `env:"CDN_UPLOAD_SIGNING_KEY_ID" envDefault:"v1"`
 }
 
 // InternalAPIConfig holds settings for the internal service-to-service API surface
