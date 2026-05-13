@@ -23,6 +23,95 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/admin/audit-logs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Return a paginated list of admin audit log entries (admin only)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "audit-logs"
+                ],
+                "summary": "List audit logs",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 25,
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort field (default: -occurred_at)",
+                        "name": "sort",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AuditLogResponse"
+                                            }
+                                        },
+                                        "meta": {
+                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/genres/bulk-create": {
             "post": {
                 "security": [
@@ -255,6 +344,48 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/sessions/{sessionID}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Admin: revoke a specific session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
                         }
@@ -796,6 +927,111 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}/sessions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Admin: list a user's sessions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SessionResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}/sessions/revoke-all": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Admin: revoke all sessions for a user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.RevokeOthersResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
                         }
@@ -1476,7 +1712,7 @@ const docTemplate = `{
         },
         "/auth/login": {
             "post": {
-                "description": "Authenticate with email and password, returns tokens",
+                "description": "Authenticate with email and password, returns a session token",
                 "consumes": [
                     "application/json"
                 ],
@@ -1545,10 +1781,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Invalidate the refresh token",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Revoke the session associated with the current bearer token",
                 "produces": [
                     "application/json"
                 ],
@@ -1556,23 +1789,12 @@ const docTemplate = `{
                     "auth"
                 ],
                 "summary": "Logout",
-                "parameters": [
-                    {
-                        "description": "Refresh token to invalidate",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.LogoutRequest"
-                        }
-                    }
-                ],
                 "responses": {
                     "204": {
                         "description": "No Content"
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
                         }
@@ -1586,67 +1808,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/refresh": {
-            "post": {
-                "description": "Exchange a valid refresh token for a new token pair",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "auth"
-                ],
-                "summary": "Refresh access token",
-                "parameters": [
-                    {
-                        "description": "Refresh token",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.RefreshTokenRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.TokenResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/auth/register": {
             "post": {
-                "description": "Create a new user account and return authentication tokens",
+                "description": "Create a new user account and return a session token",
                 "consumes": [
                     "application/json"
                 ],
@@ -2273,6 +2437,136 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/me/sessions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the calling user's active sessions, with the current one flagged.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sessions"
+                ],
+                "summary": "List my active sessions",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SessionResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/me/sessions/revoke-others": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sessions"
+                ],
+                "summary": "Sign out from all other devices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.RevokeOthersResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/me/sessions/{sessionID}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sessions"
+                ],
+                "summary": "Revoke a session of mine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Session ID",
+                        "name": "sessionID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
                         }
@@ -3254,9 +3548,9 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Upload a video file with metadata via multipart form (admin only). Optional thumbnail can be sent in the same request.",
+                "description": "Finalizes a video upload after the client has PUT the binary to the presigned URL returned by /videos/uploads. Verifies the object exists and creates the metadata record (admin only).",
                 "consumes": [
-                    "multipart/form-data"
+                    "application/json"
                 ],
                 "produces": [
                     "application/json"
@@ -3264,61 +3558,16 @@ const docTemplate = `{
                 "tags": [
                     "videos"
                 ],
-                "summary": "Upload video",
+                "summary": "Commit a video upload",
                 "parameters": [
                     {
-                        "type": "file",
-                        "description": "Video file",
-                        "name": "file",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "file",
-                        "description": "Thumbnail image",
-                        "name": "thumbnail",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Video title",
-                        "name": "title",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Video description",
-                        "name": "description",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Creator name",
-                        "name": "creator",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Content rating (G, PG, PG13, R, NC17)",
-                        "name": "content_rating",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        },
-                        "collectionFormat": "multi",
-                        "description": "Genre UUIDs (repeatable)",
-                        "name": "genre_ids",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Minimum plan level required to watch",
-                        "name": "minimum_plan_level",
-                        "in": "formData"
+                        "description": "Upload metadata",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CompleteUploadRequest"
+                        }
                     }
                 ],
                 "responses": {
@@ -3358,8 +3607,77 @@ const docTemplate = `{
                             "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
                         }
                     },
-                    "413": {
-                        "description": "Request Entity Too Large",
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/videos/uploads": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a presigned PUT URL the admin client uses to upload the video binary directly to object storage. Bypasses CDN body-size limits. Follow up with POST /videos to commit the metadata.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "videos"
+                ],
+                "summary": "Initiate video upload",
+                "parameters": [
+                    {
+                        "description": "File metadata",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.InitiateUploadRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.InitiateUploadResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
                         }
@@ -4022,20 +4340,58 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AuditActorRef": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AuditLogResponse": {
+            "type": "object",
+            "properties": {
+                "actor": {
+                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AuditActorRef"
+                },
+                "entity_id": {
+                    "type": "string"
+                },
+                "entity_type": {
+                    "type": "string"
+                },
+                "event_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "occurred_at": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AuthResponse": {
             "type": "object",
             "properties": {
-                "access_token": {
-                    "type": "string",
-                    "example": "eyJhbGciOiJIUzI1NiIs..."
-                },
                 "expires_at": {
                     "type": "string",
-                    "example": "2025-01-01T00:15:00Z"
+                    "example": "2025-04-01T12:34:56Z"
                 },
-                "refresh_token": {
+                "session_id": {
                     "type": "string",
-                    "example": "abc123def456"
+                    "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                },
+                "token": {
+                    "type": "string",
+                    "example": "K7zP_-Qm…"
                 },
                 "user": {
                     "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UserResponse"
@@ -4171,6 +4527,59 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CompleteUploadRequest": {
+            "type": "object",
+            "required": [
+                "object_key",
+                "title"
+            ],
+            "properties": {
+                "content_rating": {
+                    "type": "string",
+                    "enum": [
+                        "G",
+                        "PG",
+                        "PG13",
+                        "R",
+                        "NC17"
+                    ]
+                },
+                "creator": {
+                    "type": "string",
+                    "maxLength": 24,
+                    "minLength": 3
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 5000
+                },
+                "duration_seconds": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "example": 3600
+                },
+                "genre_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "minimum_plan_level": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "object_key": {
+                    "type": "string",
+                    "example": "videos/550e8400-e29b-41d4-a716-446655440000/original.mp4"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1,
+                    "example": "My Awesome Video"
+                }
+            }
+        },
         "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ContinueWatchingItem": {
             "type": "object",
             "properties": {
@@ -4239,6 +4648,10 @@ const docTemplate = `{
                 "price": {
                     "type": "number",
                     "minimum": 0
+                },
+                "stripe_price_id": {
+                    "type": "string",
+                    "maxLength": 255
                 }
             }
         },
@@ -4312,6 +4725,42 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.InitiateUploadRequest": {
+            "type": "object",
+            "required": [
+                "content_type",
+                "filename"
+            ],
+            "properties": {
+                "content_type": {
+                    "type": "string",
+                    "example": "video/mp4"
+                },
+                "filename": {
+                    "type": "string",
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "example": "my-video.mp4"
+                }
+            }
+        },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.InitiateUploadResponse": {
+            "type": "object",
+            "properties": {
+                "expires_at": {
+                    "type": "string",
+                    "example": "2026-05-06T13:30:00Z"
+                },
+                "object_key": {
+                    "type": "string",
+                    "example": "videos/550e8400-e29b-41d4-a716-446655440000/original.mp4"
+                },
+                "upload_url": {
+                    "type": "string",
+                    "example": "https://pc-s3.zencial.net/zencial-videos/videos/.../original.mp4?X-Amz-Signature=..."
+                }
+            }
+        },
         "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.LoginRequest": {
             "type": "object",
             "required": [
@@ -4326,18 +4775,6 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "example": "securepassword123"
-                }
-            }
-        },
-        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.LogoutRequest": {
-            "type": "object",
-            "required": [
-                "refresh_token"
-            ],
-            "properties": {
-                "refresh_token": {
-                    "type": "string",
-                    "example": "abc123def456"
                 }
             }
         },
@@ -4376,6 +4813,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "premium"
                 },
+                "stripe_price_id": {
+                    "type": "string",
+                    "example": "price_123"
+                },
                 "updated_at": {
                     "type": "string",
                     "example": "2025-01-01T00:00:00Z"
@@ -4407,18 +4848,6 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.RefreshTokenRequest": {
-            "type": "object",
-            "required": [
-                "refresh_token"
-            ],
-            "properties": {
-                "refresh_token": {
-                    "type": "string",
-                    "example": "abc123def456"
-                }
-            }
-        },
         "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.RegisterRequest": {
             "type": "object",
             "required": [
@@ -4442,6 +4871,49 @@ const docTemplate = `{
                     "maxLength": 128,
                     "minLength": 8,
                     "example": "securepassword123"
+                }
+            }
+        },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.RevokeOthersResponse": {
+            "type": "object",
+            "properties": {
+                "revoked_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SessionResponse": {
+            "type": "object",
+            "properties": {
+                "absolute_expires_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "device_name": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "ip_address": {
+                    "type": "string"
+                },
+                "is_current": {
+                    "type": "boolean"
+                },
+                "last_activity_at": {
+                    "type": "string"
+                },
+                "user_agent": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
                 }
             }
         },
@@ -4483,23 +4955,6 @@ const docTemplate = `{
                 "user_id": {
                     "type": "string",
                     "example": "550e8400-e29b-41d4-a716-446655440000"
-                }
-            }
-        },
-        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.TokenResponse": {
-            "type": "object",
-            "properties": {
-                "access_token": {
-                    "type": "string",
-                    "example": "eyJhbGciOiJIUzI1NiIs..."
-                },
-                "expires_at": {
-                    "type": "string",
-                    "example": "2025-01-01T00:15:00Z"
-                },
-                "refresh_token": {
-                    "type": "string",
-                    "example": "abc123def456"
                 }
             }
         },
@@ -4546,6 +5001,10 @@ const docTemplate = `{
                 "price": {
                     "type": "number",
                     "minimum": 0
+                },
+                "stripe_price_id": {
+                    "type": "string",
+                    "maxLength": 255
                 }
             }
         },
