@@ -3,6 +3,7 @@ package v1
 import (
 	"net/http"
 
+	_ "github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/mapper"
 	"github.com/zenfulcode/zencial/internal/infrastructure/persistence/postgres"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
@@ -29,7 +30,7 @@ func NewAuditLogHandler(service *audituc.Service) *AuditLogHandler {
 // @Param        page query int false "Page number" default(1)
 // @Param        per_page query int false "Items per page" default(25)
 // @Param        sort query string false "Sort field (default: -occurred_at)"
-// @Success      200 {object} httputil.Response{data=[]dto.AuditLogResponse,meta=httputil.Meta}
+// @Success 	 200 {object} httputil.Response{data=[]dto.AuditLogResponse,meta=httputil.Meta}
 // @Failure      400 {object} httputil.ErrorResponse
 // @Failure      401 {object} httputil.ErrorResponse
 // @Failure      403 {object} httputil.ErrorResponse
