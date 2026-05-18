@@ -655,3 +655,33 @@ func (h *VideoHandler) UploadThumbnail(w http.ResponseWriter, r *http.Request) {
 
 	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
 }
+
+// PurgeOrphans godoc
+// @Summary      Purge orphaned video records and/or storage objects
+// @Description  Phase 1 (always): hard-deletes DB rows whose storage_key file is absent in S3. Phase 2 (opt-in via include_s3_orphans): deletes S3 objects not referenced by any DB row. Use dry_run=true to preview without committing changes.
+// @Tags         videos
+// @Accept       json
+// @Produce      json
+// @Param        body body dto.PurgeOrphansRequest false "Purge options"
+// @Success      200 {object} httputil.Response{data=dto.PurgeOrphansResponse}
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/videos/purge-orphans [post]
+func (h *VideoHandler) PurgeOrphans(w http.ResponseWriter, r *http.Request) {
+	var req dto.PurgeOrphansRequest
+	// Body is optional — ignore decode errors (empty body is valid).
+	_ = httputil.DecodeJSON(r, &req)
+
+	out, appErr := h.videoService.PurgeOrphans(r.Context(), videouc.PurgeOrphansInput{
+		IncludeS3Orphans: req.IncludeS3Orphans,
+		DryRun:           req.DryRun,
+	})
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.PurgeOrphansToResponse(out, req.DryRun))
+}

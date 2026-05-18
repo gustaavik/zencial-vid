@@ -107,3 +107,22 @@ func StreamToResponse(output *videouc.StreamOutput) dto.VideoStreamResponse {
 		Type:      output.Type,
 	}
 }
+
+// PurgeOrphansToResponse maps a PurgeOrphansOutput to a PurgeOrphansResponse DTO.
+func PurgeOrphansToResponse(out *videouc.PurgeOrphansOutput, dryRun bool) dto.PurgeOrphansResponse {
+	dbOrphans := make([]string, len(out.DBOrphans))
+	for i, id := range out.DBOrphans {
+		dbOrphans[i] = id.String()
+	}
+
+	s3Orphans := out.S3Orphans
+	if s3Orphans == nil {
+		s3Orphans = []string{}
+	}
+
+	return dto.PurgeOrphansResponse{
+		DryRun:    dryRun,
+		DBOrphans: dbOrphans,
+		S3Orphans: s3Orphans,
+	}
+}
