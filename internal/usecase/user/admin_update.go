@@ -18,7 +18,7 @@ import (
 type AdminUpdateInput struct {
 	UserID      uuid.UUID
 	Email       *string
-	Role        *entity.UserRole
+	Roles       *[]entity.UserRole
 	Password    *string
 	DisplayName *string
 	AvatarURL   *string
@@ -42,7 +42,7 @@ func (s *Service) AdminUpdate(ctx context.Context, input *AdminUpdateInput) (*en
 	}
 
 	roleChanged := false
-	oldRole := user.Role
+	oldRoles := user.Roles
 
 	if input.Email != nil {
 		newEmail, emailErr := valueobject.NewEmail(*input.Email)
@@ -62,12 +62,21 @@ func (s *Service) AdminUpdate(ctx context.Context, input *AdminUpdateInput) (*en
 		}
 	}
 
-	if input.Role != nil && *input.Role != user.Role {
-		if *input.Role != entity.RoleAdmin && *input.Role != entity.RoleUser {
-			return nil, apperror.BadRequest(apperror.CodeValidationFailed, "invalid role", nil)
+	if input.Roles != nil {
+		validRoles := map[entity.UserRole]bool{
+			entity.RoleUser:      true,
+			entity.RolePublisher: true,
+			entity.RoleAdmin:     true,
 		}
-		user.Role = *input.Role
-		roleChanged = true
+		for _, r := range *input.Roles {
+			if !validRoles[r] {
+				return nil, apperror.BadRequest(apperror.CodeValidationFailed, "invalid role", nil)
+			}
+		}
+		if !roleSlicesEqual(user.Roles, *input.Roles) {
+			user.Roles = *input.Roles
+			roleChanged = true
+		}
 	}
 
 	if input.Password != nil && *input.Password != "" {
@@ -126,8 +135,8 @@ func (s *Service) AdminUpdate(ctx context.Context, input *AdminUpdateInput) (*en
 		if err := s.dispatcher.Dispatch(event.UserRoleChanged{
 			UserID:    user.ID,
 			ActorID:   actorID,
-			OldRole:   string(oldRole),
-			NewRole:   string(user.Role),
+			OldRoles:  rolesToEventStrings(oldRoles),
+			NewRoles:  rolesToEventStrings(user.Roles),
 			Timestamp: now,
 		}); err != nil {
 			s.log.Error("dispatching user role changed event", "error", err)
@@ -135,4 +144,29 @@ func (s *Service) AdminUpdate(ctx context.Context, input *AdminUpdateInput) (*en
 	}
 
 	return user, nil
+}
+
+func rolesToEventStrings(roles []entity.UserRole) []string {
+	s := make([]string, len(roles))
+	for i, r := range roles {
+		s[i] = string(r)
+	}
+	return s
+}
+
+func roleSlicesEqual(a, b []entity.UserRole) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	counts := make(map[entity.UserRole]int, len(a))
+	for _, r := range a {
+		counts[r]++
+	}
+	for _, r := range b {
+		counts[r]--
+		if counts[r] < 0 {
+			return false
+		}
+	}
+	return true
 }

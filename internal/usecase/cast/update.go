@@ -15,14 +15,14 @@ type UpdateInput struct {
 	Name      *string
 	Role      *string
 	SortOrder *int
-	// CallerID and CallerRole enforce publisher ownership.
-	CallerID   uuid.UUID
-	CallerRole entity.UserRole
+	// CallerID and CallerRoles enforce publisher ownership.
+	CallerID    uuid.UUID
+	CallerRoles []entity.UserRole
 }
 
 // Update modifies an existing cast member.
 // Publishers may only update cast for videos they uploaded.
-func (s *Service) Update(ctx context.Context, input UpdateInput) (*entity.Cast, *apperror.AppError) {
+func (s *Service) Update(ctx context.Context, input *UpdateInput) (*entity.Cast, *apperror.AppError) {
 	c, err := s.castRepo.GetByID(ctx, input.ID)
 	if err != nil {
 		s.log.Error("getting cast for update", "error", err)
@@ -32,7 +32,7 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) (*entity.Cast, 
 		return nil, apperror.NotFound(apperror.CodeCastNotFound, "cast member not found", domain.ErrCastNotFound)
 	}
 
-	if input.CallerRole == entity.RolePublisher {
+	if !entity.HasRole(input.CallerRoles, entity.RoleAdmin) {
 		video, err := s.videoRepo.GetByID(ctx, c.VideoID)
 		if err != nil {
 			s.log.Error("getting video for cast ownership check", "error", err)

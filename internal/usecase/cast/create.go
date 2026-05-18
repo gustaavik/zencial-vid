@@ -15,9 +15,9 @@ type CreateInput struct {
 	Name      string
 	Role      string
 	SortOrder int
-	// CallerID and CallerRole are used to enforce publisher ownership.
-	CallerID   uuid.UUID
-	CallerRole entity.UserRole
+	// CallerID and CallerRoles are used to enforce publisher ownership.
+	CallerID    uuid.UUID
+	CallerRoles []entity.UserRole
 }
 
 // Create adds a new cast member to a video.
@@ -32,7 +32,7 @@ func (s *Service) Create(ctx context.Context, input *CreateInput) (*entity.Cast,
 		return nil, apperror.NotFound(apperror.CodeVideoNotFound, "video not found", domain.ErrVideoNotFound)
 	}
 
-	if input.CallerRole == entity.RolePublisher && video.UploadedBy != input.CallerID {
+	if !entity.HasRole(input.CallerRoles, entity.RoleAdmin) && video.UploadedBy != input.CallerID {
 		return nil, apperror.Forbidden(apperror.CodeVideoOwnershipRequired, "you do not own this video", domain.ErrVideoOwnershipRequired)
 	}
 

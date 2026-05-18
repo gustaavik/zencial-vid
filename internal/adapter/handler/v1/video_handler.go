@@ -315,7 +315,7 @@ func (h *VideoHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	callerID, _ := middleware.GetUserID(r.Context())
-	callerRole, _ := middleware.GetUserRole(r.Context())
+	callerRoles, _ := middleware.GetUserRoles(r.Context())
 
 	video, appErr := h.videoService.Update(r.Context(), &videouc.UpdateInput{
 		ID:               id,
@@ -326,7 +326,7 @@ func (h *VideoHandler) Update(w http.ResponseWriter, r *http.Request) {
 		GenreIDs:         genreIDs,
 		MinimumPlanLevel: req.MinimumPlanLevel,
 		CallerID:         callerID,
-		CallerRole:       callerRole,
+		CallerRoles:      callerRoles,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
@@ -649,7 +649,7 @@ func (h *VideoHandler) UploadThumbnail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	thumbCallerID, _ := middleware.GetUserID(r.Context())
-	thumbCallerRole, _ := middleware.GetUserRole(r.Context())
+	thumbCallerRoles, _ := middleware.GetUserRoles(r.Context())
 
 	video, appErr := h.videoService.UpdateThumbnail(r.Context(), &videouc.UpdateThumbnailInput{
 		VideoID:     id,
@@ -657,7 +657,7 @@ func (h *VideoHandler) UploadThumbnail(w http.ResponseWriter, r *http.Request) {
 		FileName:    header.Filename,
 		ContentType: contentType,
 		CallerID:    thumbCallerID,
-		CallerRole:  thumbCallerRole,
+		CallerRoles: thumbCallerRoles,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
@@ -765,9 +765,9 @@ func (h *VideoHandler) PublishOwned(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ownership check: publishers may only publish their own videos.
-	callerRole, _ := middleware.GetUserRole(r.Context())
-	if callerRole == entity.RolePublisher {
+	// Ownership check: non-admins may only publish their own videos.
+	callerRoles, _ := middleware.GetUserRoles(r.Context())
+	if !entity.HasRole(callerRoles, entity.RoleAdmin) {
 		video, appErr := h.videoService.GetByID(r.Context(), id)
 		if appErr != nil {
 			httputil.Error(w, appErr)
@@ -814,9 +814,9 @@ func (h *VideoHandler) DeleteOwned(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ownership check: publishers may only archive their own videos.
-	callerRole, _ := middleware.GetUserRole(r.Context())
-	if callerRole == entity.RolePublisher {
+	// Ownership check: non-admins may only archive their own videos.
+	callerRolesD, _ := middleware.GetUserRoles(r.Context())
+	if !entity.HasRole(callerRolesD, entity.RoleAdmin) {
 		video, appErr := h.videoService.GetByID(r.Context(), id)
 		if appErr != nil {
 			httputil.Error(w, appErr)

@@ -148,7 +148,7 @@ func newActiveUser() *entity.User {
 		ID:           id,
 		Email:        valueobject.EmailFromTrusted("user@example.com"),
 		PasswordHash: valueobject.NewHashedPassword("hashed"),
-		Role:         entity.RoleUser,
+		Roles:        []entity.UserRole{entity.RoleUser},
 		Status:       entity.UserStatusActive,
 		Profile: entity.UserProfile{
 			UserID:      id,
