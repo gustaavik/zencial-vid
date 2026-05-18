@@ -220,7 +220,7 @@ func testUser(id uuid.UUID, stripeCustomerID *string) *entity.User {
 		ID:               id,
 		Email:            valueobject.EmailFromTrusted("viewer@example.com"),
 		PasswordHash:     valueobject.NewHashedPassword("hash"),
-		Role:             entity.RoleUser,
+		Roles:            []entity.UserRole{entity.RoleUser},
 		Status:           entity.UserStatusActive,
 		StripeCustomerID: stripeCustomerID,
 		Profile: entity.UserProfile{

@@ -241,12 +241,12 @@ func (e UserStatusChanged) AuditMetadata() map[string]any {
 	return map[string]any{"new_status": e.NewStatus}
 }
 
-// UserRoleChanged is emitted when an admin changes a user's role.
+// UserRoleChanged is emitted when an admin changes a user's roles.
 type UserRoleChanged struct {
 	UserID    uuid.UUID
 	ActorID   *uuid.UUID
-	OldRole   string
-	NewRole   string
+	OldRoles  []string
+	NewRoles  []string
 	Timestamp time.Time
 }
 
@@ -256,7 +256,7 @@ func (e UserRoleChanged) AuditActor() *uuid.UUID    { return e.ActorID }
 func (e UserRoleChanged) AuditEntityType() string   { return EntityUser }
 func (e UserRoleChanged) AuditEntityID() *uuid.UUID { return new(e.UserID) }
 func (e UserRoleChanged) AuditMetadata() map[string]any {
-	return map[string]any{"old_role": e.OldRole, "new_role": e.NewRole}
+	return map[string]any{"old_roles": e.OldRoles, "new_roles": e.NewRoles}
 }
 
 // GenreCreated is emitted when an admin creates a genre.

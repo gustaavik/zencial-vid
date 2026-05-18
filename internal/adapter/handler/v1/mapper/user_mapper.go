@@ -7,10 +7,14 @@ import (
 
 // UserToResponse maps a User entity to a UserResponse DTO.
 func UserToResponse(user *entity.User) dto.UserResponse {
+	roles := make([]string, len(user.Roles))
+	for i, r := range user.Roles {
+		roles[i] = string(r)
+	}
 	resp := dto.UserResponse{
 		ID:        user.ID.String(),
 		Email:     user.Email.String(),
-		Role:      string(user.Role),
+		Roles:     roles,
 		Status:    string(user.Status),
 		CreatedAt: user.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		Profile:   ProfileToResponse(&user.Profile),

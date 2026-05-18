@@ -92,15 +92,15 @@ func (h *CastHandler) Create(w http.ResponseWriter, r *http.Request) {
 		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
-	callerRole, _ := middleware.GetUserRole(r.Context())
+	callerRoles, _ := middleware.GetUserRoles(r.Context())
 
 	c, appErr := h.castService.Create(r.Context(), &castuc.CreateInput{
-		VideoID:    videoID,
-		Name:       req.Name,
-		Role:       req.Role,
-		SortOrder:  req.SortOrder,
-		CallerID:   callerID,
-		CallerRole: callerRole,
+		VideoID:     videoID,
+		Name:        req.Name,
+		Role:        req.Role,
+		SortOrder:   req.SortOrder,
+		CallerID:    callerID,
+		CallerRoles: callerRoles,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
@@ -148,15 +148,15 @@ func (h *CastHandler) Update(w http.ResponseWriter, r *http.Request) {
 		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
-	callerRole, _ := middleware.GetUserRole(r.Context())
+	callerRoles, _ := middleware.GetUserRoles(r.Context())
 
-	c, appErr := h.castService.Update(r.Context(), castuc.UpdateInput{
-		ID:         castID,
-		Name:       req.Name,
-		Role:       req.Role,
-		SortOrder:  req.SortOrder,
-		CallerID:   callerID,
-		CallerRole: callerRole,
+	c, appErr := h.castService.Update(r.Context(), &castuc.UpdateInput{
+		ID:          castID,
+		Name:        req.Name,
+		Role:        req.Role,
+		SortOrder:   req.SortOrder,
+		CallerID:    callerID,
+		CallerRoles: callerRoles,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
@@ -191,9 +191,9 @@ func (h *CastHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
-	callerRole, _ := middleware.GetUserRole(r.Context())
+	callerRoles, _ := middleware.GetUserRoles(r.Context())
 
-	if appErr := h.castService.Delete(r.Context(), castID, callerID, callerRole); appErr != nil {
+	if appErr := h.castService.Delete(r.Context(), castID, callerID, callerRoles); appErr != nil {
 		httputil.Error(w, appErr)
 		return
 	}

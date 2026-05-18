@@ -281,10 +281,15 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	roles := make([]entity.UserRole, len(req.Roles))
+	for i, r := range req.Roles {
+		roles[i] = entity.UserRole(r)
+	}
+
 	user, appErr := h.userService.AdminCreate(r.Context(), &useruc.AdminCreateInput{
 		Email:       req.Email,
 		Password:    req.Password,
-		Role:        entity.UserRole(req.Role),
+		Roles:       roles,
 		DisplayName: req.DisplayName,
 		AvatarURL:   req.AvatarURL,
 		Language:    req.Language,
@@ -338,22 +343,32 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if callerID, ok := middleware.GetUserID(r.Context()); ok && callerID == id {
-		if req.Role != nil && entity.UserRole(*req.Role) != entity.RoleAdmin {
+		hasAdmin := false
+		for _, r := range req.Roles {
+			if entity.UserRole(r) == entity.RoleAdmin {
+				hasAdmin = true
+				break
+			}
+		}
+		if len(req.Roles) > 0 && !hasAdmin {
 			httputil.Error(w, apperror.Forbidden(apperror.CodeForbidden, "cannot demote yourself", nil))
 			return
 		}
 	}
 
-	var rolePtr *entity.UserRole
-	if req.Role != nil {
-		role := entity.UserRole(*req.Role)
-		rolePtr = &role
+	var rolesPtr *[]entity.UserRole
+	if req.Roles != nil {
+		converted := make([]entity.UserRole, len(req.Roles))
+		for i, r := range req.Roles {
+			converted[i] = entity.UserRole(r)
+		}
+		rolesPtr = &converted
 	}
 
 	user, appErr := h.userService.AdminUpdate(r.Context(), &useruc.AdminUpdateInput{
 		UserID:      id,
 		Email:       req.Email,
-		Role:        rolePtr,
+		Roles:       rolesPtr,
 		Password:    req.Password,
 		DisplayName: req.DisplayName,
 		AvatarURL:   req.AvatarURL,

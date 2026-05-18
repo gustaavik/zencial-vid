@@ -27,7 +27,7 @@ func TestNewUser(t *testing.T) {
 	assert.NotEqual(t, uuid.Nil, user.ID, "ID should be generated")
 	assert.Equal(t, "user@example.com", user.Email.String())
 	assert.Equal(t, "$2a$10$somehash", user.PasswordHash.String())
-	assert.Equal(t, RoleUser, user.Role, "default role should be user")
+	assert.Equal(t, []UserRole{RoleUser}, user.Roles, "default roles should be [user]")
 	assert.Equal(t, UserStatusActive, user.Status, "default status should be active")
 	assert.Equal(t, "en", user.Profile.Language, "default language should be en")
 	assert.Equal(t, user.ID, user.Profile.UserID, "profile UserID should match user ID")
@@ -72,7 +72,7 @@ func TestUser_IsAdmin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			user := newTestUser(t)
-			user.Role = tt.role
+			user.Roles = []UserRole{tt.role}
 			assert.Equal(t, tt.want, user.IsAdmin())
 		})
 	}

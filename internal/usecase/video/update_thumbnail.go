@@ -20,9 +20,9 @@ type UpdateThumbnailInput struct {
 	File        io.Reader
 	FileName    string
 	ContentType string
-	// CallerID and CallerRole enforce publisher ownership when CallerRole == RolePublisher.
-	CallerID   uuid.UUID
-	CallerRole entity.UserRole
+	// CallerID and CallerRoles enforce publisher ownership when caller is not an admin.
+	CallerID    uuid.UUID
+	CallerRoles []entity.UserRole
 }
 
 // UpdateThumbnail replaces a video's thumbnail image. Bytes are streamed to
@@ -42,7 +42,7 @@ func (s *Service) UpdateThumbnail(ctx context.Context, input *UpdateThumbnailInp
 		return nil, apperror.NotFound(apperror.CodeVideoNotFound, "video not found", domain.ErrVideoNotFound)
 	}
 
-	if input.CallerRole == entity.RolePublisher && video.UploadedBy != input.CallerID {
+	if !entity.HasRole(input.CallerRoles, entity.RoleAdmin) && video.UploadedBy != input.CallerID {
 		return nil, apperror.Forbidden(apperror.CodeVideoOwnershipRequired, "you do not own this video", domain.ErrVideoOwnershipRequired)
 	}
 

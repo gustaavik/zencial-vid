@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,7 +31,7 @@ type User struct {
 	ID               uuid.UUID
 	Email            valueobject.Email
 	PasswordHash     valueobject.HashedPassword
-	Role             UserRole
+	Roles            []UserRole
 	Status           UserStatus
 	StripeCustomerID *string
 	Profile          UserProfile
@@ -57,7 +58,7 @@ func NewUser(email valueobject.Email, passwordHash valueobject.HashedPassword) *
 		ID:           id,
 		Email:        email,
 		PasswordHash: passwordHash,
-		Role:         RoleUser,
+		Roles:        []UserRole{RoleUser},
 		Status:       UserStatusActive,
 		Profile: UserProfile{
 			UserID:   id,
@@ -68,6 +69,16 @@ func NewUser(email valueobject.Email, passwordHash valueobject.HashedPassword) *
 	}
 }
 
+// HasRole reports whether a roles slice contains the given role.
+func HasRole(roles []UserRole, role UserRole) bool {
+	return slices.Contains(roles, role)
+}
+
+// HasRole reports whether the user holds the given role.
+func (u *User) HasRole(role UserRole) bool {
+	return HasRole(u.Roles, role)
+}
+
 // IsActive reports whether the user account is active.
 func (u *User) IsActive() bool {
 	return u.Status == UserStatusActive
@@ -75,7 +86,12 @@ func (u *User) IsActive() bool {
 
 // IsAdmin reports whether the user is an admin.
 func (u *User) IsAdmin() bool {
-	return u.Role == RoleAdmin
+	return u.HasRole(RoleAdmin)
+}
+
+// IsPublisher reports whether the user is a publisher.
+func (u *User) IsPublisher() bool {
+	return u.HasRole(RolePublisher)
 }
 
 // Suspend marks the user account as suspended.

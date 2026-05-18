@@ -45,9 +45,9 @@ func (h *AnalyticsHandler) VideoStats(w http.ResponseWriter, r *http.Request) {
 		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
 		return
 	}
-	callerRole, _ := middleware.GetUserRole(r.Context())
+	callerRoles, _ := middleware.GetUserRoles(r.Context())
 
-	stats, appErr := h.analyticsService.GetVideoStats(r.Context(), videoID, callerID, callerRole)
+	stats, appErr := h.analyticsService.GetVideoStats(r.Context(), videoID, callerID, callerRoles)
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return
