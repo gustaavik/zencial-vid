@@ -11,8 +11,9 @@ import (
 type UserRole string
 
 const (
-	RoleUser  UserRole = "user"
-	RoleAdmin UserRole = "admin"
+	RoleUser      UserRole = "user"
+	RolePublisher UserRole = "publisher"
+	RoleAdmin     UserRole = "admin"
 )
 
 // UserStatus represents a user's account status.

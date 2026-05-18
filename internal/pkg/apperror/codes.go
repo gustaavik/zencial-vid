@@ -51,6 +51,15 @@ const (
 	// Watch progress
 	CodeWatchProgressNotFound = "WATCH_PROGRESS_NOT_FOUND"
 
+	// Cast
+	CodeCastNotFound = "CAST_NOT_FOUND"
+
+	// Publisher / ownership
+	CodeVideoOwnershipRequired = "VIDEO_OWNERSHIP_REQUIRED"
+
+	// Analytics
+	CodeAnalyticsNotFound = "ANALYTICS_NOT_FOUND"
+
 	// General
 	CodeValidationFailed = "VALIDATION_FAILED"
 	CodeInternalError    = "INTERNAL_ERROR"

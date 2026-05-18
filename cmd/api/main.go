@@ -22,9 +22,11 @@ import (
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	"github.com/zenfulcode/zencial/internal/pkg/clock"
 	"github.com/zenfulcode/zencial/internal/pkg/httputil"
+	analyticsuc "github.com/zenfulcode/zencial/internal/usecase/analytics"
 	audituc "github.com/zenfulcode/zencial/internal/usecase/audit"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
 	billinguc "github.com/zenfulcode/zencial/internal/usecase/billing"
+	castuc "github.com/zenfulcode/zencial/internal/usecase/cast"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
 	planuc "github.com/zenfulcode/zencial/internal/usecase/plan"
 	sessionuc "github.com/zenfulcode/zencial/internal/usecase/session"
@@ -103,6 +105,8 @@ func main() {
 	watchlistRepo := postgres.NewWatchlistRepository(dbPool, videoRepo)
 	watchProgressRepo := postgres.NewWatchProgressRepository(dbPool, videoRepo)
 	auditLogRepo := postgres.NewAuditLogRepository(dbPool)
+	castRepo := postgres.NewCastRepository(dbPool)
+	analyticsRepo := postgres.NewAnalyticsRepository(dbPool)
 
 	// Event dispatcher
 	dispatcher := messaging.NewEventDispatcher(appLog)
@@ -165,6 +169,8 @@ func main() {
 	watchlistService := watchlistuc.NewService(watchlistRepo, videoRepo, appLog)
 	watchProgressService := watchprogressuc.NewService(watchProgressRepo, videoRepo, appLog)
 	auditService := audituc.NewService(auditLogRepo, appLog)
+	castService := castuc.NewService(castRepo, videoRepo, appLog)
+	analyticsService := analyticsuc.NewService(analyticsRepo, videoRepo, appLog)
 
 	// Persist every dispatched domain event into the audit log.
 	audituc.Register(dispatcher, auditLogRepo, appLog)
@@ -224,6 +230,8 @@ func main() {
 			WatchProgress:        watchProgressService,
 			Audit:                auditService,
 			Session:              sessionService,
+			Analytics:            analyticsService,
+			Cast:                 castService,
 			Authenticator:        authenticator,
 			Storage:              storageService,
 			CDNURLs:              cdnClient,
