@@ -78,3 +78,18 @@ type BulkResultResponse struct {
 	Succeeded []string              `json:"succeeded"`
 	Failed    []BulkFailureResponse `json:"failed"`
 }
+
+// PurgeOrphansRequest is the optional body for POST /admin/videos/purge-orphans.
+type PurgeOrphansRequest struct {
+	// IncludeS3Orphans also scans S3 and deletes objects not referenced by any DB row.
+	IncludeS3Orphans bool `json:"include_s3_orphans"`
+	// DryRun reports what would be deleted without committing any changes.
+	DryRun bool `json:"dry_run"`
+}
+
+// PurgeOrphansResponse reports which rows/objects were (or would be) removed.
+type PurgeOrphansResponse struct {
+	DryRun    bool     `json:"dry_run"`
+	DBOrphans []string `json:"db_orphans"`
+	S3Orphans []string `json:"s3_orphans"`
+}
