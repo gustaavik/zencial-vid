@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
+	"github.com/zenfulcode/zencial/internal/domain/repository"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 	"github.com/zenfulcode/zencial/internal/pkg/filter"
 )
@@ -224,6 +225,27 @@ func (r *VideoRepository) GetGenreIDs(ctx context.Context, videoID uuid.UUID) ([
 	}
 
 	return ids, nil
+}
+
+func (r *VideoRepository) ListAllStorageKeys(ctx context.Context) ([]repository.VideoStorageInfo, error) {
+	db := connFromCtx(ctx, r.pool)
+
+	rows, err := db.Query(ctx, `SELECT id, storage_key, COALESCE(thumbnail_key, '') FROM videos`)
+	if err != nil {
+		return nil, fmt.Errorf("listing video storage keys: %w", err)
+	}
+	defer rows.Close()
+
+	var infos []repository.VideoStorageInfo
+	for rows.Next() {
+		var info repository.VideoStorageInfo
+		if err := rows.Scan(&info.ID, &info.StorageKey, &info.ThumbnailKey); err != nil {
+			return nil, fmt.Errorf("scanning video storage info: %w", err)
+		}
+		infos = append(infos, info)
+	}
+
+	return infos, nil
 }
 
 func (r *VideoRepository) scanVideo(ctx context.Context, db DBTX, query string, args ...any) (*entity.Video, error) {

@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/domain/event"
+	"github.com/zenfulcode/zencial/internal/domain/repository"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	"github.com/zenfulcode/zencial/internal/pkg/filter"
@@ -18,16 +19,17 @@ import (
 // --- Mock VideoRepository ---
 
 type mockVideoRepo struct {
-	createFn        func(ctx context.Context, video *entity.Video) error
-	getByIDFn       func(ctx context.Context, id uuid.UUID) (*entity.Video, error)
-	getBySlugFn     func(ctx context.Context, slug valueobject.Slug) (*entity.Video, error)
-	updateFn        func(ctx context.Context, video *entity.Video) error
-	deleteFn        func(ctx context.Context, id uuid.UUID) error
-	listFn          func(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error)
-	listPublishedFn func(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error)
-	existsBySlugFn  func(ctx context.Context, slug valueobject.Slug) (bool, error)
-	setGenresFn     func(ctx context.Context, videoID uuid.UUID, genreIDs []uuid.UUID) error
-	getGenreIDsFn   func(ctx context.Context, videoID uuid.UUID) ([]uuid.UUID, error)
+	createFn             func(ctx context.Context, video *entity.Video) error
+	getByIDFn            func(ctx context.Context, id uuid.UUID) (*entity.Video, error)
+	getBySlugFn          func(ctx context.Context, slug valueobject.Slug) (*entity.Video, error)
+	updateFn             func(ctx context.Context, video *entity.Video) error
+	deleteFn             func(ctx context.Context, id uuid.UUID) error
+	listFn               func(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error)
+	listPublishedFn      func(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error)
+	existsBySlugFn       func(ctx context.Context, slug valueobject.Slug) (bool, error)
+	setGenresFn          func(ctx context.Context, videoID uuid.UUID, genreIDs []uuid.UUID) error
+	getGenreIDsFn        func(ctx context.Context, videoID uuid.UUID) ([]uuid.UUID, error)
+	listAllStorageKeysFn func(ctx context.Context) ([]repository.VideoStorageInfo, error)
 }
 
 func (m *mockVideoRepo) Create(ctx context.Context, v *entity.Video) error {
@@ -100,6 +102,13 @@ func (m *mockVideoRepo) GetGenreIDs(ctx context.Context, videoID uuid.UUID) ([]u
 	return nil, nil
 }
 
+func (m *mockVideoRepo) ListAllStorageKeys(ctx context.Context) ([]repository.VideoStorageInfo, error) {
+	if m.listAllStorageKeysFn != nil {
+		return m.listAllStorageKeysFn(ctx)
+	}
+	return nil, nil
+}
+
 // --- Stub repos for fields the callback tests don't use ---
 
 type stubGenreRepo struct{}
@@ -154,6 +163,7 @@ type stubStorage struct {
 	deleteFn        func(ctx context.Context, key string) error
 	presignPutFn    func(ctx context.Context, key, contentType string, expiry time.Duration) (string, error)
 	statFn          func(ctx context.Context, key string) (*storage.ObjectInfo, error)
+	listObjectsFn   func(ctx context.Context, prefix string) ([]string, error)
 	deletedKeys     []string
 	presignPutCalls []presignPutCall
 }
@@ -198,6 +208,13 @@ func (s *stubStorage) PresignedPutURL(ctx context.Context, key, contentType stri
 func (s *stubStorage) Stat(ctx context.Context, key string) (*storage.ObjectInfo, error) {
 	if s.statFn != nil {
 		return s.statFn(ctx, key)
+	}
+	return nil, nil
+}
+
+func (s *stubStorage) ListObjects(ctx context.Context, prefix string) ([]string, error) {
+	if s.listObjectsFn != nil {
+		return s.listObjectsFn(ctx, prefix)
 	}
 	return nil, nil
 }

@@ -167,6 +167,9 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 			r.Post("/admin/videos/bulk-archive", videoHandler.BulkDelete)
 			r.Post("/admin/videos/bulk-unarchive", videoHandler.BulkUnarchive)
 
+			// Maintenance
+			r.Post("/admin/videos/purge-orphans", videoHandler.PurgeOrphans)
+
 			// Audit log (admin)
 			r.Get("/admin/audit-logs", auditLogHandler.List)
 

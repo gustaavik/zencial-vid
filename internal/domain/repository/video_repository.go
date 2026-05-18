@@ -9,6 +9,14 @@ import (
 	"github.com/zenfulcode/zencial/internal/pkg/filter"
 )
 
+// VideoStorageInfo holds the storage keys for a single video row, used for
+// cross-referencing the database against object storage.
+type VideoStorageInfo struct {
+	ID           uuid.UUID
+	StorageKey   string
+	ThumbnailKey string
+}
+
 // VideoRepository defines persistence operations for videos.
 type VideoRepository interface {
 	Create(ctx context.Context, video *entity.Video) error
@@ -21,4 +29,5 @@ type VideoRepository interface {
 	ExistsBySlug(ctx context.Context, slug valueobject.Slug) (bool, error)
 	SetGenres(ctx context.Context, videoID uuid.UUID, genreIDs []uuid.UUID) error
 	GetGenreIDs(ctx context.Context, videoID uuid.UUID) ([]uuid.UUID, error)
+	ListAllStorageKeys(ctx context.Context) ([]VideoStorageInfo, error)
 }
