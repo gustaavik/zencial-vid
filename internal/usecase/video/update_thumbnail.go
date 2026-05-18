@@ -20,12 +20,15 @@ type UpdateThumbnailInput struct {
 	File        io.Reader
 	FileName    string
 	ContentType string
+	// CallerID and CallerRole enforce publisher ownership when CallerRole == RolePublisher.
+	CallerID   uuid.UUID
+	CallerRole entity.UserRole
 }
 
 // UpdateThumbnail replaces a video's thumbnail image. Bytes are streamed to
 // the CDN over the internal network — this API never writes thumbnails to S3
 // directly, so the frontend never needs an S3 host for reads or writes.
-func (s *Service) UpdateThumbnail(ctx context.Context, input UpdateThumbnailInput) (*entity.Video, *apperror.AppError) {
+func (s *Service) UpdateThumbnail(ctx context.Context, input *UpdateThumbnailInput) (*entity.Video, *apperror.AppError) {
 	if s.cdn == nil {
 		return nil, apperror.Internal(apperror.CodeInternalError, "CDN not configured", nil)
 	}
@@ -37,6 +40,10 @@ func (s *Service) UpdateThumbnail(ctx context.Context, input UpdateThumbnailInpu
 	}
 	if video == nil {
 		return nil, apperror.NotFound(apperror.CodeVideoNotFound, "video not found", domain.ErrVideoNotFound)
+	}
+
+	if input.CallerRole == entity.RolePublisher && video.UploadedBy != input.CallerID {
+		return nil, apperror.Forbidden(apperror.CodeVideoOwnershipRequired, "you do not own this video", domain.ErrVideoOwnershipRequired)
 	}
 
 	// Determine thumbnail extension

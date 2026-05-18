@@ -22,6 +22,9 @@ type UpdateInput struct {
 	ContentRating    *string
 	GenreIDs         []uuid.UUID
 	MinimumPlanLevel *int
+	// CallerID and CallerRole enforce publisher ownership when CallerRole == RolePublisher.
+	CallerID   uuid.UUID
+	CallerRole entity.UserRole
 }
 
 // Update updates a video's metadata.
@@ -33,6 +36,10 @@ func (s *Service) Update(ctx context.Context, input *UpdateInput) (*entity.Video
 	}
 	if video == nil {
 		return nil, apperror.NotFound(apperror.CodeVideoNotFound, "video not found", domain.ErrVideoNotFound)
+	}
+
+	if input.CallerRole == entity.RolePublisher && video.UploadedBy != input.CallerID {
+		return nil, apperror.Forbidden(apperror.CodeVideoOwnershipRequired, "you do not own this video", domain.ErrVideoOwnershipRequired)
 	}
 
 	if input.Title != nil {

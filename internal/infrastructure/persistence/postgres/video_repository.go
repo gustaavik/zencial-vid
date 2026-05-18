@@ -127,6 +127,58 @@ func (r *VideoRepository) ListPublished(ctx context.Context, fs *filter.FilterSe
 	return r.listWithBase(ctx, fs, "v.status = 'published'")
 }
 
+func (r *VideoRepository) ListByUploader(ctx context.Context, uploaderID uuid.UUID, fs *filter.FilterSet) ([]entity.Video, int64, error) {
+	db := connFromCtx(ctx, r.pool)
+
+	// uploaderID is $1; filter conditions start at $2.
+	baseCondition := "v.uploaded_by = $1"
+	baseArgs := []any{uploaderID}
+
+	countWhere, countFilterArgs, _ := filter.CountSQL(fs, baseCondition, 2)
+	countArgs := append(append([]any{}, baseArgs...), countFilterArgs...)
+	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM videos v %s`, countWhere)
+
+	var total int64
+	if err := db.QueryRow(ctx, countQuery, countArgs...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("counting videos by uploader: %w", err)
+	}
+
+	sql := filter.ToSQL(fs, baseCondition, 2)
+	dataArgs := append(append([]any{}, baseArgs...), sql.Args...)
+	dataQuery := fmt.Sprintf(`
+		SELECT id, title, slug, description, creator, duration, content_rating,
+		       status, storage_key, content_type, file_size, thumbnail_key, uploaded_by,
+		       minimum_plan_level, transcode_error, created_at, updated_at
+		FROM videos v
+		%s %s %s
+	`, sql.WhereClause, sql.OrderClause, sql.LimitClause)
+
+	rows, err := db.Query(ctx, dataQuery, dataArgs...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("listing videos by uploader: %w", err)
+	}
+	defer rows.Close()
+
+	var videos []entity.Video
+	for rows.Next() {
+		v, err := r.scanVideoRow(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		videos = append(videos, *v)
+	}
+
+	for i := range videos {
+		genreIDs, err := r.GetGenreIDs(ctx, videos[i].ID)
+		if err != nil {
+			return nil, 0, err
+		}
+		videos[i].GenreIDs = genreIDs
+	}
+
+	return videos, total, nil
+}
+
 func (r *VideoRepository) listWithBase(ctx context.Context, fs *filter.FilterSet, baseCondition string) ([]entity.Video, int64, error) {
 	db := connFromCtx(ctx, r.pool)
 

@@ -58,3 +58,13 @@ var (
 var (
 	ErrWatchProgressNotFound = errors.New("watch progress not found")
 )
+
+// Cast errors.
+var (
+	ErrCastNotFound = errors.New("cast member not found")
+)
+
+// Publisher errors.
+var (
+	ErrVideoOwnershipRequired = errors.New("caller does not own this video")
+)

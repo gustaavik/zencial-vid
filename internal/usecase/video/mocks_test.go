@@ -109,6 +109,10 @@ func (m *mockVideoRepo) ListAllStorageKeys(ctx context.Context) ([]repository.Vi
 	return nil, nil
 }
 
+func (m *mockVideoRepo) ListByUploader(ctx context.Context, uploaderID uuid.UUID, fs *filter.FilterSet) ([]entity.Video, int64, error) {
+	return nil, 0, nil
+}
+
 // --- Stub repos for fields the callback tests don't use ---
 
 type stubGenreRepo struct{}

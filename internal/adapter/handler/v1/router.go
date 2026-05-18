@@ -8,9 +8,11 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
+	analyticsuc "github.com/zenfulcode/zencial/internal/usecase/analytics"
 	audituc "github.com/zenfulcode/zencial/internal/usecase/audit"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
 	billinguc "github.com/zenfulcode/zencial/internal/usecase/billing"
+	castuc "github.com/zenfulcode/zencial/internal/usecase/cast"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
 	planuc "github.com/zenfulcode/zencial/internal/usecase/plan"
 	sessionuc "github.com/zenfulcode/zencial/internal/usecase/session"
@@ -34,6 +36,8 @@ type Deps struct {
 	WatchProgress        *watchprogressuc.Service
 	Audit                *audituc.Service
 	Session              *sessionuc.Service
+	Analytics            *analyticsuc.Service
+	Cast                 *castuc.Service
 	Authenticator        *middleware.SessionAuthenticator
 	Storage              storage.StorageService
 	CDNURLs              mapper.ThumbnailURLBuilder
@@ -55,6 +59,8 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 	transcodeCallbackHandler := NewTranscodeCallbackHandler(deps.Video)
 	auditLogHandler := NewAuditLogHandler(deps.Audit)
 	sessionHandler := NewSessionHandler(deps.Session)
+	castHandler := NewCastHandler(deps.Cast)
+	analyticsHandler := NewAnalyticsHandler(deps.Analytics)
 
 	// Internal service-to-service routes (CDN callbacks). Outside the session chain.
 	r.Route("/internal", func(r chi.Router) {
@@ -86,6 +92,9 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 
 		r.Get("/videos", videoHandler.ListPublished)
 		r.Get("/videos/{id}", videoHandler.GetByID)
+
+		// Cast is public (anyone can see who's in a video)
+		r.Get("/videos/{id}/cast", castHandler.List)
 	})
 
 	// Authenticated routes
@@ -125,6 +134,32 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 
 		// Video streaming (any authenticated user)
 		r.Get("/videos/{id}/stream", videoHandler.Stream)
+
+		// Publisher + Admin routes
+		r.Route("/publisher", func(r chi.Router) {
+			r.Use(middleware.RequireAnyRole(entity.RolePublisher, entity.RoleAdmin))
+
+			// Video management (own videos only for publishers)
+			r.Get("/videos", videoHandler.ListOwned)
+			r.Post("/videos/uploads", videoHandler.InitiateUpload)
+			r.Post("/videos", videoHandler.CompleteUpload)
+			r.Put("/videos/{id}", videoHandler.Update)
+			r.Put("/videos/{id}/thumbnail", videoHandler.UploadThumbnail)
+			r.Post("/videos/{id}/publish", videoHandler.PublishOwned)
+			r.Delete("/videos/{id}", videoHandler.DeleteOwned)
+
+			// Analytics
+			r.Get("/videos/{id}/analytics", analyticsHandler.VideoStats)
+			r.Get("/analytics/summary", analyticsHandler.Summary)
+		})
+
+		// Cast management (publisher or admin)
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.RequireAnyRole(entity.RolePublisher, entity.RoleAdmin))
+			r.Post("/videos/{id}/cast", castHandler.Create)
+			r.Put("/cast/{id}", castHandler.Update)
+			r.Delete("/cast/{id}", castHandler.Delete)
+		})
 
 		// Admin routes
 		r.Group(func(r chi.Router) {
@@ -169,6 +204,9 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 
 			// Maintenance
 			r.Post("/admin/videos/purge-orphans", videoHandler.PurgeOrphans)
+
+			// Admin analytics (any video)
+			r.Get("/admin/videos/{id}/analytics", analyticsHandler.VideoStats)
 
 			// Audit log (admin)
 			r.Get("/admin/audit-logs", auditLogHandler.List)
