@@ -163,6 +163,7 @@ type stubStorage struct {
 	deleteFn        func(ctx context.Context, key string) error
 	presignPutFn    func(ctx context.Context, key, contentType string, expiry time.Duration) (string, error)
 	statFn          func(ctx context.Context, key string) (*storage.ObjectInfo, error)
+	listObjectsFn   func(ctx context.Context, prefix string) ([]string, error)
 	deletedKeys     []string
 	presignPutCalls []presignPutCall
 }
@@ -211,7 +212,10 @@ func (s *stubStorage) Stat(ctx context.Context, key string) (*storage.ObjectInfo
 	return nil, nil
 }
 
-func (s *stubStorage) ListObjects(context.Context, string) ([]string, error) {
+func (s *stubStorage) ListObjects(ctx context.Context, prefix string) ([]string, error) {
+	if s.listObjectsFn != nil {
+		return s.listObjectsFn(ctx, prefix)
+	}
 	return nil, nil
 }
 
