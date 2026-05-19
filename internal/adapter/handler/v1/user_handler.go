@@ -15,6 +15,57 @@ import (
 	useruc "github.com/zenfulcode/zencial/internal/usecase/user"
 )
 
+// dtoLinksToEntity converts a slice of ProfileLinkRequest DTOs to entity ProfileLinks.
+func dtoLinksToEntity(links []dto.ProfileLinkRequest) []entity.ProfileLink {
+	out := make([]entity.ProfileLink, len(links))
+	for i, l := range links {
+		out[i] = entity.ProfileLink{Label: l.Label, URL: l.URL}
+	}
+	return out
+}
+
+// dtoPrefsToEntity converts a ProfilePreferencesRequest DTO to an entity ProfilePreferences.
+func dtoPrefsToEntity(p *dto.ProfilePreferencesRequest) *entity.ProfilePreferences {
+	if p == nil {
+		return nil
+	}
+	prefs := &entity.ProfilePreferences{}
+	if p.AllowMatureContent != nil {
+		prefs.AllowMatureContent = *p.AllowMatureContent
+	}
+	if p.AutoplayNextEpisode != nil {
+		prefs.AutoplayNextEpisode = *p.AutoplayNextEpisode
+	}
+	if p.AlwaysShowSubtitles != nil {
+		prefs.AlwaysShowSubtitles = *p.AlwaysShowSubtitles
+	}
+	if p.ShowPaidFirstInFeed != nil {
+		prefs.ShowPaidFirstInFeed = *p.ShowPaidFirstInFeed
+	}
+	return prefs
+}
+
+// dtoPrivacyToEntity converts a ProfilePrivacyRequest DTO to an entity ProfilePrivacy.
+func dtoPrivacyToEntity(p *dto.ProfilePrivacyRequest) *entity.ProfilePrivacy {
+	if p == nil {
+		return nil
+	}
+	privacy := &entity.ProfilePrivacy{}
+	if p.ProfileVisibility != nil {
+		privacy.ProfileVisibility = *p.ProfileVisibility
+	}
+	if p.WatchHistory != nil {
+		privacy.WatchHistory = *p.WatchHistory
+	}
+	if p.Watchlist != nil {
+		privacy.Watchlist = *p.Watchlist
+	}
+	if p.Tipping != nil {
+		privacy.Tipping = *p.Tipping
+	}
+	return privacy
+}
+
 // UserHandler handles user profile HTTP requests.
 type UserHandler struct {
 	userService *useruc.Service
@@ -90,13 +141,26 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, appErr := h.userService.UpdateProfile(r.Context(), useruc.UpdateProfileInput{
+	var linksPtr *[]entity.ProfileLink
+	if req.Links != nil {
+		links := dtoLinksToEntity(req.Links)
+		linksPtr = &links
+	}
+
+	user, appErr := h.userService.UpdateProfile(r.Context(), &useruc.UpdateProfileInput{
 		UserID:      userID,
 		DisplayName: req.DisplayName,
 		AvatarURL:   req.AvatarURL,
 		DateOfBirth: req.DateOfBirth,
 		Language:    req.Language,
 		Country:     req.Country,
+		Handle:      req.Handle,
+		Pronouns:    req.Pronouns,
+		Headline:    req.Headline,
+		Bio:         req.Bio,
+		Links:       linksPtr,
+		Preferences: dtoPrefsToEntity(req.Preferences),
+		Privacy:     dtoPrivacyToEntity(req.Privacy),
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
@@ -104,6 +168,42 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.Success(w, http.StatusOK, mapper.UserToResponse(user))
+}
+
+// CheckHandle godoc
+// @Summary      Check handle availability
+// @Description  Returns whether a given handle is available for use
+// @Tags         users
+// @Produce      json
+// @Param        handle query string true "Handle to check"
+// @Success      200 {object} httputil.Response{data=map[string]bool}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /me/handle/check [get]
+func (h *UserHandler) CheckHandle(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
+		return
+	}
+
+	handle := r.URL.Query().Get("handle")
+	if handle == "" {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "handle query parameter is required")
+		return
+	}
+
+	out, appErr := h.userService.CheckHandle(r.Context(), useruc.CheckHandleInput{
+		Handle:        handle,
+		RequestingUID: userID,
+	})
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, map[string]bool{"available": out.Available})
 }
 
 // DeleteMe godoc

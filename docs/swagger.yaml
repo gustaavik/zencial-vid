@@ -27,12 +27,12 @@ definitions:
         maxLength: 128
         minLength: 8
         type: string
-      role:
-        enum:
-        - user
-        - admin
-        example: user
-        type: string
+      roles:
+        example:
+        - '["user"]'
+        items:
+          type: string
+        type: array
     required:
     - display_name
     - email
@@ -65,12 +65,13 @@ definitions:
         maxLength: 128
         minLength: 8
         type: string
-      role:
-        enum:
-        - user
-        - admin
-        example: admin
-        type: string
+      roles:
+        example:
+        - '["user"'
+        - '"admin"]'
+        items:
+          type: string
+        type: array
     type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AssignSubscriptionRequest:
     properties:
@@ -118,7 +119,7 @@ definitions:
         example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
         type: string
       token:
-        example: K7zP_-Qm…
+        example: K7zP_-Qm...
         type: string
       user:
         $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UserResponse'
@@ -467,10 +468,64 @@ definitions:
         example: "2025-01-01T00:00:00Z"
         type: string
     type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfileLinkDTO:
+    properties:
+      label:
+        example: Website
+        type: string
+      url:
+        example: https://example.com
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfileLinkRequest:
+    properties:
+      label:
+        maxLength: 50
+        type: string
+      url:
+        maxLength: 500
+        type: string
+    required:
+    - label
+    - url
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfilePreferencesDTO:
+    properties:
+      allow_mature_content:
+        example: true
+        type: boolean
+      always_show_subtitles:
+        example: true
+        type: boolean
+      autoplay_next_episode:
+        example: false
+        type: boolean
+      show_paid_first_in_feed:
+        example: false
+        type: boolean
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfilePrivacyDTO:
+    properties:
+      profile_visibility:
+        example: Public
+        type: string
+      tipping:
+        example: Public
+        type: string
+      watch_history:
+        example: Public
+        type: string
+      watchlist:
+        example: Public
+        type: string
+    type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfileResponse:
     properties:
       avatar_url:
         example: https://example.com/avatar.jpg
+        type: string
+      bio:
+        example: I make films.
         type: string
       country:
         example: Denmark
@@ -481,8 +536,25 @@ definitions:
       display_name:
         example: John Doe
         type: string
+      handle:
+        example: johndoe
+        type: string
+      headline:
+        example: Filmmaker · New York
+        type: string
       language:
         example: en
+        type: string
+      links:
+        items:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfileLinkDTO'
+        type: array
+      preferences:
+        $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfilePreferencesDTO'
+      privacy:
+        $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfilePrivacyDTO'
+      pronouns:
+        example: he/him
         type: string
     type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.PurgeOrphansRequest:
@@ -640,24 +712,6 @@ definitions:
         type: string
     type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateProfileRequest:
-    properties:
-      avatar_url:
-        example: https://example.com/avatar.jpg
-        type: string
-      country:
-        example: Denmark
-        type: string
-      date_of_birth:
-        example: "1990-01-15"
-        type: string
-      display_name:
-        example: Jane Doe
-        maxLength: 100
-        minLength: 1
-        type: string
-      language:
-        example: en
-        type: string
     type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateStatusRequest:
     properties:
@@ -719,9 +773,12 @@ definitions:
         type: string
       profile:
         $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfileResponse'
-      role:
-        example: user
-        type: string
+      roles:
+        example:
+        - '["user"]'
+        items:
+          type: string
+        type: array
       status:
         example: active
         type: string
@@ -2507,6 +2564,42 @@ paths:
       security:
       - BearerAuth: []
       summary: Update my profile
+      tags:
+      - users
+  /me/handle/check:
+    get:
+      description: Returns whether a given handle is available for use
+      parameters:
+      - description: Handle to check
+        in: query
+        name: handle
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  additionalProperties:
+                    type: boolean
+                  type: object
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Check handle availability
       tags:
       - users
   /me/sessions:

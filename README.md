@@ -119,7 +119,7 @@ Dependency injection is manual and explicit (see [cmd/api/main.go](cmd/api/main.
 cmd/api/main.go              — API entry point, wires dependencies
 cmd/migrate/main.go          — Migration CLI
 internal/domain/             — Entities, value objects, repository interfaces, events
-internal/usecase/            — Use case services (auth, video, watchlist, watchprogress, session, audit, …)
+internal/usecase/            — Use case services (auth, video, watchlist, watchprogress, session, audit, ...)
 internal/adapter/            — HTTP handlers, DTOs, mappers, event dispatcher
 internal/infrastructure/     — Postgres, Redis, S3, middleware, config, server
 internal/pkg/                — apperror, filter, httputil, validator, thumbnail, clock, pagination
@@ -181,7 +181,7 @@ Copy `.env.example` to `.env` and configure DB, Redis, S3, JWT, and Stripe crede
 2. Create a feature branch.
 3. Write tests first (TDD).
 4. Run `make lint test` before opening a PR.
-5. Submit a pull request following conventional-commit messages (`feat:`, `fix:`, `refactor:`, …).
+5. Submit a pull request following conventional-commit messages (`feat:`, `fix:`, `refactor:`, ...).
 
 ### License
 

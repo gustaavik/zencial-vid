@@ -113,6 +113,7 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 		r.Get("/me", userHandler.GetMe)
 		r.Put("/me", userHandler.UpdateMe)
 		r.Delete("/me", userHandler.DeleteMe)
+		r.Get("/me/handle/check", userHandler.CheckHandle)
 
 		// User subscription (self)
 		r.Get("/me/subscription", subscriptionHandler.GetMySubscription)

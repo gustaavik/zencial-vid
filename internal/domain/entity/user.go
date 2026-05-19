@@ -39,6 +39,29 @@ type User struct {
 	UpdatedAt        time.Time
 }
 
+// ProfileLink is a single user-defined link (e.g. website, social).
+type ProfileLink struct {
+	Label string `json:"label"`
+	URL   string `json:"url"`
+}
+
+// ProfilePreferences stores per-user content preference toggles.
+type ProfilePreferences struct {
+	AllowMatureContent  bool `json:"allow_mature_content"`
+	AutoplayNextEpisode bool `json:"autoplay_next_episode"`
+	AlwaysShowSubtitles bool `json:"always_show_subtitles"`
+	ShowPaidFirstInFeed bool `json:"show_paid_first_in_feed"`
+}
+
+// ProfilePrivacy stores visibility settings for profile sections.
+// Values are "Public", "Followers", or "Private".
+type ProfilePrivacy struct {
+	ProfileVisibility string `json:"profile_visibility"`
+	WatchHistory      string `json:"watch_history"`
+	Watchlist         string `json:"watchlist"`
+	Tipping           string `json:"tipping"`
+}
+
 // UserProfile holds additional user information.
 type UserProfile struct {
 	UserID      uuid.UUID
@@ -47,6 +70,13 @@ type UserProfile struct {
 	DateOfBirth *time.Time
 	Language    string // ISO 639-1
 	Country     string // ISO 3166-1 alpha-2
+	Handle      *string
+	Pronouns    *string
+	Headline    *string
+	Bio         *string
+	Links       []ProfileLink
+	Preferences ProfilePreferences
+	Privacy     ProfilePrivacy
 	UpdatedAt   time.Time
 }
 
@@ -63,6 +93,13 @@ func NewUser(email valueobject.Email, passwordHash valueobject.HashedPassword) *
 		Profile: UserProfile{
 			UserID:   id,
 			Language: "en",
+			Links:    []ProfileLink{},
+			Privacy: ProfilePrivacy{
+				ProfileVisibility: "Public",
+				WatchHistory:      "Public",
+				Watchlist:         "Public",
+				Tipping:           "Public",
+			},
 		},
 		CreatedAt: now,
 		UpdatedAt: now,

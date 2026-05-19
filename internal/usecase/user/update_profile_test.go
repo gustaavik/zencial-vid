@@ -31,7 +31,7 @@ func TestService_UpdateProfile(t *testing.T) {
 		lang := "sv"
 		country := "SE"
 
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID:      user.ID,
 			DisplayName: &displayName,
 			AvatarURL:   &avatarURL,
@@ -65,7 +65,7 @@ func TestService_UpdateProfile(t *testing.T) {
 		}, nil)
 
 		displayName := "Updated Name"
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID:      user.ID,
 			DisplayName: &displayName,
 		})
@@ -86,7 +86,7 @@ func TestService_UpdateProfile(t *testing.T) {
 		}, nil)
 
 		emptyDOB := ""
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID:      user.ID,
 			DateOfBirth: &emptyDOB,
 		})
@@ -105,7 +105,7 @@ func TestService_UpdateProfile(t *testing.T) {
 		}, nil)
 
 		badDate := "not-a-date"
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID:      user.ID,
 			DateOfBirth: &badDate,
 		})
@@ -123,7 +123,7 @@ func TestService_UpdateProfile(t *testing.T) {
 		}, nil)
 
 		name := "Test"
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID:      uuid.New(),
 			DisplayName: &name,
 		})
@@ -143,7 +143,7 @@ func TestService_UpdateProfile(t *testing.T) {
 		}, nil)
 
 		name := "Test"
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID:      user.ID,
 			DisplayName: &name,
 		})
@@ -165,7 +165,7 @@ func TestService_UpdateProfile(t *testing.T) {
 		}, nil)
 
 		name := "Test"
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID:      user.ID,
 			DisplayName: &name,
 		})
@@ -173,5 +173,137 @@ func TestService_UpdateProfile(t *testing.T) {
 		assert.Nil(t, result)
 		require.NotNil(t, appErr)
 		assert.Equal(t, apperror.CodeInternalError, appErr.Code)
+	})
+
+	t.Run("update handle bio headline pronouns", func(t *testing.T) {
+		user := newActiveUser()
+		svc := newTestService(&mockUserRepo{
+			getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.User, error) {
+				return user, nil
+			},
+		}, nil)
+
+		handle := "testuser"
+		bio := "I make films."
+		headline := "Filmmaker · NYC"
+		pronouns := "they/them"
+
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
+			UserID:   user.ID,
+			Handle:   &handle,
+			Bio:      &bio,
+			Headline: &headline,
+			Pronouns: &pronouns,
+		})
+
+		require.Nil(t, appErr)
+		require.NotNil(t, result)
+		require.NotNil(t, result.Profile.Handle)
+		assert.Equal(t, "testuser", *result.Profile.Handle)
+		require.NotNil(t, result.Profile.Bio)
+		assert.Equal(t, "I make films.", *result.Profile.Bio)
+		require.NotNil(t, result.Profile.Headline)
+		assert.Equal(t, "Filmmaker · NYC", *result.Profile.Headline)
+		require.NotNil(t, result.Profile.Pronouns)
+		assert.Equal(t, "they/them", *result.Profile.Pronouns)
+	})
+
+	t.Run("handle conflict returns error", func(t *testing.T) {
+		user := newActiveUser()
+		svc := newTestService(&mockUserRepo{
+			getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.User, error) {
+				return user, nil
+			},
+			handleExistsFn: func(_ context.Context, _ string, _ uuid.UUID) (bool, error) {
+				return true, nil
+			},
+		}, nil)
+
+		handle := "taken"
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
+			UserID: user.ID,
+			Handle: &handle,
+		})
+
+		assert.Nil(t, result)
+		require.NotNil(t, appErr)
+		assert.Equal(t, apperror.CodeHandleAlreadyExists, appErr.Code)
+	})
+
+	t.Run("update links replaces slice", func(t *testing.T) {
+		user := newActiveUser()
+		svc := newTestService(&mockUserRepo{
+			getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.User, error) {
+				return user, nil
+			},
+		}, nil)
+
+		links := []entity.ProfileLink{
+			{Label: "Website", URL: "https://example.com"},
+			{Label: "GitHub", URL: "https://github.com/test"},
+		}
+
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
+			UserID: user.ID,
+			Links:  &links,
+		})
+
+		require.Nil(t, appErr)
+		require.NotNil(t, result)
+		assert.Len(t, result.Profile.Links, 2)
+		assert.Equal(t, "Website", result.Profile.Links[0].Label)
+	})
+
+	t.Run("update preferences", func(t *testing.T) {
+		user := newActiveUser()
+		svc := newTestService(&mockUserRepo{
+			getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.User, error) {
+				return user, nil
+			},
+		}, nil)
+
+		prefs := entity.ProfilePreferences{
+			AllowMatureContent:  true,
+			AutoplayNextEpisode: false,
+			AlwaysShowSubtitles: true,
+			ShowPaidFirstInFeed: false,
+		}
+
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
+			UserID:      user.ID,
+			Preferences: &prefs,
+		})
+
+		require.Nil(t, appErr)
+		require.NotNil(t, result)
+		assert.True(t, result.Profile.Preferences.AllowMatureContent)
+		assert.True(t, result.Profile.Preferences.AlwaysShowSubtitles)
+		assert.False(t, result.Profile.Preferences.AutoplayNextEpisode)
+	})
+
+	t.Run("update privacy settings", func(t *testing.T) {
+		user := newActiveUser()
+		svc := newTestService(&mockUserRepo{
+			getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.User, error) {
+				return user, nil
+			},
+		}, nil)
+
+		privacy := entity.ProfilePrivacy{
+			ProfileVisibility: "Followers",
+			WatchHistory:      "Private",
+			Watchlist:         "Public",
+			Tipping:           "Followers",
+		}
+
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
+			UserID:  user.ID,
+			Privacy: &privacy,
+		})
+
+		require.Nil(t, appErr)
+		require.NotNil(t, result)
+		assert.Equal(t, "Followers", result.Profile.Privacy.ProfileVisibility)
+		assert.Equal(t, "Private", result.Profile.Privacy.WatchHistory)
 	})
 }
