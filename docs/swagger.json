@@ -2647,6 +2647,67 @@
                 }
             }
         },
+        "/me/handle/check": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns whether a given handle is available for use",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Check handle availability",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Handle to check",
+                        "name": "handle",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "boolean"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/me/sessions": {
             "get": {
                 "security": [
@@ -4959,13 +5020,14 @@
                     "minLength": 8,
                     "example": "securepassword"
                 },
-                "role": {
-                    "type": "string",
-                    "enum": [
-                        "user",
-                        "admin"
-                    ],
-                    "example": "user"
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"user\"]"
+                    ]
                 }
             }
         },
@@ -5004,13 +5066,15 @@
                     "minLength": 8,
                     "example": "newpassword"
                 },
-                "role": {
-                    "type": "string",
-                    "enum": [
-                        "user",
-                        "admin"
-                    ],
-                    "example": "admin"
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"user\"",
+                        "\"admin\"]"
+                    ]
                 }
             }
         },
@@ -5083,7 +5147,7 @@
                 },
                 "token": {
                     "type": "string",
-                    "example": "K7zP_-Qm…"
+                    "example": "K7zP_-Qm..."
                 },
                 "user": {
                     "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UserResponse"
@@ -5574,12 +5638,88 @@
                 }
             }
         },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfileLinkDTO": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": "string",
+                    "example": "Website"
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://example.com"
+                }
+            }
+        },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfileLinkRequest": {
+            "type": "object",
+            "required": [
+                "label",
+                "url"
+            ],
+            "properties": {
+                "label": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "url": {
+                    "type": "string",
+                    "maxLength": 500
+                }
+            }
+        },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfilePreferencesDTO": {
+            "type": "object",
+            "properties": {
+                "allow_mature_content": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "always_show_subtitles": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "autoplay_next_episode": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "show_paid_first_in_feed": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfilePrivacyDTO": {
+            "type": "object",
+            "properties": {
+                "profile_visibility": {
+                    "type": "string",
+                    "example": "Public"
+                },
+                "tipping": {
+                    "type": "string",
+                    "example": "Public"
+                },
+                "watch_history": {
+                    "type": "string",
+                    "example": "Public"
+                },
+                "watchlist": {
+                    "type": "string",
+                    "example": "Public"
+                }
+            }
+        },
         "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfileResponse": {
             "type": "object",
             "properties": {
                 "avatar_url": {
                     "type": "string",
                     "example": "https://example.com/avatar.jpg"
+                },
+                "bio": {
+                    "type": "string",
+                    "example": "I make films."
                 },
                 "country": {
                     "type": "string",
@@ -5593,9 +5733,33 @@
                     "type": "string",
                     "example": "John Doe"
                 },
+                "handle": {
+                    "type": "string",
+                    "example": "johndoe"
+                },
+                "headline": {
+                    "type": "string",
+                    "example": "Filmmaker · New York"
+                },
                 "language": {
                     "type": "string",
                     "example": "en"
+                },
+                "links": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfileLinkDTO"
+                    }
+                },
+                "preferences": {
+                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfilePreferencesDTO"
+                },
+                "privacy": {
+                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfilePrivacyDTO"
+                },
+                "pronouns": {
+                    "type": "string",
+                    "example": "he/him"
                 }
             }
         },
@@ -5815,31 +5979,7 @@
             }
         },
         "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateProfileRequest": {
-            "type": "object",
-            "properties": {
-                "avatar_url": {
-                    "type": "string",
-                    "example": "https://example.com/avatar.jpg"
-                },
-                "country": {
-                    "type": "string",
-                    "example": "Denmark"
-                },
-                "date_of_birth": {
-                    "type": "string",
-                    "example": "1990-01-15"
-                },
-                "display_name": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "minLength": 1,
-                    "example": "Jane Doe"
-                },
-                "language": {
-                    "type": "string",
-                    "example": "en"
-                }
-            }
+            "type": "object"
         },
         "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateStatusRequest": {
             "type": "object",
@@ -5924,9 +6064,14 @@
                 "profile": {
                     "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ProfileResponse"
                 },
-                "role": {
-                    "type": "string",
-                    "example": "user"
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"user\"]"
+                    ]
                 },
                 "status": {
                     "type": "string",

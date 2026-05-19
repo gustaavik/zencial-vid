@@ -6,30 +6,30 @@ type UserResponse struct {
 	Email     string          `json:"email" example:"user@example.com"`
 	Roles     []string        `json:"roles" example:"[\"user\"]"`
 	Status    string          `json:"status" example:"active"`
-	Profile   ProfileResponse `json:"profile"`
+	Profile   ProfileResponse `json:"profile" `
 	CreatedAt string          `json:"created_at" example:"2025-01-01T00:00:00Z"`
 }
 
 // ProfileLinkDTO is a single link entry in a profile response.
 type ProfileLinkDTO struct {
-	Label string `json:"label"`
-	URL   string `json:"url"`
+	Label string `json:"label" example:"Website"`
+	URL   string `json:"url" example:"https://example.com"`
 }
 
 // ProfilePreferencesDTO holds content preference toggles in a profile response.
 type ProfilePreferencesDTO struct {
-	AllowMatureContent  bool `json:"allow_mature_content"`
-	AutoplayNextEpisode bool `json:"autoplay_next_episode"`
-	AlwaysShowSubtitles bool `json:"always_show_subtitles"`
-	ShowPaidFirstInFeed bool `json:"show_paid_first_in_feed"`
+	AllowMatureContent  bool `json:"allow_mature_content" example:"true"`
+	AutoplayNextEpisode bool `json:"autoplay_next_episode" example:"false"`
+	AlwaysShowSubtitles bool `json:"always_show_subtitles" example:"true"`
+	ShowPaidFirstInFeed bool `json:"show_paid_first_in_feed" example:"false"`
 }
 
 // ProfilePrivacyDTO holds visibility settings in a profile response.
 type ProfilePrivacyDTO struct {
-	ProfileVisibility string `json:"profile_visibility"`
-	WatchHistory      string `json:"watch_history"`
-	Watchlist         string `json:"watchlist"`
-	Tipping           string `json:"tipping"`
+	ProfileVisibility string `json:"profile_visibility" example:"Public"`
+	WatchHistory      string `json:"watch_history"      example:"Public"`
+	Watchlist         string `json:"watchlist"          example:"Public"`
+	Tipping           string `json:"tipping"            example:"Public"`
 }
 
 // ProfileResponse represents a user profile in API responses.
@@ -43,9 +43,9 @@ type ProfileResponse struct {
 	Pronouns    *string               `json:"pronouns,omitempty" example:"he/him"`
 	Headline    *string               `json:"headline,omitempty" example:"Filmmaker · New York"`
 	Bio         *string               `json:"bio,omitempty" example:"I make films."`
-	Links       []ProfileLinkDTO      `json:"links" example:"[{\"label\":\"Website\",\"url\":\"https://example.com\"}]"`
-	Preferences ProfilePreferencesDTO `json:"preferences" example:"{\"allow_mature_content\":true}"`
-	Privacy     ProfilePrivacyDTO     `json:"privacy" example:"{\"profile_visibility\":\"Public\"}"`
+	Links       []ProfileLinkDTO      `json:"links"`
+	Preferences ProfilePreferencesDTO `json:"preferences"`
+	Privacy     ProfilePrivacyDTO     `json:"privacy"`
 }
 
 // ProfileLinkRequest is a single link entry in a profile update request.
