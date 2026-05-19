@@ -31,7 +31,7 @@ func TestService_UpdateProfile(t *testing.T) {
 		lang := "sv"
 		country := "SE"
 
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID:      user.ID,
 			DisplayName: &displayName,
 			AvatarURL:   &avatarURL,
@@ -65,7 +65,7 @@ func TestService_UpdateProfile(t *testing.T) {
 		}, nil)
 
 		displayName := "Updated Name"
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID:      user.ID,
 			DisplayName: &displayName,
 		})
@@ -86,7 +86,7 @@ func TestService_UpdateProfile(t *testing.T) {
 		}, nil)
 
 		emptyDOB := ""
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID:      user.ID,
 			DateOfBirth: &emptyDOB,
 		})
@@ -105,7 +105,7 @@ func TestService_UpdateProfile(t *testing.T) {
 		}, nil)
 
 		badDate := "not-a-date"
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID:      user.ID,
 			DateOfBirth: &badDate,
 		})
@@ -123,7 +123,7 @@ func TestService_UpdateProfile(t *testing.T) {
 		}, nil)
 
 		name := "Test"
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID:      uuid.New(),
 			DisplayName: &name,
 		})
@@ -143,7 +143,7 @@ func TestService_UpdateProfile(t *testing.T) {
 		}, nil)
 
 		name := "Test"
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID:      user.ID,
 			DisplayName: &name,
 		})
@@ -165,7 +165,7 @@ func TestService_UpdateProfile(t *testing.T) {
 		}, nil)
 
 		name := "Test"
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID:      user.ID,
 			DisplayName: &name,
 		})
@@ -188,7 +188,7 @@ func TestService_UpdateProfile(t *testing.T) {
 		headline := "Filmmaker · NYC"
 		pronouns := "they/them"
 
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID:   user.ID,
 			Handle:   &handle,
 			Bio:      &bio,
@@ -220,7 +220,7 @@ func TestService_UpdateProfile(t *testing.T) {
 		}, nil)
 
 		handle := "taken"
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID: user.ID,
 			Handle: &handle,
 		})
@@ -243,7 +243,7 @@ func TestService_UpdateProfile(t *testing.T) {
 			{Label: "GitHub", URL: "https://github.com/test"},
 		}
 
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID: user.ID,
 			Links:  &links,
 		})
@@ -269,7 +269,7 @@ func TestService_UpdateProfile(t *testing.T) {
 			ShowPaidFirstInFeed: false,
 		}
 
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID:      user.ID,
 			Preferences: &prefs,
 		})
@@ -296,7 +296,7 @@ func TestService_UpdateProfile(t *testing.T) {
 			Tipping:           "Followers",
 		}
 
-		result, appErr := svc.UpdateProfile(ctx, UpdateProfileInput{
+		result, appErr := svc.UpdateProfile(ctx, &UpdateProfileInput{
 			UserID:  user.ID,
 			Privacy: &privacy,
 		})

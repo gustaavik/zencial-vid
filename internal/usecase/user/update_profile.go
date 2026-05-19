@@ -29,7 +29,7 @@ type UpdateProfileInput struct {
 }
 
 // UpdateProfile updates the authenticated user's profile.
-func (s *Service) UpdateProfile(ctx context.Context, input UpdateProfileInput) (*entity.User, *apperror.AppError) {
+func (s *Service) UpdateProfile(ctx context.Context, input *UpdateProfileInput) (*entity.User, *apperror.AppError) {
 	user, err := s.userRepo.GetByID(ctx, input.UserID)
 	if err != nil {
 		s.log.Error("getting user for profile update", "error", err, "userID", input.UserID)

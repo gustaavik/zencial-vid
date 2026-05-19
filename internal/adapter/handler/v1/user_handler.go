@@ -147,7 +147,7 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		linksPtr = &links
 	}
 
-	user, appErr := h.userService.UpdateProfile(r.Context(), useruc.UpdateProfileInput{
+	user, appErr := h.userService.UpdateProfile(r.Context(), &useruc.UpdateProfileInput{
 		UserID:      userID,
 		DisplayName: req.DisplayName,
 		AvatarURL:   req.AvatarURL,
