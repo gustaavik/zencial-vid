@@ -22,6 +22,7 @@ type mockUserRepo struct {
 	updateFn        func(ctx context.Context, user *entity.User) error
 	deleteFn        func(ctx context.Context, id uuid.UUID) error
 	existsByEmailFn func(ctx context.Context, email valueobject.Email) (bool, error)
+	handleExistsFn  func(ctx context.Context, handle string, excludeUserID uuid.UUID) (bool, error)
 	listFn          func(ctx context.Context, fs *filter.FilterSet) ([]entity.User, int64, error)
 	updateStatusFn  func(ctx context.Context, id uuid.UUID, status entity.UserStatus) error
 }
@@ -64,6 +65,13 @@ func (m *mockUserRepo) Delete(ctx context.Context, id uuid.UUID) error {
 func (m *mockUserRepo) ExistsByEmail(ctx context.Context, email valueobject.Email) (bool, error) {
 	if m.existsByEmailFn != nil {
 		return m.existsByEmailFn(ctx, email)
+	}
+	return false, nil
+}
+
+func (m *mockUserRepo) HandleExists(ctx context.Context, handle string, excludeUserID uuid.UUID) (bool, error) {
+	if m.handleExistsFn != nil {
+		return m.handleExistsFn(ctx, handle, excludeUserID)
 	}
 	return false, nil
 }
@@ -155,7 +163,14 @@ func newActiveUser() *entity.User {
 			DisplayName: "Test User",
 			Language:    "en",
 			Country:     "Denmark",
-			UpdatedAt:   now,
+			Links:       []entity.ProfileLink{},
+			Privacy: entity.ProfilePrivacy{
+				ProfileVisibility: "Public",
+				WatchHistory:      "Public",
+				Watchlist:         "Public",
+				Tipping:           "Public",
+			},
+			UpdatedAt: now,
 		},
 		CreatedAt: now,
 		UpdatedAt: now,

@@ -24,11 +24,33 @@ func UserToResponse(user *entity.User) dto.UserResponse {
 
 // ProfileToResponse maps a UserProfile to a ProfileResponse DTO.
 func ProfileToResponse(profile *entity.UserProfile) dto.ProfileResponse {
+	links := make([]dto.ProfileLinkDTO, len(profile.Links))
+	for i, l := range profile.Links {
+		links[i] = dto.ProfileLinkDTO{Label: l.Label, URL: l.URL}
+	}
+
 	resp := dto.ProfileResponse{
 		DisplayName: profile.DisplayName,
 		AvatarURL:   profile.AvatarURL,
 		Language:    profile.Language,
 		Country:     profile.Country,
+		Handle:      profile.Handle,
+		Pronouns:    profile.Pronouns,
+		Headline:    profile.Headline,
+		Bio:         profile.Bio,
+		Links:       links,
+		Preferences: dto.ProfilePreferencesDTO{
+			AllowMatureContent:  profile.Preferences.AllowMatureContent,
+			AutoplayNextEpisode: profile.Preferences.AutoplayNextEpisode,
+			AlwaysShowSubtitles: profile.Preferences.AlwaysShowSubtitles,
+			ShowPaidFirstInFeed: profile.Preferences.ShowPaidFirstInFeed,
+		},
+		Privacy: dto.ProfilePrivacyDTO{
+			ProfileVisibility: profile.Privacy.ProfileVisibility,
+			WatchHistory:      profile.Privacy.WatchHistory,
+			Watchlist:         profile.Privacy.Watchlist,
+			Tipping:           profile.Privacy.Tipping,
+		},
 	}
 	if profile.DateOfBirth != nil {
 		dob := profile.DateOfBirth.Format("2006-01-02")
