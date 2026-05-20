@@ -1,5 +1,23 @@
 basePath: /api/v1
 definitions:
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AddEpisodeRequest:
+    properties:
+      episode_number:
+        example: 3
+        minimum: 1
+        type: integer
+      season_number:
+        example: 1
+        minimum: 1
+        type: integer
+      video_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    required:
+    - episode_number
+    - season_number
+    - video_id
+    type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AdminCreateUserRequest:
     properties:
       avatar_url:
@@ -346,6 +364,33 @@ definitions:
     required:
     - name
     type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CreateSeriesRequest:
+    properties:
+      cover_image_key:
+        maxLength: 1000
+        type: string
+      creator:
+        maxLength: 200
+        minLength: 3
+        type: string
+      description:
+        maxLength: 5000
+        type: string
+      genre_ids:
+        items:
+          type: string
+        type: array
+      minimum_plan_level:
+        minimum: 0
+        type: integer
+      title:
+        example: My Great Show
+        maxLength: 500
+        minLength: 1
+        type: string
+    required:
+    - title
+    type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.GenreResponse:
     properties:
       created_at:
@@ -605,6 +650,55 @@ definitions:
       revoked_count:
         type: integer
     type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SeriesResponse:
+    properties:
+      cover_image_key:
+        example: series/550e8400/cover.jpg
+        type: string
+      created_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      creator:
+        example: Studio ABC
+        type: string
+      description:
+        example: A compelling drama series...
+        type: string
+      genre_ids:
+        items:
+          type: string
+        type: array
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      minimum_plan_level:
+        example: 1
+        type: integer
+      slug:
+        example: my-great-show-a3f8b2c1
+        type: string
+      status:
+        example: published
+        type: string
+      title:
+        example: My Great Show
+        type: string
+      updated_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SeriesWatchProgressResponse:
+    properties:
+      last_episode_id:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+      series_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      updated_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+    type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SessionResponse:
     properties:
       absolute_expires_at:
@@ -713,6 +807,38 @@ definitions:
     type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateProfileRequest:
     type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateSeriesRequest:
+    properties:
+      cover_image_key:
+        maxLength: 1000
+        type: string
+      creator:
+        maxLength: 200
+        minLength: 3
+        type: string
+      description:
+        maxLength: 5000
+        type: string
+      genre_ids:
+        items:
+          type: string
+        type: array
+      minimum_plan_level:
+        minimum: 0
+        type: integer
+      title:
+        maxLength: 500
+        minLength: 1
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateSeriesWatchProgressRequest:
+    properties:
+      episode_id:
+        example: 550e8400-e29b-41d4-a716-446655440001
+        type: string
+    required:
+    - episode_id
+    type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateStatusRequest:
     properties:
       status:
@@ -800,6 +926,9 @@ definitions:
       duration:
         example: 3600
         type: integer
+      episode_number:
+        example: 3
+        type: integer
       file_size:
         example: 104857600
         type: integer
@@ -815,6 +944,12 @@ definitions:
       minimum_plan_level:
         example: 1
         type: integer
+      season_number:
+        example: 1
+        type: integer
+      series_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
       slug:
         example: my-awesome-video-a3f8b2c1
         type: string
@@ -1139,6 +1274,53 @@ paths:
       summary: List all plans (admin)
       tags:
       - plans
+  /admin/series:
+    get:
+      description: 'Admin-only: returns all series regardless of status.'
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SeriesResponse'
+                  type: array
+                meta:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all series (admin)
+      tags:
+      - series
   /admin/sessions/{sessionID}:
     delete:
       parameters:
@@ -3272,6 +3454,128 @@ paths:
       summary: Get publisher analytics summary
       tags:
       - analytics
+  /publisher/series:
+    get:
+      description: Returns all series uploaded by the authenticated publisher.
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SeriesResponse'
+                  type: array
+                meta:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List series owned by the caller
+      tags:
+      - series
+  /publisher/series/{id}:
+    delete:
+      description: Soft-deletes a series. Publisher must own it; admin can archive
+        any.
+      parameters:
+      - description: Series ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Archive an owned series
+      tags:
+      - series
+  /publisher/series/{id}/publish:
+    post:
+      description: Transitions a draft series to published status. Publisher must
+        own the series.
+      parameters:
+      - description: Series ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SeriesResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Publish an owned series
+      tags:
+      - series
   /publisher/videos:
     get:
       description: Return a paginated list of all videos uploaded by the authenticated
@@ -3454,6 +3758,558 @@ paths:
       summary: Publish publisher's own video
       tags:
       - publisher
+  /series:
+    get:
+      description: Returns all published series with optional filtering.
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Filter by title (partial match)
+        in: query
+        name: title
+        type: string
+      - description: Filter by creator (partial match)
+        in: query
+        name: creator
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SeriesResponse'
+                  type: array
+                meta:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta'
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      summary: List published series
+      tags:
+      - series
+    post:
+      consumes:
+      - application/json
+      description: Creates a new series in draft status.
+      parameters:
+      - description: Series details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CreateSeriesRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SeriesResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new series
+      tags:
+      - series
+  /series/{id}:
+    delete:
+      description: 'Admin-only: archive any series.'
+      parameters:
+      - description: Series ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Archive a series (admin)
+      tags:
+      - series
+    get:
+      description: Returns a single series by its UUID.
+      parameters:
+      - description: Series ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SeriesResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      summary: Get series by ID
+      tags:
+      - series
+    put:
+      consumes:
+      - application/json
+      description: Updates series metadata. Publisher must own the series; admin can
+        update any.
+      parameters:
+      - description: Series ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateSeriesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SeriesResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a series
+      tags:
+      - series
+  /series/{id}/episodes:
+    get:
+      description: Returns all videos assigned to the series, ordered by season and
+        episode number.
+      parameters:
+      - description: Series ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse'
+                  type: array
+                meta:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      summary: List episodes for a series
+      tags:
+      - series
+    post:
+      consumes:
+      - application/json
+      description: Links an existing published video to the series as a numbered episode.
+      parameters:
+      - description: Series ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Episode details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AddEpisodeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add an episode to a series
+      tags:
+      - series
+  /series/{id}/episodes/{videoID}:
+    delete:
+      description: Unlinks a video from the series. Publisher must own the series;
+        admin can remove any.
+      parameters:
+      - description: Series ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Video (episode) ID
+        format: uuid
+        in: path
+        name: videoID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove an episode from a series
+      tags:
+      - series
+  /series/{id}/next-episode:
+    get:
+      description: Returns the next unwatched episode for the authenticated user.
+        Returns the first episode if no watch progress exists.
+      parameters:
+      - description: Series ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get next episode to watch
+      tags:
+      - series
+  /series/{id}/publish:
+    post:
+      description: 'Admin-only: publish any series regardless of ownership.'
+      parameters:
+      - description: Series ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SeriesResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Publish a series (admin)
+      tags:
+      - series
+  /series/{id}/unarchive:
+    post:
+      description: 'Admin-only: restore an archived series back to draft status.'
+      parameters:
+      - description: Series ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SeriesResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Restore an archived series (admin)
+      tags:
+      - series
+  /series/{id}/watch-progress:
+    get:
+      description: Returns the last-watched episode for the authenticated user in
+        a given series.
+      parameters:
+      - description: Series ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SeriesWatchProgressResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get series watch progress
+      tags:
+      - series
+    put:
+      consumes:
+      - application/json
+      description: Records the last-watched episode for the authenticated user.
+      parameters:
+      - description: Series ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Episode to mark as watched
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateSeriesWatchProgressRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update series watch progress
+      tags:
+      - series
   /videos:
     get:
       description: Return a paginated list of published videos. With a valid bearer
