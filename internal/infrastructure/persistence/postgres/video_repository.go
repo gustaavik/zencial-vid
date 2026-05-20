@@ -128,7 +128,7 @@ func (r *VideoRepository) List(ctx context.Context, fs *filter.FilterSet) ([]ent
 }
 
 func (r *VideoRepository) ListPublished(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error) {
-	return r.listWithBase(ctx, fs, "v.status = 'published'")
+	return r.listWithBase(ctx, fs, "v.status = 'published' AND v.series_id IS NULL")
 }
 
 func (r *VideoRepository) ListByUploader(ctx context.Context, uploaderID uuid.UUID, fs *filter.FilterSet) ([]entity.Video, int64, error) {
