@@ -31,4 +31,7 @@ type VideoRepository interface {
 	SetGenres(ctx context.Context, videoID uuid.UUID, genreIDs []uuid.UUID) error
 	GetGenreIDs(ctx context.Context, videoID uuid.UUID) ([]uuid.UUID, error)
 	ListAllStorageKeys(ctx context.Context) ([]VideoStorageInfo, error)
+	SetSeriesEpisode(ctx context.Context, videoID, seriesID uuid.UUID, season, episode int) error
+	RemoveFromSeries(ctx context.Context, videoID uuid.UUID) error
+	ListBySeries(ctx context.Context, seriesID uuid.UUID, fs *filter.FilterSet) ([]entity.Video, int64, error)
 }

@@ -29,6 +29,7 @@ import (
 	castuc "github.com/zenfulcode/zencial/internal/usecase/cast"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
 	planuc "github.com/zenfulcode/zencial/internal/usecase/plan"
+	seriesuc "github.com/zenfulcode/zencial/internal/usecase/series"
 	sessionuc "github.com/zenfulcode/zencial/internal/usecase/session"
 	subscriptionuc "github.com/zenfulcode/zencial/internal/usecase/subscription"
 	useruc "github.com/zenfulcode/zencial/internal/usecase/user"
@@ -107,6 +108,8 @@ func main() {
 	auditLogRepo := postgres.NewAuditLogRepository(dbPool)
 	castRepo := postgres.NewCastRepository(dbPool)
 	analyticsRepo := postgres.NewAnalyticsRepository(dbPool)
+	seriesRepo := postgres.NewSeriesRepository(dbPool)
+	seriesWatchProgressRepo := postgres.NewSeriesWatchProgressRepository(dbPool)
 
 	// Event dispatcher
 	dispatcher := messaging.NewEventDispatcher(appLog)
@@ -166,6 +169,7 @@ func main() {
 		appLog.Warn("INTERNAL_API_SHARED_SECRET is unset — transcode-completion callbacks will be rejected")
 	}
 	videoService := videouc.NewService(videoRepo, genreRepo, subRepo, planRepo, storageService, dispatcher, appLog, videoOpts...)
+	seriesService := seriesuc.NewService(seriesRepo, seriesWatchProgressRepo, videoRepo, genreRepo, dispatcher, appLog)
 	watchlistService := watchlistuc.NewService(watchlistRepo, videoRepo, appLog)
 	watchProgressService := watchprogressuc.NewService(watchProgressRepo, videoRepo, appLog)
 	auditService := audituc.NewService(auditLogRepo, appLog)
@@ -223,6 +227,7 @@ func main() {
 			Genre:                genreService,
 			User:                 userService,
 			Video:                videoService,
+			Series:               seriesService,
 			Plan:                 planService,
 			Subscription:         subscriptionService,
 			Billing:              billingService,

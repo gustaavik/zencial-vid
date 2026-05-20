@@ -13,6 +13,7 @@ const (
 	EntityGenre        = "genre"
 	EntityPlan         = "plan"
 	EntitySubscription = "subscription"
+	EntitySeries       = "series"
 )
 
 // Event is the interface that all domain events implement.
@@ -391,3 +392,79 @@ func (e SubscriptionCancelled) AuditEntityID() *uuid.UUID { return new(e.Subscri
 func (e SubscriptionCancelled) AuditMetadata() map[string]any {
 	return map[string]any{"user_id": e.UserID.String()}
 }
+
+// SeriesCreated is emitted when a publisher creates a new series.
+type SeriesCreated struct {
+	SeriesID  uuid.UUID
+	Title     string
+	ActorID   *uuid.UUID
+	Timestamp time.Time
+}
+
+func (e SeriesCreated) EventName() string         { return "series.created" }
+func (e SeriesCreated) OccurredAt() time.Time     { return e.Timestamp }
+func (e SeriesCreated) AuditActor() *uuid.UUID    { return e.ActorID }
+func (e SeriesCreated) AuditEntityType() string   { return EntitySeries }
+func (e SeriesCreated) AuditEntityID() *uuid.UUID { return new(e.SeriesID) }
+func (e SeriesCreated) AuditMetadata() map[string]any {
+	return map[string]any{"title": e.Title}
+}
+
+// SeriesUpdated is emitted when a series is updated.
+type SeriesUpdated struct {
+	SeriesID  uuid.UUID
+	Field     string
+	ActorID   *uuid.UUID
+	Timestamp time.Time
+}
+
+func (e SeriesUpdated) EventName() string         { return "series.updated" }
+func (e SeriesUpdated) OccurredAt() time.Time     { return e.Timestamp }
+func (e SeriesUpdated) AuditActor() *uuid.UUID    { return e.ActorID }
+func (e SeriesUpdated) AuditEntityType() string   { return EntitySeries }
+func (e SeriesUpdated) AuditEntityID() *uuid.UUID { return new(e.SeriesID) }
+func (e SeriesUpdated) AuditMetadata() map[string]any {
+	return map[string]any{"field": e.Field}
+}
+
+// SeriesPublished is emitted when a series is published.
+type SeriesPublished struct {
+	SeriesID  uuid.UUID
+	ActorID   *uuid.UUID
+	Timestamp time.Time
+}
+
+func (e SeriesPublished) EventName() string             { return "series.published" }
+func (e SeriesPublished) OccurredAt() time.Time         { return e.Timestamp }
+func (e SeriesPublished) AuditActor() *uuid.UUID        { return e.ActorID }
+func (e SeriesPublished) AuditEntityType() string       { return EntitySeries }
+func (e SeriesPublished) AuditEntityID() *uuid.UUID     { return new(e.SeriesID) }
+func (e SeriesPublished) AuditMetadata() map[string]any { return map[string]any{} }
+
+// SeriesArchived is emitted when a series is soft-deleted (archived).
+type SeriesArchived struct {
+	SeriesID  uuid.UUID
+	ActorID   *uuid.UUID
+	Timestamp time.Time
+}
+
+func (e SeriesArchived) EventName() string             { return "series.archived" }
+func (e SeriesArchived) OccurredAt() time.Time         { return e.Timestamp }
+func (e SeriesArchived) AuditActor() *uuid.UUID        { return e.ActorID }
+func (e SeriesArchived) AuditEntityType() string       { return EntitySeries }
+func (e SeriesArchived) AuditEntityID() *uuid.UUID     { return new(e.SeriesID) }
+func (e SeriesArchived) AuditMetadata() map[string]any { return map[string]any{} }
+
+// SeriesRestored is emitted when an archived series is restored.
+type SeriesRestored struct {
+	SeriesID  uuid.UUID
+	ActorID   *uuid.UUID
+	Timestamp time.Time
+}
+
+func (e SeriesRestored) EventName() string             { return "series.restored" }
+func (e SeriesRestored) OccurredAt() time.Time         { return e.Timestamp }
+func (e SeriesRestored) AuditActor() *uuid.UUID        { return e.ActorID }
+func (e SeriesRestored) AuditEntityType() string       { return EntitySeries }
+func (e SeriesRestored) AuditEntityID() *uuid.UUID     { return new(e.SeriesID) }
+func (e SeriesRestored) AuditMetadata() map[string]any { return map[string]any{} }

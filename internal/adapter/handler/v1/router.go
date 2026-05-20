@@ -15,6 +15,7 @@ import (
 	castuc "github.com/zenfulcode/zencial/internal/usecase/cast"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
 	planuc "github.com/zenfulcode/zencial/internal/usecase/plan"
+	seriesuc "github.com/zenfulcode/zencial/internal/usecase/series"
 	sessionuc "github.com/zenfulcode/zencial/internal/usecase/session"
 	subscriptionuc "github.com/zenfulcode/zencial/internal/usecase/subscription"
 	useruc "github.com/zenfulcode/zencial/internal/usecase/user"
@@ -29,6 +30,7 @@ type Deps struct {
 	Genre                *genreuc.Service
 	User                 *useruc.Service
 	Video                *videouc.Service
+	Series               *seriesuc.Service
 	Plan                 *planuc.Service
 	Subscription         *subscriptionuc.Service
 	Billing              *billinguc.Service
@@ -51,6 +53,7 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 	genreHandler := NewGenreHandler(deps.Genre)
 	userHandler := NewUserHandler(deps.User)
 	videoHandler := NewVideoHandler(deps.Video, deps.Subscription, deps.Storage, deps.CDNURLs)
+	seriesHandler := NewSeriesHandler(deps.Series, deps.CDNURLs)
 	planHandler := NewPlanHandler(deps.Plan)
 	subscriptionHandler := NewSubscriptionHandler(deps.Subscription)
 	billingHandler := NewBillingHandler(deps.Billing)
@@ -95,6 +98,11 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 
 		// Cast is public (anyone can see who's in a video)
 		r.Get("/videos/{id}/cast", castHandler.List)
+
+		// Series (public read)
+		r.Get("/series", seriesHandler.ListPublished)
+		r.Get("/series/{id}", seriesHandler.GetByID)
+		r.Get("/series/{id}/episodes", seriesHandler.ListEpisodes)
 	})
 
 	// Authenticated routes
@@ -136,6 +144,11 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 		// Video streaming (any authenticated user)
 		r.Get("/videos/{id}/stream", videoHandler.Stream)
 
+		// Series watch progress (any authenticated user)
+		r.Get("/series/{id}/next-episode", seriesHandler.GetNextEpisode)
+		r.Put("/series/{id}/watch-progress", seriesHandler.UpdateWatchProgress)
+		r.Get("/series/{id}/watch-progress", seriesHandler.GetWatchProgress)
+
 		// Publisher + Admin routes
 		r.Route("/publisher", func(r chi.Router) {
 			r.Use(middleware.RequireAnyRole(entity.RolePublisher, entity.RoleAdmin))
@@ -152,6 +165,15 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 			// Analytics
 			r.Get("/videos/{id}/analytics", analyticsHandler.VideoStats)
 			r.Get("/analytics/summary", analyticsHandler.Summary)
+
+			// Series management (own series)
+			r.Post("/series", seriesHandler.Create)
+			r.Put("/series/{id}", seriesHandler.Update)
+			r.Post("/series/{id}/episodes", seriesHandler.AddEpisode)
+			r.Delete("/series/{id}/episodes/{videoID}", seriesHandler.RemoveEpisode)
+			r.Get("/publisher/series", seriesHandler.ListOwned)
+			r.Post("/publisher/series/{id}/publish", seriesHandler.PublishOwned)
+			r.Delete("/publisher/series/{id}", seriesHandler.ArchiveOwned)
 		})
 
 		// Cast management (publisher or admin)
@@ -208,6 +230,12 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 
 			// Admin analytics (any video)
 			r.Get("/admin/videos/{id}/analytics", analyticsHandler.VideoStats)
+
+			// Series management (admin)
+			r.Get("/admin/series", seriesHandler.AdminListAll)
+			r.Post("/series/{id}/publish", seriesHandler.AdminPublish)
+			r.Delete("/series/{id}", seriesHandler.AdminArchive)
+			r.Post("/series/{id}/unarchive", seriesHandler.AdminUnarchive)
 
 			// Audit log (admin)
 			r.Get("/admin/audit-logs", auditLogHandler.List)
