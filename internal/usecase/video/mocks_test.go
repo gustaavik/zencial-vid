@@ -30,6 +30,9 @@ type mockVideoRepo struct {
 	setGenresFn          func(ctx context.Context, videoID uuid.UUID, genreIDs []uuid.UUID) error
 	getGenreIDsFn        func(ctx context.Context, videoID uuid.UUID) ([]uuid.UUID, error)
 	listAllStorageKeysFn func(ctx context.Context) ([]repository.VideoStorageInfo, error)
+	setSeriesEpisodeFn   func(ctx context.Context, videoID, seriesID uuid.UUID, season, episode int) error
+	removeFromSeriesFn   func(ctx context.Context, videoID uuid.UUID) error
+	listBySeriesFn       func(ctx context.Context, seriesID uuid.UUID, fs *filter.FilterSet) ([]entity.Video, int64, error)
 }
 
 func (m *mockVideoRepo) Create(ctx context.Context, v *entity.Video) error {
@@ -107,6 +110,31 @@ func (m *mockVideoRepo) ListAllStorageKeys(ctx context.Context) ([]repository.Vi
 		return m.listAllStorageKeysFn(ctx)
 	}
 	return nil, nil
+}
+
+func (m *mockVideoRepo) ListByUploader(ctx context.Context, uploaderID uuid.UUID, fs *filter.FilterSet) ([]entity.Video, int64, error) {
+	return nil, 0, nil
+}
+
+func (m *mockVideoRepo) SetSeriesEpisode(ctx context.Context, videoID, seriesID uuid.UUID, season, episode int) error {
+	if m.setSeriesEpisodeFn != nil {
+		return m.setSeriesEpisodeFn(ctx, videoID, seriesID, season, episode)
+	}
+	return nil
+}
+
+func (m *mockVideoRepo) RemoveFromSeries(ctx context.Context, videoID uuid.UUID) error {
+	if m.removeFromSeriesFn != nil {
+		return m.removeFromSeriesFn(ctx, videoID)
+	}
+	return nil
+}
+
+func (m *mockVideoRepo) ListBySeries(ctx context.Context, seriesID uuid.UUID, fs *filter.FilterSet) ([]entity.Video, int64, error) {
+	if m.listBySeriesFn != nil {
+		return m.listBySeriesFn(ctx, seriesID, fs)
+	}
+	return nil, 0, nil
 }
 
 // --- Stub repos for fields the callback tests don't use ---

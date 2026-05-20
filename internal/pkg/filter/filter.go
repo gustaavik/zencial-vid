@@ -6,14 +6,15 @@ import "github.com/zenfulcode/zencial/internal/domain/valueobject"
 type Op string
 
 const (
-	OpEq   Op = "eq"
-	OpNeq  Op = "neq"
-	OpGt   Op = "gt"
-	OpGte  Op = "gte"
-	OpLt   Op = "lt"
-	OpLte  Op = "lte"
-	OpLike Op = "like"
-	OpIn   Op = "in"
+	OpEq            Op = "eq"
+	OpNeq           Op = "neq"
+	OpGt            Op = "gt"
+	OpGte           Op = "gte"
+	OpLt            Op = "lt"
+	OpLte           Op = "lte"
+	OpLike          Op = "like"
+	OpIn            Op = "in"
+	OpArrayContains Op = "array_contains" // $N = ANY(column)
 )
 
 // ValueType controls how raw string values are coerced.

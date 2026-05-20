@@ -55,6 +55,16 @@ func (m *mockVideoRepo) GetGenreIDs(context.Context, uuid.UUID) ([]uuid.UUID, er
 func (m *mockVideoRepo) ListAllStorageKeys(context.Context) ([]repository.VideoStorageInfo, error) {
 	return nil, nil
 }
+func (m *mockVideoRepo) ListByUploader(context.Context, uuid.UUID, *filter.FilterSet) ([]entity.Video, int64, error) {
+	return nil, 0, nil
+}
+func (m *mockVideoRepo) SetSeriesEpisode(context.Context, uuid.UUID, uuid.UUID, int, int) error {
+	return nil
+}
+func (m *mockVideoRepo) RemoveFromSeries(context.Context, uuid.UUID) error { return nil }
+func (m *mockVideoRepo) ListBySeries(context.Context, uuid.UUID, *filter.FilterSet) ([]entity.Video, int64, error) {
+	return nil, 0, nil
+}
 
 // --- Mock WatchlistRepository ---
 

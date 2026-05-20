@@ -13,11 +13,12 @@ const (
 	CodeSessionExpired     = "SESSION_EXPIRED"
 
 	// User
-	CodeUserNotFound       = "USER_NOT_FOUND"
-	CodeEmailAlreadyExists = "EMAIL_ALREADY_EXISTS"
-	CodeUserSuspended      = "USER_SUSPENDED"
-	CodeUserDeleted        = "USER_DELETED"
-	CodeInvalidDateFormat  = "INVALID_DATE_FORMAT"
+	CodeUserNotFound        = "USER_NOT_FOUND"
+	CodeEmailAlreadyExists  = "EMAIL_ALREADY_EXISTS"
+	CodeHandleAlreadyExists = "HANDLE_ALREADY_EXISTS"
+	CodeUserSuspended       = "USER_SUSPENDED"
+	CodeUserDeleted         = "USER_DELETED"
+	CodeInvalidDateFormat   = "INVALID_DATE_FORMAT"
 
 	// Videos
 	CodeSlugConflict = "SLUG_CONFLICT"
@@ -50,6 +51,22 @@ const (
 
 	// Watch progress
 	CodeWatchProgressNotFound = "WATCH_PROGRESS_NOT_FOUND"
+
+	// Cast
+	CodeCastNotFound = "CAST_NOT_FOUND"
+
+	// Publisher / ownership
+	CodeVideoOwnershipRequired  = "VIDEO_OWNERSHIP_REQUIRED"
+	CodeSeriesOwnershipRequired = "SERIES_OWNERSHIP_REQUIRED"
+
+	// Analytics
+	CodeAnalyticsNotFound = "ANALYTICS_NOT_FOUND"
+
+	// Series
+	CodeSeriesNotFound              = "SERIES_NOT_FOUND"
+	CodeSeriesSlugConflict          = "SERIES_SLUG_CONFLICT"
+	CodeEpisodeAlreadyExists        = "EPISODE_ALREADY_EXISTS"
+	CodeSeriesWatchProgressNotFound = "SERIES_WATCH_PROGRESS_NOT_FOUND"
 
 	// General
 	CodeValidationFailed = "VALIDATION_FAILED"

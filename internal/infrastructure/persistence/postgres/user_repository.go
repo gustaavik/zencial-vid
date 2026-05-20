@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -17,7 +18,7 @@ import (
 var userFilterConfig = filter.Config{
 	Columns: map[string]filter.ColumnDef{
 		"status": {DBColumn: "u.status", AllowedOps: []filter.Op{filter.OpEq, filter.OpIn}, Type: filter.TypeString},
-		"role":   {DBColumn: "u.role", AllowedOps: []filter.Op{filter.OpEq}, Type: filter.TypeString},
+		"role":   {DBColumn: "u.roles", AllowedOps: []filter.Op{filter.OpArrayContains}, Type: filter.TypeString},
 		"email":  {DBColumn: "u.email", AllowedOps: []filter.Op{filter.OpLike, filter.OpEq}, Type: filter.TypeString},
 	},
 	SortColumns: map[string]filter.SortDef{
@@ -42,22 +43,54 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 	return &UserRepository{pool: pool}
 }
 
+func rolesToStrings(roles []entity.UserRole) []string {
+	s := make([]string, len(roles))
+	for i, r := range roles {
+		s[i] = string(r)
+	}
+	return s
+}
+
+func stringsToRoles(s []string) []entity.UserRole {
+	roles := make([]entity.UserRole, len(s))
+	for i, r := range s {
+		roles[i] = entity.UserRole(r)
+	}
+	return roles
+}
+
 func (r *UserRepository) Create(ctx context.Context, user *entity.User) error {
 	db := connFromCtx(ctx, r.pool)
 	_, err := db.Exec(ctx, `
-		INSERT INTO users (id, email, password_hash, role, status, stripe_customer_id, created_at, updated_at)
+		INSERT INTO users (id, email, password_hash, roles, status, stripe_customer_id, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-	`, user.ID, user.Email.String(), user.PasswordHash.String(), user.Role, user.Status,
+	`, user.ID, user.Email.String(), user.PasswordHash.String(), rolesToStrings(user.Roles), user.Status,
 		user.StripeCustomerID, user.CreatedAt, user.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("creating user: %w", err)
 	}
 
+	linksJSON, err := json.Marshal(user.Profile.Links)
+	if err != nil {
+		return fmt.Errorf("marshaling profile links: %w", err)
+	}
+	prefsJSON, err := json.Marshal(user.Profile.Preferences)
+	if err != nil {
+		return fmt.Errorf("marshaling profile preferences: %w", err)
+	}
+	privacyJSON, err := json.Marshal(user.Profile.Privacy)
+	if err != nil {
+		return fmt.Errorf("marshaling profile privacy: %w", err)
+	}
+
 	_, err = db.Exec(ctx, `
-		INSERT INTO user_profiles (user_id, display_name, avatar_url, date_of_birth, language, country, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO user_profiles (user_id, display_name, avatar_url, date_of_birth, language, country,
+			handle, pronouns, headline, bio, links, preferences, privacy, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`, user.ID, user.Profile.DisplayName, user.Profile.AvatarURL, user.Profile.DateOfBirth,
-		user.Profile.Language, user.Profile.Country, user.Profile.UpdatedAt)
+		user.Profile.Language, user.Profile.Country,
+		user.Profile.Handle, user.Profile.Pronouns, user.Profile.Headline, user.Profile.Bio,
+		linksJSON, prefsJSON, privacyJSON, user.Profile.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("creating user profile: %w", err)
 	}
@@ -69,18 +102,23 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Use
 	db := connFromCtx(ctx, r.pool)
 	user := &entity.User{}
 	var email, passwordHash string
+	var roleStrings []string
 	var stripeCustomerID sql.NullString
 
+	var linksRaw, prefsRaw, privacyRaw json.RawMessage
 	err := db.QueryRow(ctx, `
-		SELECT u.id, u.email, u.password_hash, u.role, u.status, u.stripe_customer_id, u.created_at, u.updated_at,
-		       p.display_name, p.avatar_url, p.date_of_birth, p.language, p.country, p.updated_at
+		SELECT u.id, u.email, u.password_hash, u.roles, u.status, u.stripe_customer_id, u.created_at, u.updated_at,
+		       p.display_name, p.avatar_url, p.date_of_birth, p.language, p.country,
+		       p.handle, p.pronouns, p.headline, p.bio, p.links, p.preferences, p.privacy, p.updated_at
 		FROM users u
 		LEFT JOIN user_profiles p ON u.id = p.user_id
 		WHERE u.id = $1
 	`, id).Scan(
-		&user.ID, &email, &passwordHash, &user.Role, &user.Status, &stripeCustomerID, &user.CreatedAt, &user.UpdatedAt,
+		&user.ID, &email, &passwordHash, &roleStrings, &user.Status, &stripeCustomerID, &user.CreatedAt, &user.UpdatedAt,
 		&user.Profile.DisplayName, &user.Profile.AvatarURL, &user.Profile.DateOfBirth,
-		&user.Profile.Language, &user.Profile.Country, &user.Profile.UpdatedAt,
+		&user.Profile.Language, &user.Profile.Country,
+		&user.Profile.Handle, &user.Profile.Pronouns, &user.Profile.Headline, &user.Profile.Bio,
+		&linksRaw, &prefsRaw, &privacyRaw, &user.Profile.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -91,8 +129,18 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Use
 
 	user.Email = valueobject.EmailFromTrusted(email)
 	user.PasswordHash = valueobject.NewHashedPassword(passwordHash)
+	user.Roles = stringsToRoles(roleStrings)
 	if stripeCustomerID.Valid {
 		user.StripeCustomerID = &stripeCustomerID.String
+	}
+	if err := json.Unmarshal(linksRaw, &user.Profile.Links); err != nil {
+		user.Profile.Links = []entity.ProfileLink{}
+	}
+	if err := json.Unmarshal(prefsRaw, &user.Profile.Preferences); err != nil {
+		user.Profile.Preferences = entity.ProfilePreferences{}
+	}
+	if err := json.Unmarshal(privacyRaw, &user.Profile.Privacy); err != nil {
+		user.Profile.Privacy = entity.ProfilePrivacy{}
 	}
 	user.Profile.UserID = user.ID
 	return user, nil
@@ -102,18 +150,23 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email valueobject.Email
 	db := connFromCtx(ctx, r.pool)
 	user := &entity.User{}
 	var emailStr, passwordHash string
+	var roleStrings []string
 	var stripeCustomerID sql.NullString
 
+	var linksRaw, prefsRaw, privacyRaw json.RawMessage
 	err := db.QueryRow(ctx, `
-		SELECT u.id, u.email, u.password_hash, u.role, u.status, u.stripe_customer_id, u.created_at, u.updated_at,
-		       p.display_name, p.avatar_url, p.date_of_birth, p.language, p.country, p.updated_at
+		SELECT u.id, u.email, u.password_hash, u.roles, u.status, u.stripe_customer_id, u.created_at, u.updated_at,
+		       p.display_name, p.avatar_url, p.date_of_birth, p.language, p.country,
+		       p.handle, p.pronouns, p.headline, p.bio, p.links, p.preferences, p.privacy, p.updated_at
 		FROM users u
 		LEFT JOIN user_profiles p ON u.id = p.user_id
 		WHERE u.email = $1
 	`, email.String()).Scan(
-		&user.ID, &emailStr, &passwordHash, &user.Role, &user.Status, &stripeCustomerID, &user.CreatedAt, &user.UpdatedAt,
+		&user.ID, &emailStr, &passwordHash, &roleStrings, &user.Status, &stripeCustomerID, &user.CreatedAt, &user.UpdatedAt,
 		&user.Profile.DisplayName, &user.Profile.AvatarURL, &user.Profile.DateOfBirth,
-		&user.Profile.Language, &user.Profile.Country, &user.Profile.UpdatedAt,
+		&user.Profile.Language, &user.Profile.Country,
+		&user.Profile.Handle, &user.Profile.Pronouns, &user.Profile.Headline, &user.Profile.Bio,
+		&linksRaw, &prefsRaw, &privacyRaw, &user.Profile.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -124,8 +177,18 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email valueobject.Email
 
 	user.Email = valueobject.EmailFromTrusted(emailStr)
 	user.PasswordHash = valueobject.NewHashedPassword(passwordHash)
+	user.Roles = stringsToRoles(roleStrings)
 	if stripeCustomerID.Valid {
 		user.StripeCustomerID = &stripeCustomerID.String
+	}
+	if err := json.Unmarshal(linksRaw, &user.Profile.Links); err != nil {
+		user.Profile.Links = []entity.ProfileLink{}
+	}
+	if err := json.Unmarshal(prefsRaw, &user.Profile.Preferences); err != nil {
+		user.Profile.Preferences = entity.ProfilePreferences{}
+	}
+	if err := json.Unmarshal(privacyRaw, &user.Profile.Privacy); err != nil {
+		user.Profile.Privacy = entity.ProfilePrivacy{}
 	}
 	user.Profile.UserID = user.ID
 	return user, nil
@@ -134,20 +197,37 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email valueobject.Email
 func (r *UserRepository) Update(ctx context.Context, user *entity.User) error {
 	db := connFromCtx(ctx, r.pool)
 	_, err := db.Exec(ctx, `
-		UPDATE users SET email = $2, password_hash = $3, role = $4, status = $5, stripe_customer_id = $6, updated_at = $7
+		UPDATE users SET email = $2, password_hash = $3, roles = $4, status = $5, stripe_customer_id = $6, updated_at = $7
 		WHERE id = $1
-	`, user.ID, user.Email.String(), user.PasswordHash.String(), user.Role, user.Status,
+	`, user.ID, user.Email.String(), user.PasswordHash.String(), rolesToStrings(user.Roles), user.Status,
 		user.StripeCustomerID, user.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("updating user: %w", err)
 	}
 
+	linksJSON, err := json.Marshal(user.Profile.Links)
+	if err != nil {
+		return fmt.Errorf("marshaling profile links: %w", err)
+	}
+	prefsJSON, err := json.Marshal(user.Profile.Preferences)
+	if err != nil {
+		return fmt.Errorf("marshaling profile preferences: %w", err)
+	}
+	privacyJSON, err := json.Marshal(user.Profile.Privacy)
+	if err != nil {
+		return fmt.Errorf("marshaling profile privacy: %w", err)
+	}
+
 	_, err = db.Exec(ctx, `
 		UPDATE user_profiles
-		SET display_name = $2, avatar_url = $3, date_of_birth = $4, language = $5, country = $6, updated_at = $7
+		SET display_name = $2, avatar_url = $3, date_of_birth = $4, language = $5, country = $6,
+		    handle = $7, pronouns = $8, headline = $9, bio = $10,
+		    links = $11, preferences = $12, privacy = $13, updated_at = $14
 		WHERE user_id = $1
 	`, user.ID, user.Profile.DisplayName, user.Profile.AvatarURL, user.Profile.DateOfBirth,
-		user.Profile.Language, user.Profile.Country, user.Profile.UpdatedAt)
+		user.Profile.Language, user.Profile.Country,
+		user.Profile.Handle, user.Profile.Pronouns, user.Profile.Headline, user.Profile.Bio,
+		linksJSON, prefsJSON, privacyJSON, user.Profile.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("updating user profile: %w", err)
 	}
@@ -190,7 +270,7 @@ func (r *UserRepository) List(ctx context.Context, fs *filter.FilterSet) ([]enti
 	// Data
 	sqlFilter := filter.ToSQL(fs, baseCondition, 1)
 	dataQuery := fmt.Sprintf(`
-		SELECT u.id, u.email, u.role, u.status, u.created_at, u.updated_at,
+		SELECT u.id, u.email, u.roles, u.status, u.created_at, u.updated_at,
 		       p.display_name, p.avatar_url, p.language, p.country
 		FROM users u
 		LEFT JOIN user_profiles p ON u.id = p.user_id
@@ -207,14 +287,16 @@ func (r *UserRepository) List(ctx context.Context, fs *filter.FilterSet) ([]enti
 	for rows.Next() {
 		var u entity.User
 		var email string
+		var roleStrings []string
 		err := rows.Scan(
-			&u.ID, &email, &u.Role, &u.Status, &u.CreatedAt, &u.UpdatedAt,
+			&u.ID, &email, &roleStrings, &u.Status, &u.CreatedAt, &u.UpdatedAt,
 			&u.Profile.DisplayName, &u.Profile.AvatarURL, &u.Profile.Language, &u.Profile.Country,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning user: %w", err)
 		}
 		u.Email = valueobject.EmailFromTrusted(email)
+		u.Roles = stringsToRoles(roleStrings)
 		u.Profile.UserID = u.ID
 		users = append(users, u)
 	}
@@ -229,4 +311,17 @@ func (r *UserRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status 
 		return fmt.Errorf("updating user status: %w", err)
 	}
 	return nil
+}
+
+func (r *UserRepository) HandleExists(ctx context.Context, handle string, excludeUserID uuid.UUID) (bool, error) {
+	db := connFromCtx(ctx, r.pool)
+	var exists bool
+	err := db.QueryRow(ctx,
+		`SELECT EXISTS(SELECT 1 FROM user_profiles WHERE handle = $1 AND user_id != $2)`,
+		handle, excludeUserID,
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("checking handle existence: %w", err)
+	}
+	return exists, nil
 }
