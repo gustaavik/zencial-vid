@@ -35,8 +35,14 @@ func VideoToResponse(_ context.Context, video *entity.Video, urls ThumbnailURLBu
 		GenreIDs:         genreIDs,
 		MinimumPlanLevel: video.MinimumPlanLevel,
 		TranscodeError:   video.TranscodeError,
+		SeasonNumber:     video.SeasonNumber,
+		EpisodeNumber:    video.EpisodeNumber,
 		CreatedAt:        video.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		UpdatedAt:        video.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+	}
+	if video.SeriesID != nil {
+		s := video.SeriesID.String()
+		resp.SeriesID = &s
 	}
 	if video.ThumbnailKey != "" && urls != nil {
 		resp.ThumbnailURL = urls.ThumbnailURL(video.ID.String())

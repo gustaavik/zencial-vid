@@ -56,10 +56,17 @@ const (
 	CodeCastNotFound = "CAST_NOT_FOUND"
 
 	// Publisher / ownership
-	CodeVideoOwnershipRequired = "VIDEO_OWNERSHIP_REQUIRED"
+	CodeVideoOwnershipRequired  = "VIDEO_OWNERSHIP_REQUIRED"
+	CodeSeriesOwnershipRequired = "SERIES_OWNERSHIP_REQUIRED"
 
 	// Analytics
 	CodeAnalyticsNotFound = "ANALYTICS_NOT_FOUND"
+
+	// Series
+	CodeSeriesNotFound              = "SERIES_NOT_FOUND"
+	CodeSeriesSlugConflict          = "SERIES_SLUG_CONFLICT"
+	CodeEpisodeAlreadyExists        = "EPISODE_ALREADY_EXISTS"
+	CodeSeriesWatchProgressNotFound = "SERIES_WATCH_PROGRESS_NOT_FOUND"
 
 	// General
 	CodeValidationFailed = "VALIDATION_FAILED"
