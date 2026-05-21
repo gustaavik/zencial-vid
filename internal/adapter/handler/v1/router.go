@@ -181,6 +181,7 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 			r.Use(middleware.RequireAnyRole(entity.RolePublisher, entity.RoleAdmin))
 			r.Post("/videos/{id}/cast", castHandler.Create)
 			r.Put("/cast/{id}", castHandler.Update)
+			r.Put("/cast/{id}/picture", castHandler.UploadPicture)
 			r.Delete("/cast/{id}", castHandler.Delete)
 		})
 

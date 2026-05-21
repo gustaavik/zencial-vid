@@ -41,5 +41,6 @@ func (s *Service) Create(ctx context.Context, input *CreateInput) (*entity.Cast,
 		s.log.Error("creating cast", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to create cast member", err)
 	}
+	s.resolvePictureURL(c)
 	return c, nil
 }

@@ -2,13 +2,14 @@ package dto
 
 // CastResponse represents a cast member in API responses.
 type CastResponse struct {
-	ID        string `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
-	VideoID   string `json:"video_id" example:"550e8400-e29b-41d4-a716-446655440000"`
-	Name      string `json:"name" example:"Jane Doe"`
-	Role      string `json:"role" example:"actor"`
-	SortOrder int    `json:"sort_order" example:"0"`
-	CreatedAt string `json:"created_at" example:"2025-01-01T00:00:00Z"`
-	UpdatedAt string `json:"updated_at" example:"2025-01-01T00:00:00Z"`
+	ID         string `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	VideoID    string `json:"video_id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Name       string `json:"name" example:"Jane Doe"`
+	Role       string `json:"role" example:"actor"`
+	SortOrder  int    `json:"sort_order" example:"0"`
+	PictureURL string `json:"picture_url,omitempty" example:"https://cdn.example.com/cast/picture.jpg"`
+	CreatedAt  string `json:"created_at" example:"2025-01-01T00:00:00Z"`
+	UpdatedAt  string `json:"updated_at" example:"2025-01-01T00:00:00Z"`
 }
 
 // CreateCastRequest is the body for adding a cast member.

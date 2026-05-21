@@ -25,5 +25,8 @@ func (s *Service) List(ctx context.Context, videoID uuid.UUID) ([]entity.Cast, *
 		s.log.Error("listing cast", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to list cast", err)
 	}
+	for i := range cast {
+		s.resolvePictureURL(&cast[i])
+	}
 	return cast, nil
 }

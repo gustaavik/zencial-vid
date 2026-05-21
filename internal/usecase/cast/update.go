@@ -57,5 +57,6 @@ func (s *Service) Update(ctx context.Context, input *UpdateInput) (*entity.Cast,
 		s.log.Error("updating cast", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to update cast member", err)
 	}
+	s.resolvePictureURL(c)
 	return c, nil
 }
