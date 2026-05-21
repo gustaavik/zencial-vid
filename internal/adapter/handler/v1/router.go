@@ -179,6 +179,7 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 		// Cast management (publisher or admin)
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequireAnyRole(entity.RolePublisher, entity.RoleAdmin))
+			r.Get("/admin/cast", castHandler.ListAll)
 			r.Post("/videos/{id}/cast", castHandler.Create)
 			r.Put("/videos/{videoID}/cast/{castID}", castHandler.UpdateCredit)
 			r.Delete("/videos/{videoID}/cast/{castID}", castHandler.DeleteFromVideo)

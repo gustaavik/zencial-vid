@@ -31,6 +31,15 @@ func VideoCastListToResponse(credits []entity.VideoCast) []dto.CastCreditRespons
 	return out
 }
 
+// CastMembersToResponse converts a slice of Cast entities to CastMemberResponse DTOs.
+func CastMembersToResponse(casts []entity.Cast) []dto.CastMemberResponse {
+	out := make([]dto.CastMemberResponse, len(casts))
+	for i := range casts {
+		out[i] = CastToMemberResponse(&casts[i])
+	}
+	return out
+}
+
 // CastToMemberResponse converts a Cast entity to a CastMemberResponse DTO.
 func CastToMemberResponse(c *entity.Cast) dto.CastMemberResponse {
 	return dto.CastMemberResponse{

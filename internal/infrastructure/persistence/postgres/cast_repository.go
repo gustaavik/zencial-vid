@@ -114,6 +114,45 @@ func (r *CastRepository) HasVideoWithCaller(ctx context.Context, castID, callerI
 	return exists, nil
 }
 
+// ListAll returns a paginated slice of all cast members ordered by name and
+// the total count of members in the table.
+func (r *CastRepository) ListAll(ctx context.Context, offset, limit int) ([]entity.Cast, int, error) {
+	db := connFromCtx(ctx, r.pool)
+
+	var total int
+	if err := db.QueryRow(ctx, `SELECT COUNT(*) FROM casts`).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("counting casts: %w", err)
+	}
+
+	rows, err := db.Query(ctx, `
+		SELECT id, name, picture_key, created_at, updated_at
+		FROM casts
+		ORDER BY name
+		LIMIT $1 OFFSET $2
+	`, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("listing casts: %w", err)
+	}
+	defer rows.Close()
+
+	var casts []entity.Cast
+	for rows.Next() {
+		var c entity.Cast
+		var pictureKey *string
+		if err := rows.Scan(&c.ID, &c.Name, &pictureKey, &c.CreatedAt, &c.UpdatedAt); err != nil {
+			return nil, 0, fmt.Errorf("scanning cast row: %w", err)
+		}
+		if pictureKey != nil {
+			c.PictureKey = *pictureKey
+		}
+		casts = append(casts, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("iterating cast rows: %w", err)
+	}
+	return casts, total, nil
+}
+
 // scanCast reads a single row from the casts table.
 func scanCast(row pgx.Row) (*entity.Cast, error) {
 	c := &entity.Cast{}

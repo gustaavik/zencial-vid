@@ -23,6 +23,7 @@ type mockCastRepo struct {
 	updateFn             func(ctx context.Context, cast *entity.Cast) error
 	deleteFn             func(ctx context.Context, id uuid.UUID) error
 	hasVideoWithCallerFn func(ctx context.Context, castID, callerID uuid.UUID) (bool, error)
+	ListAllFn            func(ctx context.Context, offset int, limit int) ([]entity.Cast, int, error)
 }
 
 func (m *mockCastRepo) Create(ctx context.Context, cast *entity.Cast) error {
@@ -45,6 +46,9 @@ func (m *mockCastRepo) Delete(ctx context.Context, id uuid.UUID) error {
 }
 func (m *mockCastRepo) HasVideoWithCaller(ctx context.Context, castID, callerID uuid.UUID) (bool, error) {
 	return m.hasVideoWithCallerFn(ctx, castID, callerID)
+}
+func (m *mockCastRepo) ListAll(ctx context.Context, offset int, limit int) ([]entity.Cast, int, error) {
+	return m.ListAllFn(ctx, offset, limit)
 }
 
 // mockVideoCastRepo is a closure-field mock for repository.VideoCastRepository.

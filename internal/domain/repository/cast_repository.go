@@ -20,4 +20,7 @@ type CastRepository interface {
 	// HasVideoWithCaller returns true when the cast member is credited on at
 	// least one video uploaded by callerID. Used to authorize publisher edits.
 	HasVideoWithCaller(ctx context.Context, castID, callerID uuid.UUID) (bool, error)
+	// ListAll returns a paginated list of all cast members ordered by name,
+	// along with the total count.
+	ListAll(ctx context.Context, offset, limit int) ([]entity.Cast, int, error)
 }

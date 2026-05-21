@@ -2,6 +2,7 @@ package v1
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -26,6 +27,39 @@ func NewCastHandler(castService *castuc.Service) *CastHandler {
 		castService: castService,
 		validator:   validator.New(),
 	}
+}
+
+// ListAll godoc
+// @Summary      List all cast members
+// @Description  Returns a paginated list of all cast members ordered by name. Publisher or admin access required.
+// @Tags         cast
+// @Produce      json
+// @Param        page     query int false "Page number" default(1)
+// @Param        per_page query int false "Items per page" default(20)
+// @Success      200 {object} httputil.Response{data=[]dto.CastMemberResponse}
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/cast [get]
+func (h *CastHandler) ListAll(w http.ResponseWriter, r *http.Request) {
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	perPage, _ := strconv.Atoi(r.URL.Query().Get("per_page"))
+
+	out, appErr := h.castService.ListAll(r.Context(), castuc.ListAllInput{
+		Page:    page,
+		PerPage: perPage,
+	})
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.SuccessWithMeta(w, mapper.CastMembersToResponse(out.Members), &httputil.Meta{
+		Page:    out.Page,
+		PerPage: out.PerPage,
+		Total:   int64(out.Total),
+	})
 }
 
 // List godoc
