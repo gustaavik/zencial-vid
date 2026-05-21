@@ -180,7 +180,9 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequireAnyRole(entity.RolePublisher, entity.RoleAdmin))
 			r.Post("/videos/{id}/cast", castHandler.Create)
-			r.Put("/cast/{id}", castHandler.Update)
+			r.Put("/videos/{videoID}/cast/{castID}", castHandler.UpdateCredit)
+			r.Delete("/videos/{videoID}/cast/{castID}", castHandler.DeleteFromVideo)
+			r.Put("/cast/{id}", castHandler.UpdateCast)
 			r.Put("/cast/{id}/picture", castHandler.UploadPicture)
 			r.Delete("/cast/{id}", castHandler.Delete)
 		})

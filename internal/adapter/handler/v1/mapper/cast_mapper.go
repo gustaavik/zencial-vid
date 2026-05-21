@@ -5,25 +5,39 @@ import (
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 )
 
-// CastToResponse converts a Cast entity to a CastResponse DTO.
-func CastToResponse(c *entity.Cast) dto.CastResponse {
-	return dto.CastResponse{
+// VideoCastToResponse converts a VideoCast entity to a CastCreditResponse DTO.
+func VideoCastToResponse(vc *entity.VideoCast) dto.CastCreditResponse {
+	r := dto.CastCreditResponse{
+		ID:        vc.CastID.String(),
+		VideoID:   vc.VideoID.String(),
+		Role:      vc.Role,
+		SortOrder: vc.SortOrder,
+		CreatedAt: vc.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+		UpdatedAt: vc.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+	}
+	if vc.Cast != nil {
+		r.Name = vc.Cast.Name
+		r.PictureURL = vc.Cast.PictureURL
+	}
+	return r
+}
+
+// VideoCastListToResponse converts a slice of VideoCast entities to CastCreditResponse DTOs.
+func VideoCastListToResponse(credits []entity.VideoCast) []dto.CastCreditResponse {
+	out := make([]dto.CastCreditResponse, len(credits))
+	for i := range credits {
+		out[i] = VideoCastToResponse(&credits[i])
+	}
+	return out
+}
+
+// CastToMemberResponse converts a Cast entity to a CastMemberResponse DTO.
+func CastToMemberResponse(c *entity.Cast) dto.CastMemberResponse {
+	return dto.CastMemberResponse{
 		ID:         c.ID.String(),
-		VideoID:    c.VideoID.String(),
 		Name:       c.Name,
-		Role:       c.Role,
-		SortOrder:  c.SortOrder,
 		PictureURL: c.PictureURL,
 		CreatedAt:  c.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 		UpdatedAt:  c.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	}
-}
-
-// CastListToResponse converts a slice of Cast entities to CastResponse DTOs.
-func CastListToResponse(cast []entity.Cast) []dto.CastResponse {
-	out := make([]dto.CastResponse, len(cast))
-	for i := range cast {
-		out[i] = CastToResponse(&cast[i])
-	}
-	return out
 }

@@ -10,21 +10,33 @@ import (
 
 // Service handles cast use cases.
 type Service struct {
-	castRepo  repository.CastRepository
-	videoRepo repository.VideoRepository
-	storage   storage.StorageService
-	log       *slog.Logger
+	castRepo      repository.CastRepository
+	videoCastRepo repository.VideoCastRepository
+	videoRepo     repository.VideoRepository
+	storage       storage.StorageService
+	log           *slog.Logger
 }
 
 // NewService creates a new cast Service.
-func NewService(castRepo repository.CastRepository, videoRepo repository.VideoRepository, log *slog.Logger, s storage.StorageService) *Service {
-	svc := &Service{castRepo: castRepo, videoRepo: videoRepo, log: log, storage: s}
-	return svc
+func NewService(
+	castRepo repository.CastRepository,
+	videoCastRepo repository.VideoCastRepository,
+	videoRepo repository.VideoRepository,
+	log *slog.Logger,
+	s storage.StorageService,
+) *Service {
+	return &Service{
+		castRepo:      castRepo,
+		videoCastRepo: videoCastRepo,
+		videoRepo:     videoRepo,
+		log:           log,
+		storage:       s,
+	}
 }
 
 // resolvePictureURL populates c.PictureURL from c.PictureKey using the storage backend.
 func (s *Service) resolvePictureURL(c *entity.Cast) {
-	if s.storage != nil && c.PictureKey != "" {
+	if s.storage != nil && c != nil && c.PictureKey != "" {
 		c.PictureURL = s.storage.PublicURL(c.PictureKey)
 	}
 }

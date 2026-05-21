@@ -30,11 +30,11 @@ func NewCastHandler(castService *castuc.Service) *CastHandler {
 
 // List godoc
 // @Summary      List cast
-// @Description  Returns all cast members for a video, ordered by sort_order
+// @Description  Returns all cast credits for a video, ordered by sort_order
 // @Tags         cast
 // @Produce      json
 // @Param        id path string true "Video ID"
-// @Success      200 {object} httputil.Response{data=[]dto.CastResponse}
+// @Success      200 {object} httputil.Response{data=[]dto.CastCreditResponse}
 // @Failure      404 {object} httputil.ErrorResponse
 // @Failure      500 {object} httputil.ErrorResponse
 // @Router       /videos/{id}/cast [get]
@@ -45,28 +45,29 @@ func (h *CastHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cast, appErr := h.castService.List(r.Context(), videoID)
+	credits, appErr := h.castService.List(r.Context(), videoID)
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.CastListToResponse(cast))
+	httputil.Success(w, http.StatusOK, mapper.VideoCastListToResponse(credits))
 }
 
 // Create godoc
-// @Summary      Add cast member
-// @Description  Adds a cast member to a video. Publishers may only add cast to their own videos.
+// @Summary      Add cast member to video
+// @Description  Adds a cast member to a video using find-or-create by name. Publishers may only add cast to their own videos.
 // @Tags         cast
 // @Accept       json
 // @Produce      json
 // @Param        id   path string               true "Video ID"
 // @Param        body body dto.CreateCastRequest true "Cast data"
-// @Success      201 {object} httputil.Response{data=dto.CastResponse}
+// @Success      201 {object} httputil.Response{data=dto.CastCreditResponse}
 // @Failure      400 {object} httputil.ErrorResponse
 // @Failure      401 {object} httputil.ErrorResponse
 // @Failure      403 {object} httputil.ErrorResponse
 // @Failure      404 {object} httputil.ErrorResponse
+// @Failure      409 {object} httputil.ErrorResponse
 // @Failure      500 {object} httputil.ErrorResponse
 // @Security     BearerAuth
 // @Router       /videos/{id}/cast [post]
@@ -94,7 +95,7 @@ func (h *CastHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	callerRoles, _ := middleware.GetUserRoles(r.Context())
 
-	c, appErr := h.castService.Create(r.Context(), &castuc.CreateInput{
+	vc, appErr := h.castService.Create(r.Context(), &castuc.CreateInput{
 		VideoID:     videoID,
 		Name:        req.Name,
 		Role:        req.Role,
@@ -107,18 +108,18 @@ func (h *CastHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusCreated, mapper.CastToResponse(c))
+	httputil.Success(w, http.StatusCreated, mapper.VideoCastToResponse(vc))
 }
 
-// Update godoc
-// @Summary      Update cast member
-// @Description  Updates a cast member. Publishers may only update cast for their own videos.
+// UpdateCast godoc
+// @Summary      Update cast member name
+// @Description  Updates a cast member's name globally. Admins are unrestricted; publishers must have the member credited on one of their videos.
 // @Tags         cast
 // @Accept       json
 // @Produce      json
-// @Param        id   path string               true "Cast ID"
+// @Param        id   path string               true "Cast member ID"
 // @Param        body body dto.UpdateCastRequest true "Fields to update"
-// @Success      200 {object} httputil.Response{data=dto.CastResponse}
+// @Success      200 {object} httputil.Response{data=dto.CastMemberResponse}
 // @Failure      400 {object} httputil.ErrorResponse
 // @Failure      401 {object} httputil.ErrorResponse
 // @Failure      403 {object} httputil.ErrorResponse
@@ -126,7 +127,7 @@ func (h *CastHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} httputil.ErrorResponse
 // @Security     BearerAuth
 // @Router       /cast/{id} [put]
-func (h *CastHandler) Update(w http.ResponseWriter, r *http.Request) {
+func (h *CastHandler) UpdateCast(w http.ResponseWriter, r *http.Request) {
 	castID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid cast ID")
@@ -150,9 +151,69 @@ func (h *CastHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	callerRoles, _ := middleware.GetUserRoles(r.Context())
 
-	c, appErr := h.castService.Update(r.Context(), &castuc.UpdateInput{
+	c, appErr := h.castService.UpdateCast(r.Context(), &castuc.UpdateCastInput{
 		ID:          castID,
 		Name:        req.Name,
+		CallerID:    callerID,
+		CallerRoles: callerRoles,
+	})
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.CastToMemberResponse(c))
+}
+
+// UpdateCredit godoc
+// @Summary      Update cast credit
+// @Description  Updates the role or sort_order for a cast member's credit on a specific video. Publishers may only update credits for their own videos.
+// @Tags         cast
+// @Accept       json
+// @Produce      json
+// @Param        videoID path string                 true "Video ID"
+// @Param        castID  path string                 true "Cast member ID"
+// @Param        body    body dto.UpdateCreditRequest true "Fields to update"
+// @Success      200 {object} httputil.Response{data=dto.CastCreditResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /videos/{videoID}/cast/{castID} [put]
+func (h *CastHandler) UpdateCredit(w http.ResponseWriter, r *http.Request) {
+	videoID, err := uuid.Parse(chi.URLParam(r, "videoID"))
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid video ID")
+		return
+	}
+	castID, err := uuid.Parse(chi.URLParam(r, "castID"))
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid cast ID")
+		return
+	}
+
+	var req dto.UpdateCreditRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
+		return
+	}
+	if errs := h.validator.Validate(req); errs != nil {
+		httputil.ErrorWithDetails(w, apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil), errs)
+		return
+	}
+
+	callerID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
+		return
+	}
+	callerRoles, _ := middleware.GetUserRoles(r.Context())
+
+	vc, appErr := h.castService.UpdateCredit(r.Context(), &castuc.UpdateCreditInput{
+		CastID:      castID,
+		VideoID:     videoID,
 		Role:        req.Role,
 		SortOrder:   req.SortOrder,
 		CallerID:    callerID,
@@ -163,18 +224,18 @@ func (h *CastHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.CastToResponse(c))
+	httputil.Success(w, http.StatusOK, mapper.VideoCastToResponse(vc))
 }
 
 // UploadPicture godoc
 // @Summary      Upload cast member picture
-// @Description  Uploads or replaces a cast member's picture via multipart form. Publishers may only update pictures for cast on their own videos.
+// @Description  Uploads or replaces a cast member's picture via multipart form.
 // @Tags         cast
 // @Accept       multipart/form-data
 // @Produce      json
-// @Param        id      path     string true "Cast ID" format(uuid)
+// @Param        id      path     string true "Cast member ID" format(uuid)
 // @Param        picture formData file   true "Picture image (JPEG, PNG, WebP, or GIF)"
-// @Success      200 {object} httputil.Response{data=dto.CastResponse}
+// @Success      200 {object} httputil.Response{data=dto.CastMemberResponse}
 // @Failure      400 {object} httputil.ErrorResponse
 // @Failure      401 {object} httputil.ErrorResponse
 // @Failure      403 {object} httputil.ErrorResponse
@@ -238,15 +299,56 @@ func (h *CastHandler) UploadPicture(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.Success(w, http.StatusOK, mapper.CastToResponse(out.Cast))
+	httputil.Success(w, http.StatusOK, mapper.CastToMemberResponse(out.Cast))
+}
+
+// DeleteFromVideo godoc
+// @Summary      Remove cast member from video
+// @Description  Removes a cast member's credit from a specific video. Publishers may only remove credits from their own videos.
+// @Tags         cast
+// @Produce      json
+// @Param        videoID path string true "Video ID"
+// @Param        castID  path string true "Cast member ID"
+// @Success      204
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /videos/{videoID}/cast/{castID} [delete]
+func (h *CastHandler) DeleteFromVideo(w http.ResponseWriter, r *http.Request) {
+	videoID, err := uuid.Parse(chi.URLParam(r, "videoID"))
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid video ID")
+		return
+	}
+	castID, err := uuid.Parse(chi.URLParam(r, "castID"))
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid cast ID")
+		return
+	}
+
+	callerID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
+		return
+	}
+	callerRoles, _ := middleware.GetUserRoles(r.Context())
+
+	if appErr := h.castService.DeleteFromVideo(r.Context(), castID, videoID, callerID, callerRoles); appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // Delete godoc
-// @Summary      Remove cast member
-// @Description  Removes a cast member. Publishers may only remove cast from their own videos.
+// @Summary      Delete cast member globally
+// @Description  Permanently removes a cast member and all their video credits. Admin only.
 // @Tags         cast
 // @Produce      json
-// @Param        id path string true "Cast ID"
+// @Param        id path string true "Cast member ID"
 // @Success      204
 // @Failure      401 {object} httputil.ErrorResponse
 // @Failure      403 {object} httputil.ErrorResponse

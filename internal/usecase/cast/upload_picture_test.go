@@ -18,7 +18,6 @@ import (
 func TestUploadPicture(t *testing.T) {
 	callerID := uuid.New()
 	castID := uuid.New()
-	videoID := uuid.New()
 	otherUserID := uuid.New()
 
 	const uploadedURL = "https://cdn.example.com/cast/picture.jpg"
@@ -48,21 +47,17 @@ func TestUploadPicture(t *testing.T) {
 			setupCast: func() *mockCastRepo {
 				return &mockCastRepo{
 					getByIDFn: func(_ context.Context, id uuid.UUID) (*entity.Cast, error) {
-						c := newCastMember(castID, videoID)
-						return c, nil
+						return newCastMember(castID), nil
+					},
+					hasVideoWithCallerFn: func(_ context.Context, _, _ uuid.UUID) (bool, error) {
+						return true, nil
 					},
 					updateFn: func(_ context.Context, c *entity.Cast) error {
 						return nil
 					},
 				}
 			},
-			setupVideo: func() *mockVideoRepo {
-				return &mockVideoRepo{
-					getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.Video, error) {
-						return newActiveVideo(videoID, callerID), nil
-					},
-				}
-			},
+			setupVideo: func() *mockVideoRepo { return &mockVideoRepo{} },
 			setupStore: func() *mockStorageSvc {
 				return &mockStorageSvc{
 					uploadFn: func(_ context.Context, key string, _ io.Reader, _ string) (string, error) {
@@ -88,20 +83,17 @@ func TestUploadPicture(t *testing.T) {
 			setupCast: func() *mockCastRepo {
 				return &mockCastRepo{
 					getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.Cast, error) {
-						c := newCastMember(castID, videoID)
-						c.PictureKey = "cast/" + castID.String() + "/picture.jpg" // old key, different ext
+						c := newCastMember(castID)
+						c.PictureKey = "cast/" + castID.String() + "/picture.jpg"
 						return c, nil
+					},
+					hasVideoWithCallerFn: func(_ context.Context, _, _ uuid.UUID) (bool, error) {
+						return true, nil
 					},
 					updateFn: func(_ context.Context, _ *entity.Cast) error { return nil },
 				}
 			},
-			setupVideo: func() *mockVideoRepo {
-				return &mockVideoRepo{
-					getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.Video, error) {
-						return newActiveVideo(videoID, callerID), nil
-					},
-				}
-			},
+			setupVideo: func() *mockVideoRepo { return &mockVideoRepo{} },
 			setupStore: func() *mockStorageSvc {
 				deleted := ""
 				return &mockStorageSvc{
@@ -132,18 +124,12 @@ func TestUploadPicture(t *testing.T) {
 			setupCast: func() *mockCastRepo {
 				return &mockCastRepo{
 					getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.Cast, error) {
-						return newCastMember(castID, videoID), nil
+						return newCastMember(castID), nil
 					},
 					updateFn: func(_ context.Context, _ *entity.Cast) error { return nil },
 				}
 			},
-			setupVideo: func() *mockVideoRepo {
-				return &mockVideoRepo{
-					getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.Video, error) {
-						return newActiveVideo(videoID, callerID), nil
-					},
-				}
-			},
+			setupVideo: func() *mockVideoRepo { return &mockVideoRepo{} },
 			setupStore: func() *mockStorageSvc {
 				return &mockStorageSvc{
 					uploadFn:    func(_ context.Context, _ string, _ io.Reader, _ string) (string, error) { return uploadedURL, nil },
@@ -188,17 +174,14 @@ func TestUploadPicture(t *testing.T) {
 			setupCast: func() *mockCastRepo {
 				return &mockCastRepo{
 					getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.Cast, error) {
-						return newCastMember(castID, videoID), nil
+						return newCastMember(castID), nil
+					},
+					hasVideoWithCallerFn: func(_ context.Context, _, _ uuid.UUID) (bool, error) {
+						return false, nil // otherUserID has no video with this cast member
 					},
 				}
 			},
-			setupVideo: func() *mockVideoRepo {
-				return &mockVideoRepo{
-					getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.Video, error) {
-						return newActiveVideo(videoID, callerID), nil // owned by callerID, not otherUserID
-					},
-				}
-			},
+			setupVideo: func() *mockVideoRepo { return &mockVideoRepo{} },
 			setupStore: func() *mockStorageSvc { return &mockStorageSvc{} },
 			wantErr:    apperror.CodeVideoOwnershipRequired,
 		},
@@ -215,17 +198,14 @@ func TestUploadPicture(t *testing.T) {
 			setupCast: func() *mockCastRepo {
 				return &mockCastRepo{
 					getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.Cast, error) {
-						return newCastMember(castID, videoID), nil
+						return newCastMember(castID), nil
+					},
+					hasVideoWithCallerFn: func(_ context.Context, _, _ uuid.UUID) (bool, error) {
+						return true, nil
 					},
 				}
 			},
-			setupVideo: func() *mockVideoRepo {
-				return &mockVideoRepo{
-					getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.Video, error) {
-						return newActiveVideo(videoID, callerID), nil
-					},
-				}
-			},
+			setupVideo: func() *mockVideoRepo { return &mockVideoRepo{} },
 			setupStore: func() *mockStorageSvc {
 				return &mockStorageSvc{
 					uploadFn: func(_ context.Context, _ string, _ io.Reader, _ string) (string, error) {
@@ -250,17 +230,11 @@ func TestUploadPicture(t *testing.T) {
 			setupCast: func() *mockCastRepo {
 				return &mockCastRepo{
 					getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.Cast, error) {
-						return newCastMember(castID, videoID), nil
+						return newCastMember(castID), nil
 					},
 				}
 			},
-			setupVideo: func() *mockVideoRepo {
-				return &mockVideoRepo{
-					getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.Video, error) {
-						return newActiveVideo(videoID, callerID), nil
-					},
-				}
-			},
+			setupVideo: func() *mockVideoRepo { return &mockVideoRepo{} },
 			setupStore: nil, // no storage configured
 			wantErr:    apperror.CodeInternalError,
 		},
@@ -272,7 +246,7 @@ func TestUploadPicture(t *testing.T) {
 			if tc.setupStore != nil {
 				storageSvc = tc.setupStore()
 			}
-			svc := newTestService(tc.setupCast(), tc.setupVideo(), storageSvc)
+			svc := newTestService(tc.setupCast(), &mockVideoCastRepo{}, tc.setupVideo(), storageSvc)
 
 			out, appErr := svc.UploadPicture(context.Background(), tc.input)
 

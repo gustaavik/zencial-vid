@@ -43,13 +43,13 @@ func (s *Service) UploadPicture(ctx context.Context, input *UploadPictureInput) 
 	}
 
 	if !entity.HasRole(input.CallerRoles, entity.RoleAdmin) {
-		video, err := s.videoRepo.GetByID(ctx, c.VideoID)
+		ok, err := s.castRepo.HasVideoWithCaller(ctx, input.ID, input.CallerID)
 		if err != nil {
-			s.log.Error("getting video for cast ownership check", "error", err)
-			return nil, apperror.Internal(apperror.CodeInternalError, "failed to get video", err)
+			s.log.Error("checking cast ownership for picture upload", "error", err)
+			return nil, apperror.Internal(apperror.CodeInternalError, "failed to check ownership", err)
 		}
-		if video == nil || video.UploadedBy != input.CallerID {
-			return nil, apperror.Forbidden(apperror.CodeVideoOwnershipRequired, "you do not own this video", domain.ErrVideoOwnershipRequired)
+		if !ok {
+			return nil, apperror.Forbidden(apperror.CodeVideoOwnershipRequired, "you do not have a video with this cast member", domain.ErrVideoOwnershipRequired)
 		}
 	}
 

@@ -16,11 +16,13 @@ import (
 
 // mockCastRepo is a closure-field mock for repository.CastRepository.
 type mockCastRepo struct {
-	createFn      func(ctx context.Context, cast *entity.Cast) error
-	getByIDFn     func(ctx context.Context, id uuid.UUID) (*entity.Cast, error)
-	listByVideoFn func(ctx context.Context, videoID uuid.UUID) ([]entity.Cast, error)
-	updateFn      func(ctx context.Context, cast *entity.Cast) error
-	deleteFn      func(ctx context.Context, id uuid.UUID) error
+	createFn             func(ctx context.Context, cast *entity.Cast) error
+	getByIDFn            func(ctx context.Context, id uuid.UUID) (*entity.Cast, error)
+	getByNameFn          func(ctx context.Context, name string) (*entity.Cast, error)
+	findOrCreateFn       func(ctx context.Context, name string) (*entity.Cast, error)
+	updateFn             func(ctx context.Context, cast *entity.Cast) error
+	deleteFn             func(ctx context.Context, id uuid.UUID) error
+	hasVideoWithCallerFn func(ctx context.Context, castID, callerID uuid.UUID) (bool, error)
 }
 
 func (m *mockCastRepo) Create(ctx context.Context, cast *entity.Cast) error {
@@ -29,14 +31,45 @@ func (m *mockCastRepo) Create(ctx context.Context, cast *entity.Cast) error {
 func (m *mockCastRepo) GetByID(ctx context.Context, id uuid.UUID) (*entity.Cast, error) {
 	return m.getByIDFn(ctx, id)
 }
-func (m *mockCastRepo) ListByVideo(ctx context.Context, videoID uuid.UUID) ([]entity.Cast, error) {
-	return m.listByVideoFn(ctx, videoID)
+func (m *mockCastRepo) GetByName(ctx context.Context, name string) (*entity.Cast, error) {
+	return m.getByNameFn(ctx, name)
+}
+func (m *mockCastRepo) FindOrCreate(ctx context.Context, name string) (*entity.Cast, error) {
+	return m.findOrCreateFn(ctx, name)
 }
 func (m *mockCastRepo) Update(ctx context.Context, cast *entity.Cast) error {
 	return m.updateFn(ctx, cast)
 }
 func (m *mockCastRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return m.deleteFn(ctx, id)
+}
+func (m *mockCastRepo) HasVideoWithCaller(ctx context.Context, castID, callerID uuid.UUID) (bool, error) {
+	return m.hasVideoWithCallerFn(ctx, castID, callerID)
+}
+
+// mockVideoCastRepo is a closure-field mock for repository.VideoCastRepository.
+type mockVideoCastRepo struct {
+	createFn               func(ctx context.Context, vc *entity.VideoCast) error
+	getByVideoAndCastFn    func(ctx context.Context, videoID, castID uuid.UUID) (*entity.VideoCast, error)
+	listByVideoFn          func(ctx context.Context, videoID uuid.UUID) ([]entity.VideoCast, error)
+	updateFn               func(ctx context.Context, vc *entity.VideoCast) error
+	deleteByVideoAndCastFn func(ctx context.Context, videoID, castID uuid.UUID) error
+}
+
+func (m *mockVideoCastRepo) Create(ctx context.Context, vc *entity.VideoCast) error {
+	return m.createFn(ctx, vc)
+}
+func (m *mockVideoCastRepo) GetByVideoAndCast(ctx context.Context, videoID, castID uuid.UUID) (*entity.VideoCast, error) {
+	return m.getByVideoAndCastFn(ctx, videoID, castID)
+}
+func (m *mockVideoCastRepo) ListByVideo(ctx context.Context, videoID uuid.UUID) ([]entity.VideoCast, error) {
+	return m.listByVideoFn(ctx, videoID)
+}
+func (m *mockVideoCastRepo) Update(ctx context.Context, vc *entity.VideoCast) error {
+	return m.updateFn(ctx, vc)
+}
+func (m *mockVideoCastRepo) DeleteByVideoAndCast(ctx context.Context, videoID, castID uuid.UUID) error {
+	return m.deleteByVideoAndCastFn(ctx, videoID, castID)
 }
 
 // mockVideoRepo is a closure-field mock for repository.VideoRepository (only GetByID is used by cast).
@@ -114,27 +147,16 @@ func (m *mockStorageSvc) ListObjects(_ context.Context, _ string) ([]string, err
 // storageSvc accepts a storage.StorageService interface so that a true nil
 // interface (not a typed-nil *mockStorageSvc) can be passed for the
 // "storage not configured" test case.
-func newTestService(castRepo *mockCastRepo, videoRepo *mockVideoRepo, storageSvc storage.StorageService) *Service {
-	return NewService(castRepo, videoRepo, slog.Default(), storageSvc)
-}
-
-// newActiveVideo returns a minimal Video entity owned by ownerID.
-func newActiveVideo(videoID, ownerID uuid.UUID) *entity.Video {
-	return &entity.Video{
-		ID:         videoID,
-		UploadedBy: ownerID,
-	}
+func newTestService(castRepo *mockCastRepo, videoCastRepo *mockVideoCastRepo, videoRepo *mockVideoRepo, storageSvc storage.StorageService) *Service {
+	return NewService(castRepo, videoCastRepo, videoRepo, slog.Default(), storageSvc)
 }
 
 // newCastMember returns a minimal Cast entity.
-func newCastMember(castID, videoID uuid.UUID) *entity.Cast {
+func newCastMember(castID uuid.UUID) *entity.Cast {
 	now := time.Now().UTC()
 	return &entity.Cast{
 		ID:        castID,
-		VideoID:   videoID,
 		Name:      "Jane Doe",
-		Role:      "actor",
-		SortOrder: 0,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
