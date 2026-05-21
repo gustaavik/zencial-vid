@@ -14,7 +14,8 @@ type VideoCast struct {
 	CastID    uuid.UUID
 	Role      string
 	SortOrder int
-	Cast      *Cast // populated by repository JOIN
+	Cast      *Cast  // populated by repository JOIN for ListByVideo direction
+	Video     *Video // populated by repository JOIN for ListByCast direction
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

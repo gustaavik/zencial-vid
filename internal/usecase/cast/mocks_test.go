@@ -58,6 +58,7 @@ type mockVideoCastRepo struct {
 	listByVideoFn          func(ctx context.Context, videoID uuid.UUID) ([]entity.VideoCast, error)
 	updateFn               func(ctx context.Context, vc *entity.VideoCast) error
 	deleteByVideoAndCastFn func(ctx context.Context, videoID, castID uuid.UUID) error
+	listByCastFn           func(ctx context.Context, castID uuid.UUID, offset, limit int) ([]entity.VideoCast, int, error)
 }
 
 func (m *mockVideoCastRepo) Create(ctx context.Context, vc *entity.VideoCast) error {
@@ -74,6 +75,9 @@ func (m *mockVideoCastRepo) Update(ctx context.Context, vc *entity.VideoCast) er
 }
 func (m *mockVideoCastRepo) DeleteByVideoAndCast(ctx context.Context, videoID, castID uuid.UUID) error {
 	return m.deleteByVideoAndCastFn(ctx, videoID, castID)
+}
+func (m *mockVideoCastRepo) ListByCast(ctx context.Context, castID uuid.UUID, offset, limit int) ([]entity.VideoCast, int, error) {
+	return m.listByCastFn(ctx, castID, offset, limit)
 }
 
 // mockVideoRepo is a closure-field mock for repository.VideoRepository (only GetByID is used by cast).

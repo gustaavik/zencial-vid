@@ -271,6 +271,51 @@ definitions:
         example: "2025-01-01T00:00:00Z"
         type: string
     type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastVideoResponse:
+    properties:
+      content_rating:
+        example: PG
+        type: string
+      created_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      duration:
+        example: 3600
+        type: integer
+      episode_number:
+        example: 3
+        type: integer
+      role:
+        example: actor
+        type: string
+      season_number:
+        example: 1
+        type: integer
+      series_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      slug:
+        example: my-awesome-video-a3f8b2c1
+        type: string
+      sort_order:
+        example: 0
+        type: integer
+      status:
+        example: published
+        type: string
+      thumbnail_url:
+        example: https://cdn.example.com/thumbnails/video.jpg
+        type: string
+      title:
+        example: My Awesome Video
+        type: string
+      updated_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      video_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CompleteUploadRequest:
     properties:
       content_rating:
@@ -2514,6 +2559,58 @@ paths:
       security:
       - BearerAuth: []
       summary: Upload cast member picture
+      tags:
+      - cast
+  /cast/{id}/videos:
+    get:
+      description: Returns a paginated list of published videos a cast member appears
+        in, ordered by release date (newest first).
+      parameters:
+      - description: Cast member ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastVideoResponse'
+                  type: array
+                meta:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      summary: List videos for a cast member
       tags:
       - cast
   /genres:

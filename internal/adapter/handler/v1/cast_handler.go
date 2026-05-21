@@ -18,13 +18,15 @@ import (
 // CastHandler handles cast HTTP requests.
 type CastHandler struct {
 	castService *castuc.Service
+	cdnURLs     mapper.ThumbnailURLBuilder
 	validator   *validator.Validator
 }
 
 // NewCastHandler creates a new CastHandler.
-func NewCastHandler(castService *castuc.Service) *CastHandler {
+func NewCastHandler(castService *castuc.Service, cdnURLs mapper.ThumbnailURLBuilder) *CastHandler {
 	return &CastHandler{
 		castService: castService,
+		cdnURLs:     cdnURLs,
 		validator:   validator.New(),
 	}
 }
@@ -410,4 +412,45 @@ func (h *CastHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// ListVideos godoc
+// @Summary      List videos for a cast member
+// @Description  Returns a paginated list of published videos a cast member appears in, ordered by release date (newest first).
+// @Tags         cast
+// @Produce      json
+// @Param        id       path  string true  "Cast member ID" format(uuid)
+// @Param        page     query int    false "Page number"    default(1)
+// @Param        per_page query int    false "Items per page" default(20)
+// @Success      200 {object} httputil.Response{data=[]dto.CastVideoResponse,meta=httputil.Meta}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Router       /cast/{id}/videos [get]
+func (h *CastHandler) ListVideos(w http.ResponseWriter, r *http.Request) {
+	castID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid cast ID")
+		return
+	}
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	perPage, _ := strconv.Atoi(r.URL.Query().Get("per_page"))
+
+	out, appErr := h.castService.ListVideos(r.Context(), castuc.ListVideosInput{
+		CastID:  castID,
+		Page:    page,
+		PerPage: perPage,
+	})
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.SuccessWithMeta(w, mapper.VideoCastToVideoResponses(out.Credits, h.cdnURLs), &httputil.Meta{
+		Page:       out.Page,
+		PerPage:    out.PerPage,
+		Total:      int64(out.Total),
+		TotalPages: (out.Total + out.PerPage - 1) / out.PerPage,
+	})
 }

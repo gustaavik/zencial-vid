@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
+	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 )
 
 // VideoCastRepository implements repository.VideoCastRepository using PostgreSQL.
@@ -125,4 +126,74 @@ func scanVideoCastRow(row scannable) (*entity.VideoCast, error) {
 		vc.Cast.PictureKey = *pictureKey
 	}
 	return vc, nil
+}
+
+func scanVideoCastWithVideo(row scannable) (*entity.VideoCast, error) {
+	vc := &entity.VideoCast{Video: &entity.Video{}}
+	var slug, contentRating, status, transcodeError string
+	var duration int64
+	err := row.Scan(
+		&vc.ID, &vc.VideoID, &vc.CastID, &vc.Role, &vc.SortOrder,
+		&vc.CreatedAt, &vc.UpdatedAt,
+		&vc.Video.ID, &vc.Video.Title, &slug, &vc.Video.Description,
+		&vc.Video.Creator, &duration, &contentRating, &status,
+		&vc.Video.StorageKey, &vc.Video.ContentType, &vc.Video.FileSize,
+		&vc.Video.ThumbnailKey, &vc.Video.UploadedBy,
+		&vc.Video.MinimumPlanLevel, &transcodeError,
+		&vc.Video.CreatedAt, &vc.Video.UpdatedAt,
+		&vc.Video.SeriesID, &vc.Video.SeasonNumber, &vc.Video.EpisodeNumber,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("scanning video cast with video: %w", err)
+	}
+	vc.Video.Slug = valueobject.SlugFromTrusted(slug)
+	vc.Video.Duration = valueobject.NewDuration(duration)
+	vc.Video.ContentRating = contentRating
+	vc.Video.Status = entity.VideoStatus(status)
+	vc.Video.TranscodeError = transcodeError
+	return vc, nil
+}
+
+func (r *VideoCastRepository) ListByCast(ctx context.Context, castID uuid.UUID, offset, limit int) ([]entity.VideoCast, int, error) {
+	db := connFromCtx(ctx, r.pool)
+
+	var total int
+	if err := db.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM video_cast vc
+		JOIN videos v ON v.id = vc.video_id
+		WHERE vc.cast_id = $1 AND v.status = 'published'
+	`, castID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("counting videos by cast: %w", err)
+	}
+
+	rows, err := db.Query(ctx, `
+		SELECT
+			vc.id, vc.video_id, vc.cast_id, vc.role, vc.sort_order,
+			vc.created_at, vc.updated_at,
+			v.id, v.title, v.slug, v.description, v.creator, v.duration,
+			v.content_rating, v.status, v.storage_key, v.content_type,
+			v.file_size, v.thumbnail_key, v.uploaded_by,
+			v.minimum_plan_level, v.transcode_error, v.created_at, v.updated_at,
+			v.series_id, v.season_number, v.episode_number
+		FROM video_cast vc
+		JOIN videos v ON v.id = vc.video_id
+		WHERE vc.cast_id = $1 AND v.status = 'published'
+		ORDER BY v.created_at DESC
+		LIMIT $2 OFFSET $3
+	`, castID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("listing videos by cast: %w", err)
+	}
+	defer rows.Close()
+
+	var results []entity.VideoCast
+	for rows.Next() {
+		vc, err := scanVideoCastWithVideo(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		results = append(results, *vc)
+	}
+	return results, total, rows.Err()
 }

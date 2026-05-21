@@ -18,4 +18,7 @@ type VideoCastRepository interface {
 	ListByVideo(ctx context.Context, videoID uuid.UUID) ([]entity.VideoCast, error)
 	Update(ctx context.Context, vc *entity.VideoCast) error
 	DeleteByVideoAndCast(ctx context.Context, videoID, castID uuid.UUID) error
+	// ListByCast returns a paginated list of published video credits for a cast
+	// member ordered by v.created_at DESC. Each VideoCast.Video is populated via JOIN.
+	ListByCast(ctx context.Context, castID uuid.UUID, offset, limit int) ([]entity.VideoCast, int, error)
 }

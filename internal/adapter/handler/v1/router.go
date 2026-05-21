@@ -62,7 +62,7 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 	transcodeCallbackHandler := NewTranscodeCallbackHandler(deps.Video)
 	auditLogHandler := NewAuditLogHandler(deps.Audit)
 	sessionHandler := NewSessionHandler(deps.Session)
-	castHandler := NewCastHandler(deps.Cast)
+	castHandler := NewCastHandler(deps.Cast, deps.CDNURLs)
 	analyticsHandler := NewAnalyticsHandler(deps.Analytics)
 
 	// Internal service-to-service routes (CDN callbacks). Outside the session chain.
@@ -96,8 +96,9 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 		r.Get("/videos", videoHandler.ListPublished)
 		r.Get("/videos/{id}", videoHandler.GetByID)
 
-		// Cast is public (anyone can see who's in a video)
+		// Cast is public (anyone can see who's in a video, or all videos for a cast member)
 		r.Get("/videos/{id}/cast", castHandler.List)
+		r.Get("/cast/{id}/videos", castHandler.ListVideos)
 
 		// Series (public read)
 		r.Get("/series", seriesHandler.ListPublished)
