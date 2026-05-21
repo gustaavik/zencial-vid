@@ -3,6 +3,7 @@ package video
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -389,6 +390,63 @@ func TestService_PurgeOrphans_Phase2_S3Orphans(t *testing.T) {
 		require.Nil(t, appErr)
 		assert.Empty(t, out.S3Orphans)
 		assert.False(t, listCalled, "ListObjects must not be called when IncludeS3Orphans is false")
+	})
+
+	t.Run("HLS files for a known video are not S3 orphans", func(t *testing.T) {
+		id := uuid.New()
+		hlsPrefix := fmt.Sprintf("videos/%s/hls/", id)
+		svc := newTestServiceWithStorage(
+			&mockVideoRepo{
+				listAllStorageKeysFn: func(_ context.Context) ([]repository.VideoStorageInfo, error) {
+					return []repository.VideoStorageInfo{
+						{ID: id, StorageKey: fmt.Sprintf("videos/%s/original.mp4", id)},
+					}, nil
+				},
+			},
+			nil,
+			&stubStorage{
+				statFn: func(_ context.Context, _ string) (*storage.ObjectInfo, error) {
+					return objectPresent, nil
+				},
+				listObjectsFn: func(_ context.Context, _ string) ([]string, error) {
+					return []string{
+						fmt.Sprintf("videos/%s/original.mp4", id),
+						hlsPrefix + "master.m3u8",
+						hlsPrefix + "360p/playlist.m3u8",
+						hlsPrefix + "360p/segment_000.ts",
+					}, nil
+				},
+			},
+		)
+
+		out, appErr := svc.PurgeOrphans(ctx, PurgeOrphansInput{IncludeS3Orphans: true})
+
+		require.Nil(t, appErr)
+		assert.Empty(t, out.S3Orphans)
+	})
+
+	t.Run("HLS files for an unknown videoID are S3 orphans", func(t *testing.T) {
+		unknownID := uuid.New()
+		hlsKey := fmt.Sprintf("videos/%s/hls/master.m3u8", unknownID)
+		svc := newTestServiceWithStorage(
+			&mockVideoRepo{
+				listAllStorageKeysFn: func(_ context.Context) ([]repository.VideoStorageInfo, error) {
+					return nil, nil
+				},
+			},
+			nil,
+			&stubStorage{
+				listObjectsFn: func(_ context.Context, _ string) ([]string, error) {
+					return []string{hlsKey}, nil
+				},
+			},
+		)
+
+		out, appErr := svc.PurgeOrphans(ctx, PurgeOrphansInput{IncludeS3Orphans: true})
+
+		require.Nil(t, appErr)
+		require.Len(t, out.S3Orphans, 1)
+		assert.Equal(t, hlsKey, out.S3Orphans[0])
 	})
 
 	t.Run("ListObjects error returns internal", func(t *testing.T) {
