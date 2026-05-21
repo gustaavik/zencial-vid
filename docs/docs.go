@@ -2024,7 +2024,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Updates a cast member. Publishers may only update cast for their own videos.",
+                "description": "Updates a cast member's name globally. Admins are unrestricted; publishers must have the member credited on one of their videos.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2034,11 +2034,11 @@ const docTemplate = `{
                 "tags": [
                     "cast"
                 ],
-                "summary": "Update cast member",
+                "summary": "Update cast member name",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Cast ID",
+                        "description": "Cast member ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -2065,7 +2065,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastResponse"
+                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastMemberResponse"
                                         }
                                     }
                                 }
@@ -2110,18 +2110,18 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Removes a cast member. Publishers may only remove cast from their own videos.",
+                "description": "Permanently removes a cast member and all their video credits. Admin only.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "cast"
                 ],
-                "summary": "Remove cast member",
+                "summary": "Delete cast member globally",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Cast ID",
+                        "description": "Cast member ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -2165,7 +2165,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Uploads or replaces a cast member's picture via multipart form. Publishers may only update pictures for cast on their own videos.",
+                "description": "Uploads or replaces a cast member's picture via multipart form.",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -2180,7 +2180,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "format": "uuid",
-                        "description": "Cast ID",
+                        "description": "Cast member ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -2205,7 +2205,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastResponse"
+                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastMemberResponse"
                                         }
                                     }
                                 }
@@ -5755,7 +5755,7 @@ const docTemplate = `{
         },
         "/videos/{id}/cast": {
             "get": {
-                "description": "Returns all cast members for a video, ordered by sort_order",
+                "description": "Returns all cast credits for a video, ordered by sort_order",
                 "produces": [
                     "application/json"
                 ],
@@ -5786,7 +5786,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastResponse"
+                                                "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastCreditResponse"
                                             }
                                         }
                                     }
@@ -5814,7 +5814,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Adds a cast member to a video. Publishers may only add cast to their own videos.",
+                "description": "Adds a cast member to a video using find-or-create by name. Publishers may only add cast to their own videos.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5824,7 +5824,7 @@ const docTemplate = `{
                 "tags": [
                     "cast"
                 ],
-                "summary": "Add cast member",
+                "summary": "Add cast member to video",
                 "parameters": [
                     {
                         "type": "string",
@@ -5855,7 +5855,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastResponse"
+                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastCreditResponse"
                                         }
                                     }
                                 }
@@ -5882,6 +5882,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
                         }
@@ -6224,6 +6230,161 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/videos/{videoID}/cast/{castID}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates the role or sort_order for a cast member's credit on a specific video. Publishers may only update credits for their own videos.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cast"
+                ],
+                "summary": "Update cast credit",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video ID",
+                        "name": "videoID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cast member ID",
+                        "name": "castID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateCreditRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastCreditResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes a cast member's credit from a specific video. Publishers may only remove credits from their own videos.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cast"
+                ],
+                "summary": "Remove cast member from video",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video ID",
+                        "name": "videoID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cast member ID",
+                        "name": "castID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -6554,7 +6715,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastResponse": {
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastCreditResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -6588,6 +6749,31 @@ const docTemplate = `{
                 "video_id": {
                     "type": "string",
                     "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastMemberResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-01T00:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Jane Doe"
+                },
+                "picture_url": {
+                    "type": "string",
+                    "example": "https://cdn.example.com/cast/picture.jpg"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2025-01-01T00:00:00Z"
                 }
             }
         },
@@ -7294,7 +7480,12 @@ const docTemplate = `{
                     "maxLength": 255,
                     "minLength": 1,
                     "example": "Jane Doe"
-                },
+                }
+            }
+        },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateCreditRequest": {
+            "type": "object",
+            "properties": {
                 "role": {
                     "type": "string",
                     "maxLength": 100,
