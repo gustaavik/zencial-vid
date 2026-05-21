@@ -8,13 +8,15 @@ import (
 
 // Cast represents a person credited on a video (actor, director, writer, etc.).
 type Cast struct {
-	ID        uuid.UUID
-	VideoID   uuid.UUID
-	Name      string
-	Role      string
-	SortOrder int
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID         uuid.UUID
+	VideoID    uuid.UUID
+	Name       string
+	Role       string
+	SortOrder  int
+	PictureKey string // stored in DB; empty if no picture assigned
+	PictureURL string // resolved by use case from PictureKey; not stored in DB
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 // NewCast creates a new Cast record.

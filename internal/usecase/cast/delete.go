@@ -36,5 +36,11 @@ func (s *Service) Delete(ctx context.Context, id, callerID uuid.UUID, callerRole
 		s.log.Error("deleting cast", "error", err)
 		return apperror.Internal(apperror.CodeInternalError, "failed to delete cast member", err)
 	}
+
+	if s.storage != nil && c.PictureKey != "" {
+		if err := s.storage.Delete(ctx, c.PictureKey); err != nil {
+			s.log.Error("deleting cast picture from storage", "key", c.PictureKey, "error", err)
+		}
+	}
 	return nil
 }

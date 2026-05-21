@@ -166,6 +166,81 @@ func (h *CastHandler) Update(w http.ResponseWriter, r *http.Request) {
 	httputil.Success(w, http.StatusOK, mapper.CastToResponse(c))
 }
 
+// UploadPicture godoc
+// @Summary      Upload cast member picture
+// @Description  Uploads or replaces a cast member's picture via multipart form. Publishers may only update pictures for cast on their own videos.
+// @Tags         cast
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        id      path     string true "Cast ID" format(uuid)
+// @Param        picture formData file   true "Picture image (JPEG, PNG, WebP, or GIF)"
+// @Success      200 {object} httputil.Response{data=dto.CastResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /cast/{id}/picture [put]
+func (h *CastHandler) UploadPicture(w http.ResponseWriter, r *http.Request) {
+	castID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid cast ID")
+		return
+	}
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "failed to parse multipart form")
+		return
+	}
+
+	file, header, err := r.FormFile("picture")
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "picture file is required")
+		return
+	}
+	defer func() { _ = file.Close() }()
+
+	contentType := header.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "image/jpeg"
+	}
+
+	extByContentType := map[string]string{
+		"image/jpeg": ".jpg",
+		"image/png":  ".png",
+		"image/webp": ".webp",
+		"image/gif":  ".gif",
+	}
+	ext, ok := extByContentType[contentType]
+	if !ok {
+		httputil.BadRequest(w, apperror.CodeValidationFailed, "unsupported image format; use JPEG, PNG, WebP, or GIF")
+		return
+	}
+
+	callerID, ok2 := middleware.GetUserID(r.Context())
+	if !ok2 {
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
+		return
+	}
+	callerRoles, _ := middleware.GetUserRoles(r.Context())
+
+	out, appErr := h.castService.UploadPicture(r.Context(), &castuc.UploadPictureInput{
+		ID:          castID,
+		Body:        file,
+		ContentType: contentType,
+		Ext:         ext,
+		CallerID:    callerID,
+		CallerRoles: callerRoles,
+	})
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.CastToResponse(out.Cast))
+}
+
 // Delete godoc
 // @Summary      Remove cast member
 // @Description  Removes a cast member. Publishers may only remove cast from their own videos.

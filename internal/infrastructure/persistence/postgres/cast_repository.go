@@ -25,9 +25,9 @@ func NewCastRepository(pool *pgxpool.Pool) *CastRepository {
 func (r *CastRepository) Create(ctx context.Context, cast *entity.Cast) error {
 	db := connFromCtx(ctx, r.pool)
 	_, err := db.Exec(ctx, `
-		INSERT INTO video_cast (id, video_id, name, role, sort_order, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`, cast.ID, cast.VideoID, cast.Name, cast.Role, cast.SortOrder, cast.CreatedAt, cast.UpdatedAt)
+		INSERT INTO video_cast (id, video_id, name, role, sort_order, picture_key, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, cast.ID, cast.VideoID, cast.Name, cast.Role, cast.SortOrder, nullableString(cast.PictureKey), cast.CreatedAt, cast.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("creating cast: %w", err)
 	}
@@ -37,15 +37,19 @@ func (r *CastRepository) Create(ctx context.Context, cast *entity.Cast) error {
 func (r *CastRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Cast, error) {
 	db := connFromCtx(ctx, r.pool)
 	c := &entity.Cast{}
+	var pictureKey *string
 	err := db.QueryRow(ctx, `
-		SELECT id, video_id, name, role, sort_order, created_at, updated_at
+		SELECT id, video_id, name, role, sort_order, picture_key, created_at, updated_at
 		FROM video_cast WHERE id = $1
-	`, id).Scan(&c.ID, &c.VideoID, &c.Name, &c.Role, &c.SortOrder, &c.CreatedAt, &c.UpdatedAt)
+	`, id).Scan(&c.ID, &c.VideoID, &c.Name, &c.Role, &c.SortOrder, &pictureKey, &c.CreatedAt, &c.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("getting cast by id: %w", err)
+	}
+	if pictureKey != nil {
+		c.PictureKey = *pictureKey
 	}
 	return c, nil
 }
@@ -53,7 +57,7 @@ func (r *CastRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Cas
 func (r *CastRepository) ListByVideo(ctx context.Context, videoID uuid.UUID) ([]entity.Cast, error) {
 	db := connFromCtx(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id, video_id, name, role, sort_order, created_at, updated_at
+		SELECT id, video_id, name, role, sort_order, picture_key, created_at, updated_at
 		FROM video_cast WHERE video_id = $1
 		ORDER BY sort_order ASC, created_at ASC
 	`, videoID)
@@ -65,8 +69,12 @@ func (r *CastRepository) ListByVideo(ctx context.Context, videoID uuid.UUID) ([]
 	var results []entity.Cast
 	for rows.Next() {
 		var c entity.Cast
-		if err := rows.Scan(&c.ID, &c.VideoID, &c.Name, &c.Role, &c.SortOrder, &c.CreatedAt, &c.UpdatedAt); err != nil {
+		var pictureKey *string
+		if err := rows.Scan(&c.ID, &c.VideoID, &c.Name, &c.Role, &c.SortOrder, &pictureKey, &c.CreatedAt, &c.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scanning cast row: %w", err)
+		}
+		if pictureKey != nil {
+			c.PictureKey = *pictureKey
 		}
 		results = append(results, c)
 	}
@@ -77,9 +85,9 @@ func (r *CastRepository) Update(ctx context.Context, cast *entity.Cast) error {
 	db := connFromCtx(ctx, r.pool)
 	cast.UpdatedAt = time.Now().UTC()
 	_, err := db.Exec(ctx, `
-		UPDATE video_cast SET name = $2, role = $3, sort_order = $4, updated_at = $5
+		UPDATE video_cast SET name = $2, role = $3, sort_order = $4, picture_key = $5, updated_at = $6
 		WHERE id = $1
-	`, cast.ID, cast.Name, cast.Role, cast.SortOrder, cast.UpdatedAt)
+	`, cast.ID, cast.Name, cast.Role, cast.SortOrder, nullableString(cast.PictureKey), cast.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("updating cast: %w", err)
 	}

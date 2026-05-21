@@ -173,7 +173,7 @@ func main() {
 	watchlistService := watchlistuc.NewService(watchlistRepo, videoRepo, appLog)
 	watchProgressService := watchprogressuc.NewService(watchProgressRepo, videoRepo, appLog)
 	auditService := audituc.NewService(auditLogRepo, appLog)
-	castService := castuc.NewService(castRepo, videoRepo, appLog)
+	castService := castuc.NewService(castRepo, videoRepo, appLog, storageService)
 	analyticsService := analyticsuc.NewService(analyticsRepo, videoRepo, appLog)
 
 	// Persist every dispatched domain event into the audit log.
