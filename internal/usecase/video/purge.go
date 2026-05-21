@@ -2,6 +2,8 @@ package video
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
@@ -72,8 +74,10 @@ func (s *Service) PurgeOrphans(ctx context.Context, input PurgeOrphansInput) (*P
 	}
 
 	// Phase 2 — S3 objects with no matching DB row.
-	// Build a set of all keys the DB knows about.
+	// Build a set of all keys the DB knows about, plus HLS directory prefixes
+	// derived from each video's ID (the CDN stores HLS at videos/{id}/hls/).
 	knownKeys := make(map[string]struct{}, len(infos)*2)
+	knownHLSPrefixes := make([]string, 0, len(infos))
 	for _, info := range infos {
 		if info.StorageKey != "" {
 			knownKeys[info.StorageKey] = struct{}{}
@@ -81,6 +85,7 @@ func (s *Service) PurgeOrphans(ctx context.Context, input PurgeOrphansInput) (*P
 		if info.ThumbnailKey != "" {
 			knownKeys[info.ThumbnailKey] = struct{}{}
 		}
+		knownHLSPrefixes = append(knownHLSPrefixes, fmt.Sprintf("videos/%s/hls/", info.ID))
 	}
 
 	s3Keys, err := s.storage.ListObjects(ctx, "")
@@ -91,6 +96,9 @@ func (s *Service) PurgeOrphans(ctx context.Context, input PurgeOrphansInput) (*P
 
 	for _, key := range s3Keys {
 		if _, known := knownKeys[key]; known {
+			continue
+		}
+		if hasKnownPrefix(key, knownHLSPrefixes) {
 			continue
 		}
 		out.S3Orphans = append(out.S3Orphans, key)
@@ -108,4 +116,13 @@ func (s *Service) PurgeOrphans(ctx context.Context, input PurgeOrphansInput) (*P
 	)
 
 	return out, nil
+}
+
+func hasKnownPrefix(key string, prefixes []string) bool {
+	for _, p := range prefixes {
+		if strings.HasPrefix(key, p) {
+			return true
+		}
+	}
+	return false
 }
