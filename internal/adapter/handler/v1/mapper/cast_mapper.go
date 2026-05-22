@@ -8,7 +8,8 @@ import (
 // VideoCastToResponse converts a VideoCast entity to a CastCreditResponse DTO.
 func VideoCastToResponse(vc *entity.VideoCast) dto.CastCreditResponse {
 	r := dto.CastCreditResponse{
-		ID:        vc.CastID.String(),
+		ID:        vc.ID.String(),
+		CastID:    vc.CastID.String(),
 		VideoID:   vc.VideoID.String(),
 		Role:      vc.Role,
 		SortOrder: vc.SortOrder,

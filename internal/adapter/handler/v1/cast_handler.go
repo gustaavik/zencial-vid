@@ -206,13 +206,13 @@ func (h *CastHandler) UpdateCast(w http.ResponseWriter, r *http.Request) {
 
 // UpdateCredit godoc
 // @Summary      Update cast credit
-// @Description  Updates the role or sort_order for a cast member's credit on a specific video. Publishers may only update credits for their own videos.
+// @Description  Updates the role or sort_order for a specific cast credit. Publishers may only update credits for their own videos.
 // @Tags         cast
 // @Accept       json
 // @Produce      json
-// @Param        videoID path string                 true "Video ID"
-// @Param        castID  path string                 true "Cast member ID"
-// @Param        body    body dto.UpdateCreditRequest true "Fields to update"
+// @Param        videoID  path string                 true "Video ID"
+// @Param        creditID path string                 true "Cast credit ID"
+// @Param        body     body dto.UpdateCreditRequest true "Fields to update"
 // @Success      200 {object} httputil.Response{data=dto.CastCreditResponse}
 // @Failure      400 {object} httputil.ErrorResponse
 // @Failure      401 {object} httputil.ErrorResponse
@@ -220,16 +220,11 @@ func (h *CastHandler) UpdateCast(w http.ResponseWriter, r *http.Request) {
 // @Failure      404 {object} httputil.ErrorResponse
 // @Failure      500 {object} httputil.ErrorResponse
 // @Security     BearerAuth
-// @Router       /videos/{videoID}/cast/{castID} [put]
+// @Router       /videos/{videoID}/cast/{creditID} [put]
 func (h *CastHandler) UpdateCredit(w http.ResponseWriter, r *http.Request) {
-	videoID, err := uuid.Parse(chi.URLParam(r, "videoID"))
+	creditID, err := uuid.Parse(chi.URLParam(r, "creditID"))
 	if err != nil {
-		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid video ID")
-		return
-	}
-	castID, err := uuid.Parse(chi.URLParam(r, "castID"))
-	if err != nil {
-		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid cast ID")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid credit ID")
 		return
 	}
 
@@ -251,8 +246,7 @@ func (h *CastHandler) UpdateCredit(w http.ResponseWriter, r *http.Request) {
 	callerRoles, _ := middleware.GetUserRoles(r.Context())
 
 	vc, appErr := h.castService.UpdateCredit(r.Context(), &castuc.UpdateCreditInput{
-		CastID:      castID,
-		VideoID:     videoID,
+		CreditID:    creditID,
 		Role:        req.Role,
 		SortOrder:   req.SortOrder,
 		CallerID:    callerID,
@@ -342,28 +336,23 @@ func (h *CastHandler) UploadPicture(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeleteFromVideo godoc
-// @Summary      Remove cast member from video
-// @Description  Removes a cast member's credit from a specific video. Publishers may only remove credits from their own videos.
+// @Summary      Remove cast credit from video
+// @Description  Removes a specific cast credit from a video. Publishers may only remove credits from their own videos.
 // @Tags         cast
 // @Produce      json
-// @Param        videoID path string true "Video ID"
-// @Param        castID  path string true "Cast member ID"
+// @Param        videoID  path string true "Video ID"
+// @Param        creditID path string true "Cast credit ID"
 // @Success      204
 // @Failure      401 {object} httputil.ErrorResponse
 // @Failure      403 {object} httputil.ErrorResponse
 // @Failure      404 {object} httputil.ErrorResponse
 // @Failure      500 {object} httputil.ErrorResponse
 // @Security     BearerAuth
-// @Router       /videos/{videoID}/cast/{castID} [delete]
+// @Router       /videos/{videoID}/cast/{creditID} [delete]
 func (h *CastHandler) DeleteFromVideo(w http.ResponseWriter, r *http.Request) {
-	videoID, err := uuid.Parse(chi.URLParam(r, "videoID"))
+	creditID, err := uuid.Parse(chi.URLParam(r, "creditID"))
 	if err != nil {
-		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid video ID")
-		return
-	}
-	castID, err := uuid.Parse(chi.URLParam(r, "castID"))
-	if err != nil {
-		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid cast ID")
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid credit ID")
 		return
 	}
 
@@ -374,7 +363,7 @@ func (h *CastHandler) DeleteFromVideo(w http.ResponseWriter, r *http.Request) {
 	}
 	callerRoles, _ := middleware.GetUserRoles(r.Context())
 
-	if appErr := h.castService.DeleteFromVideo(r.Context(), castID, videoID, callerID, callerRoles); appErr != nil {
+	if appErr := h.castService.DeleteFromVideo(r.Context(), creditID, callerID, callerRoles); appErr != nil {
 		httputil.Error(w, appErr)
 		return
 	}

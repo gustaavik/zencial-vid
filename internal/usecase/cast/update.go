@@ -56,8 +56,7 @@ func (s *Service) UpdateCast(ctx context.Context, input *UpdateCastInput) (*enti
 
 // UpdateCreditInput holds the fields needed to update a credit's role/sort_order.
 type UpdateCreditInput struct {
-	CastID    uuid.UUID
-	VideoID   uuid.UUID
+	CreditID  uuid.UUID
 	Role      *string
 	SortOrder *int
 	// CallerID and CallerRoles enforce publisher ownership.
@@ -68,7 +67,7 @@ type UpdateCreditInput struct {
 // UpdateCredit modifies the role or sort_order of a cast member's credit on a video.
 // Publishers may only update credits for videos they uploaded.
 func (s *Service) UpdateCredit(ctx context.Context, input *UpdateCreditInput) (*entity.VideoCast, *apperror.AppError) {
-	vc, err := s.videoCastRepo.GetByVideoAndCast(ctx, input.VideoID, input.CastID)
+	vc, err := s.videoCastRepo.GetByID(ctx, input.CreditID)
 	if err != nil {
 		s.log.Error("getting credit for update", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to get cast credit", err)
@@ -78,7 +77,7 @@ func (s *Service) UpdateCredit(ctx context.Context, input *UpdateCreditInput) (*
 	}
 
 	if !entity.HasRole(input.CallerRoles, entity.RoleAdmin) {
-		video, err := s.videoRepo.GetByID(ctx, input.VideoID)
+		video, err := s.videoRepo.GetByID(ctx, vc.VideoID)
 		if err != nil {
 			s.log.Error("getting video for credit ownership check", "error", err)
 			return nil, apperror.Internal(apperror.CodeInternalError, "failed to get video", err)

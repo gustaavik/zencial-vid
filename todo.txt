@@ -1,3 +1,1 @@
-* soft delete casts
 * make sure all list usecases, uses filters
-* a cast should be able to be mentioned multiple times in the same video with different roles (fx. an actor can also be a director)

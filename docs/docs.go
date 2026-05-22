@@ -6467,14 +6467,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/videos/{videoID}/cast/{castID}": {
+        "/videos/{videoID}/cast/{creditID}": {
             "put": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Updates the role or sort_order for a cast member's credit on a specific video. Publishers may only update credits for their own videos.",
+                "description": "Updates the role or sort_order for a specific cast credit. Publishers may only update credits for their own videos.",
                 "consumes": [
                     "application/json"
                 ],
@@ -6495,8 +6495,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Cast member ID",
-                        "name": "castID",
+                        "description": "Cast credit ID",
+                        "name": "creditID",
                         "in": "path",
                         "required": true
                     },
@@ -6567,14 +6567,14 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Removes a cast member's credit from a specific video. Publishers may only remove credits from their own videos.",
+                "description": "Removes a specific cast credit from a video. Publishers may only remove credits from their own videos.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "cast"
                 ],
-                "summary": "Remove cast member from video",
+                "summary": "Remove cast credit from video",
                 "parameters": [
                     {
                         "type": "string",
@@ -6585,8 +6585,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Cast member ID",
-                        "name": "castID",
+                        "description": "Cast credit ID",
+                        "name": "creditID",
                         "in": "path",
                         "required": true
                     }
@@ -6954,6 +6954,10 @@ const docTemplate = `{
         "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastCreditResponse": {
             "type": "object",
             "properties": {
+                "cast_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
                 "created_at": {
                     "type": "string",
                     "example": "2025-01-01T00:00:00Z"

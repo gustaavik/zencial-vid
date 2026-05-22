@@ -35,7 +35,7 @@ func (r *VideoCastRepository) Create(ctx context.Context, vc *entity.VideoCast) 
 	return nil
 }
 
-func (r *VideoCastRepository) GetByVideoAndCast(ctx context.Context, videoID, castID uuid.UUID) (*entity.VideoCast, error) {
+func (r *VideoCastRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.VideoCast, error) {
 	db := connFromCtx(ctx, r.pool)
 	return scanVideoCast(db.QueryRow(ctx, `
 		SELECT
@@ -44,8 +44,21 @@ func (r *VideoCastRepository) GetByVideoAndCast(ctx context.Context, videoID, ca
 			c.id, c.name, c.picture_key, c.created_at, c.updated_at
 		FROM video_cast vc
 		JOIN casts c ON c.id = vc.cast_id
-		WHERE vc.video_id = $1 AND vc.cast_id = $2
-	`, videoID, castID))
+		WHERE vc.id = $1
+	`, id))
+}
+
+func (r *VideoCastRepository) GetByVideoAndCastAndRole(ctx context.Context, videoID, castID uuid.UUID, role string) (*entity.VideoCast, error) {
+	db := connFromCtx(ctx, r.pool)
+	return scanVideoCast(db.QueryRow(ctx, `
+		SELECT
+			vc.id, vc.video_id, vc.cast_id, vc.role, vc.sort_order,
+			vc.created_at, vc.updated_at,
+			c.id, c.name, c.picture_key, c.created_at, c.updated_at
+		FROM video_cast vc
+		JOIN casts c ON c.id = vc.cast_id
+		WHERE vc.video_id = $1 AND vc.cast_id = $2 AND vc.role = $3
+	`, videoID, castID, role))
 }
 
 func (r *VideoCastRepository) ListByVideo(ctx context.Context, videoID uuid.UUID) ([]entity.VideoCast, error) {
@@ -80,20 +93,20 @@ func (r *VideoCastRepository) Update(ctx context.Context, vc *entity.VideoCast) 
 	db := connFromCtx(ctx, r.pool)
 	vc.UpdatedAt = time.Now().UTC()
 	_, err := db.Exec(ctx, `
-		UPDATE video_cast SET role = $3, sort_order = $4, updated_at = $5
-		WHERE video_id = $1 AND cast_id = $2
-	`, vc.VideoID, vc.CastID, vc.Role, vc.SortOrder, vc.UpdatedAt)
+		UPDATE video_cast SET role = $2, sort_order = $3, updated_at = $4
+		WHERE id = $1
+	`, vc.ID, vc.Role, vc.SortOrder, vc.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("updating video cast: %w", err)
 	}
 	return nil
 }
 
-func (r *VideoCastRepository) DeleteByVideoAndCast(ctx context.Context, videoID, castID uuid.UUID) error {
+func (r *VideoCastRepository) DeleteByID(ctx context.Context, id uuid.UUID) error {
 	db := connFromCtx(ctx, r.pool)
 	_, err := db.Exec(ctx, `
-		DELETE FROM video_cast WHERE video_id = $1 AND cast_id = $2
-	`, videoID, castID)
+		DELETE FROM video_cast WHERE id = $1
+	`, id)
 	if err != nil {
 		return fmt.Errorf("deleting video cast: %w", err)
 	}

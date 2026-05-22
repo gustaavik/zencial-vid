@@ -46,13 +46,13 @@ func (s *Service) Create(ctx context.Context, input *CreateInput) (*entity.Video
 		return nil, apperror.Conflict(apperror.CodeCastArchived, "cast member is archived; unarchive before crediting", domain.ErrCastArchived)
 	}
 
-	existing, err := s.videoCastRepo.GetByVideoAndCast(ctx, input.VideoID, cast.ID)
+	existing, err := s.videoCastRepo.GetByVideoAndCastAndRole(ctx, input.VideoID, cast.ID, input.Role)
 	if err != nil {
 		s.log.Error("checking for duplicate cast credit", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to check cast credit", err)
 	}
 	if existing != nil {
-		return nil, apperror.Conflict(apperror.CodeCastAlreadyCredited, "cast member already credited on this video", nil)
+		return nil, apperror.Conflict(apperror.CodeCastAlreadyCredited, "cast member already has this role on this video", nil)
 	}
 
 	vc := entity.NewVideoCast(input.VideoID, cast.ID, input.Role, input.SortOrder)

@@ -3,6 +3,7 @@ package dto
 // CastCreditResponse represents a cast member's credit on a specific video.
 type CastCreditResponse struct {
 	ID         string `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	CastID     string `json:"cast_id" example:"550e8400-e29b-41d4-a716-446655440000"`
 	VideoID    string `json:"video_id" example:"550e8400-e29b-41d4-a716-446655440000"`
 	Name       string `json:"name" example:"Jane Doe"`
 	Role       string `json:"role" example:"actor"`

@@ -53,19 +53,23 @@ func (m *mockCastRepo) ListAll(ctx context.Context, offset int, limit int, inclu
 
 // mockVideoCastRepo is a closure-field mock for repository.VideoCastRepository.
 type mockVideoCastRepo struct {
-	createFn               func(ctx context.Context, vc *entity.VideoCast) error
-	getByVideoAndCastFn    func(ctx context.Context, videoID, castID uuid.UUID) (*entity.VideoCast, error)
-	listByVideoFn          func(ctx context.Context, videoID uuid.UUID) ([]entity.VideoCast, error)
-	updateFn               func(ctx context.Context, vc *entity.VideoCast) error
-	deleteByVideoAndCastFn func(ctx context.Context, videoID, castID uuid.UUID) error
-	listByCastFn           func(ctx context.Context, castID uuid.UUID, offset, limit int) ([]entity.VideoCast, int, error)
+	createFn                   func(ctx context.Context, vc *entity.VideoCast) error
+	getByIDFn                  func(ctx context.Context, id uuid.UUID) (*entity.VideoCast, error)
+	getByVideoAndCastAndRoleFn func(ctx context.Context, videoID, castID uuid.UUID, role string) (*entity.VideoCast, error)
+	listByVideoFn              func(ctx context.Context, videoID uuid.UUID) ([]entity.VideoCast, error)
+	updateFn                   func(ctx context.Context, vc *entity.VideoCast) error
+	deleteByIDFn               func(ctx context.Context, id uuid.UUID) error
+	listByCastFn               func(ctx context.Context, castID uuid.UUID, offset, limit int) ([]entity.VideoCast, int, error)
 }
 
 func (m *mockVideoCastRepo) Create(ctx context.Context, vc *entity.VideoCast) error {
 	return m.createFn(ctx, vc)
 }
-func (m *mockVideoCastRepo) GetByVideoAndCast(ctx context.Context, videoID, castID uuid.UUID) (*entity.VideoCast, error) {
-	return m.getByVideoAndCastFn(ctx, videoID, castID)
+func (m *mockVideoCastRepo) GetByID(ctx context.Context, id uuid.UUID) (*entity.VideoCast, error) {
+	return m.getByIDFn(ctx, id)
+}
+func (m *mockVideoCastRepo) GetByVideoAndCastAndRole(ctx context.Context, videoID, castID uuid.UUID, role string) (*entity.VideoCast, error) {
+	return m.getByVideoAndCastAndRoleFn(ctx, videoID, castID, role)
 }
 func (m *mockVideoCastRepo) ListByVideo(ctx context.Context, videoID uuid.UUID) ([]entity.VideoCast, error) {
 	return m.listByVideoFn(ctx, videoID)
@@ -73,8 +77,8 @@ func (m *mockVideoCastRepo) ListByVideo(ctx context.Context, videoID uuid.UUID) 
 func (m *mockVideoCastRepo) Update(ctx context.Context, vc *entity.VideoCast) error {
 	return m.updateFn(ctx, vc)
 }
-func (m *mockVideoCastRepo) DeleteByVideoAndCast(ctx context.Context, videoID, castID uuid.UUID) error {
-	return m.deleteByVideoAndCastFn(ctx, videoID, castID)
+func (m *mockVideoCastRepo) DeleteByID(ctx context.Context, id uuid.UUID) error {
+	return m.deleteByIDFn(ctx, id)
 }
 func (m *mockVideoCastRepo) ListByCast(ctx context.Context, castID uuid.UUID, offset, limit int) ([]entity.VideoCast, int, error) {
 	return m.listByCastFn(ctx, castID, offset, limit)
