@@ -135,6 +135,12 @@
                         "description": "Items per page",
                         "name": "per_page",
                         "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Include archived cast members (admin only)",
+                        "name": "include_archived",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -2178,14 +2184,14 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Permanently removes a cast member and all their video credits. Admin only.",
+                "description": "Soft-deletes a cast member by archiving them. The record and credits are preserved but the member is hidden from normal listings. Admin only.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "cast"
                 ],
-                "summary": "Delete cast member globally",
+                "summary": "Archive cast member globally",
                 "parameters": [
                     {
                         "type": "string",
@@ -2258,6 +2264,82 @@
                         "description": "Picture image (JPEG, PNG, WebP, or GIF)",
                         "name": "picture",
                         "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastMemberResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/cast/{id}/unarchive": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Restores an archived cast member to active status. Admin only.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cast"
+                ],
+                "summary": "Unarchive cast member",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cast member ID",
+                        "name": "id",
+                        "in": "path",
                         "required": true
                     }
                 ],
@@ -6918,6 +7000,10 @@
                 "picture_url": {
                     "type": "string",
                     "example": "https://cdn.example.com/cast/picture.jpg"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
                 },
                 "updated_at": {
                     "type": "string",

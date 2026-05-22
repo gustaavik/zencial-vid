@@ -267,6 +267,9 @@ definitions:
       picture_url:
         example: https://cdn.example.com/cast/picture.jpg
         type: string
+      status:
+        example: active
+        type: string
       updated_at:
         example: "2025-01-01T00:00:00Z"
         type: string
@@ -1210,6 +1213,10 @@ paths:
         in: query
         name: per_page
         type: integer
+      - description: Include archived cast members (admin only)
+        in: query
+        name: include_archived
+        type: boolean
       produces:
       - application/json
       responses:
@@ -2419,8 +2426,8 @@ paths:
       - auth
   /cast/{id}:
     delete:
-      description: Permanently removes a cast member and all their video credits.
-        Admin only.
+      description: Soft-deletes a cast member by archiving them. The record and credits
+        are preserved but the member is hidden from normal listings. Admin only.
       parameters:
       - description: Cast member ID
         in: path
@@ -2450,7 +2457,7 @@ paths:
             $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Delete cast member globally
+      summary: Archive cast member globally
       tags:
       - cast
     put:
@@ -2559,6 +2566,52 @@ paths:
       security:
       - BearerAuth: []
       summary: Upload cast member picture
+      tags:
+      - cast
+  /cast/{id}/unarchive:
+    post:
+      description: Restores an archived cast member to active status. Admin only.
+      parameters:
+      - description: Cast member ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastMemberResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Unarchive cast member
       tags:
       - cast
   /cast/{id}/videos:
