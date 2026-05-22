@@ -10,8 +10,9 @@ import (
 
 // ListAllInput carries pagination parameters for the global cast list.
 type ListAllInput struct {
-	Page    int
-	PerPage int
+	Page            int
+	PerPage         int
+	IncludeArchived bool
 }
 
 // ListAllOutput holds the paginated result.
@@ -26,7 +27,7 @@ type ListAllOutput struct {
 func (s *Service) ListAll(ctx context.Context, input ListAllInput) (*ListAllOutput, *apperror.AppError) {
 	p := valueobject.NewPagination(input.Page, input.PerPage)
 
-	members, total, err := s.castRepo.ListAll(ctx, p.Offset(), p.Limit())
+	members, total, err := s.castRepo.ListAll(ctx, p.Offset(), p.Limit(), input.IncludeArchived)
 	if err != nil {
 		s.log.Error("listing all cast", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to list cast", err)

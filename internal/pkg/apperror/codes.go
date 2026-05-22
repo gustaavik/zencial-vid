@@ -55,6 +55,7 @@ const (
 	// Cast
 	CodeCastNotFound        = "CAST_NOT_FOUND"
 	CodeCastAlreadyCredited = "CAST_ALREADY_CREDITED"
+	CodeCastArchived        = "CAST_ARCHIVED"
 
 	// Publisher / ownership
 	CodeVideoOwnershipRequired  = "VIDEO_OWNERSHIP_REQUIRED"

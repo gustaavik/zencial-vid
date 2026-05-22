@@ -62,6 +62,7 @@ var (
 // Cast errors.
 var (
 	ErrCastNotFound = errors.New("cast member not found")
+	ErrCastArchived = errors.New("cast member is archived")
 )
 
 // Publisher errors.

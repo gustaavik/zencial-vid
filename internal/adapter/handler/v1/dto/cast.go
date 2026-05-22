@@ -16,6 +16,7 @@ type CastCreditResponse struct {
 type CastMemberResponse struct {
 	ID         string `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
 	Name       string `json:"name" example:"Jane Doe"`
+	Status     string `json:"status" example:"active"`
 	PictureURL string `json:"picture_url,omitempty" example:"https://cdn.example.com/cast/picture.jpg"`
 	CreatedAt  string `json:"created_at" example:"2025-01-01T00:00:00Z"`
 	UpdatedAt  string `json:"updated_at" example:"2025-01-01T00:00:00Z"`

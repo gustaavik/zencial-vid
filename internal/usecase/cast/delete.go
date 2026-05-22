@@ -40,32 +40,31 @@ func (s *Service) DeleteFromVideo(ctx context.Context, castID, videoID, callerID
 	return nil
 }
 
-// Delete removes a cast member globally (admin only).
-// All video credits for this cast member are removed by cascade.
-// The cast member's picture is cleaned up from storage on a best-effort basis.
+// Delete archives a cast member globally (soft delete, admin only).
+// The record and all video credits are preserved; the cast member is hidden
+// from normal listings until unarchived.
 func (s *Service) Delete(ctx context.Context, castID, callerID uuid.UUID, callerRoles []entity.UserRole) *apperror.AppError {
 	if !entity.HasRole(callerRoles, entity.RoleAdmin) {
-		return apperror.Forbidden(apperror.CodeForbidden, "only admins can delete cast members globally", nil)
+		return apperror.Forbidden(apperror.CodeForbidden, "only admins can archive cast members", nil)
 	}
 
 	c, err := s.castRepo.GetByID(ctx, castID)
 	if err != nil {
-		s.log.Error("getting cast for global delete", "error", err)
+		s.log.Error("getting cast for archive", "error", err)
 		return apperror.Internal(apperror.CodeInternalError, "failed to get cast member", err)
 	}
 	if c == nil {
 		return apperror.NotFound(apperror.CodeCastNotFound, "cast member not found", domain.ErrCastNotFound)
 	}
 
-	if err := s.castRepo.Delete(ctx, castID); err != nil {
-		s.log.Error("deleting cast member", "error", err)
-		return apperror.Internal(apperror.CodeInternalError, "failed to delete cast member", err)
+	if c.IsArchived() {
+		return nil
 	}
 
-	if s.storage != nil && c.PictureKey != "" {
-		if err := s.storage.Delete(ctx, c.PictureKey); err != nil {
-			s.log.Error("deleting cast picture from storage", "key", c.PictureKey, "error", err)
-		}
+	c.Archive()
+	if err := s.castRepo.Update(ctx, c); err != nil {
+		s.log.Error("archiving cast member", "error", err)
+		return apperror.Internal(apperror.CodeInternalError, "failed to archive cast member", err)
 	}
 	return nil
 }

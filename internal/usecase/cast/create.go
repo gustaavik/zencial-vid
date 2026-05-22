@@ -42,6 +42,10 @@ func (s *Service) Create(ctx context.Context, input *CreateInput) (*entity.Video
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to resolve cast member", err)
 	}
 
+	if cast.IsArchived() {
+		return nil, apperror.Conflict(apperror.CodeCastArchived, "cast member is archived; unarchive before crediting", domain.ErrCastArchived)
+	}
+
 	existing, err := s.videoCastRepo.GetByVideoAndCast(ctx, input.VideoID, cast.ID)
 	if err != nil {
 		s.log.Error("checking for duplicate cast credit", "error", err)

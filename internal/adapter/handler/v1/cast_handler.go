@@ -36,8 +36,9 @@ func NewCastHandler(castService *castuc.Service, cdnURLs mapper.ThumbnailURLBuil
 // @Description  Returns a paginated list of all cast members ordered by name. Publisher or admin access required.
 // @Tags         cast
 // @Produce      json
-// @Param        page     query int false "Page number" default(1)
-// @Param        per_page query int false "Items per page" default(20)
+// @Param        page             query int    false "Page number" default(1)
+// @Param        per_page         query int    false "Items per page" default(20)
+// @Param        include_archived query bool   false "Include archived cast members (admin only)"
 // @Success      200 {object} httputil.Response{data=[]dto.CastMemberResponse}
 // @Failure      401 {object} httputil.ErrorResponse
 // @Failure      403 {object} httputil.ErrorResponse
@@ -47,10 +48,12 @@ func NewCastHandler(castService *castuc.Service, cdnURLs mapper.ThumbnailURLBuil
 func (h *CastHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	perPage, _ := strconv.Atoi(r.URL.Query().Get("per_page"))
+	includeArchived := r.URL.Query().Get("include_archived") == "true"
 
 	out, appErr := h.castService.ListAll(r.Context(), castuc.ListAllInput{
-		Page:    page,
-		PerPage: perPage,
+		Page:            page,
+		PerPage:         perPage,
+		IncludeArchived: includeArchived,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
@@ -380,8 +383,8 @@ func (h *CastHandler) DeleteFromVideo(w http.ResponseWriter, r *http.Request) {
 }
 
 // Delete godoc
-// @Summary      Delete cast member globally
-// @Description  Permanently removes a cast member and all their video credits. Admin only.
+// @Summary      Archive cast member globally
+// @Description  Soft-deletes a cast member by archiving them. The record and credits are preserved but the member is hidden from normal listings. Admin only.
 // @Tags         cast
 // @Produce      json
 // @Param        id path string true "Cast member ID"
@@ -412,6 +415,41 @@ func (h *CastHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// Unarchive godoc
+// @Summary      Unarchive cast member
+// @Description  Restores an archived cast member to active status. Admin only.
+// @Tags         cast
+// @Produce      json
+// @Param        id path string true "Cast member ID"
+// @Success      200 {object} httputil.Response{data=dto.CastMemberResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /cast/{id}/unarchive [post]
+func (h *CastHandler) Unarchive(w http.ResponseWriter, r *http.Request) {
+	castID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid cast ID")
+		return
+	}
+
+	callerRoles, _ := middleware.GetUserRoles(r.Context())
+
+	out, appErr := h.castService.Unarchive(r.Context(), &castuc.UnarchiveInput{
+		ID:          castID,
+		CallerRoles: callerRoles,
+	})
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.CastToMemberResponse(out.Cast))
 }
 
 // ListVideos godoc

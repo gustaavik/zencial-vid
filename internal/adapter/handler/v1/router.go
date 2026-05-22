@@ -187,6 +187,7 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 			r.Put("/cast/{id}", castHandler.UpdateCast)
 			r.Put("/cast/{id}/picture", castHandler.UploadPicture)
 			r.Delete("/cast/{id}", castHandler.Delete)
+			r.Post("/cast/{id}/unarchive", castHandler.Unarchive)
 		})
 
 		// Admin routes

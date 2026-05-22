@@ -45,6 +45,7 @@ func CastToMemberResponse(c *entity.Cast) dto.CastMemberResponse {
 	return dto.CastMemberResponse{
 		ID:         c.ID.String(),
 		Name:       c.Name,
+		Status:     string(c.Status),
 		PictureURL: c.PictureURL,
 		CreatedAt:  c.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 		UpdatedAt:  c.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"),

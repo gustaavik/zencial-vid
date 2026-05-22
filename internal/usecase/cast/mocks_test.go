@@ -23,7 +23,7 @@ type mockCastRepo struct {
 	updateFn             func(ctx context.Context, cast *entity.Cast) error
 	deleteFn             func(ctx context.Context, id uuid.UUID) error
 	hasVideoWithCallerFn func(ctx context.Context, castID, callerID uuid.UUID) (bool, error)
-	ListAllFn            func(ctx context.Context, offset int, limit int) ([]entity.Cast, int, error)
+	listAllFn            func(ctx context.Context, offset int, limit int, includeArchived bool) ([]entity.Cast, int, error)
 }
 
 func (m *mockCastRepo) Create(ctx context.Context, cast *entity.Cast) error {
@@ -47,8 +47,8 @@ func (m *mockCastRepo) Delete(ctx context.Context, id uuid.UUID) error {
 func (m *mockCastRepo) HasVideoWithCaller(ctx context.Context, castID, callerID uuid.UUID) (bool, error) {
 	return m.hasVideoWithCallerFn(ctx, castID, callerID)
 }
-func (m *mockCastRepo) ListAll(ctx context.Context, offset int, limit int) ([]entity.Cast, int, error) {
-	return m.ListAllFn(ctx, offset, limit)
+func (m *mockCastRepo) ListAll(ctx context.Context, offset int, limit int, includeArchived bool) ([]entity.Cast, int, error) {
+	return m.listAllFn(ctx, offset, limit, includeArchived)
 }
 
 // mockVideoCastRepo is a closure-field mock for repository.VideoCastRepository.
@@ -159,13 +159,21 @@ func newTestService(castRepo *mockCastRepo, videoCastRepo *mockVideoCastRepo, vi
 	return NewService(castRepo, videoCastRepo, videoRepo, slog.Default(), storageSvc)
 }
 
-// newCastMember returns a minimal Cast entity.
+// newCastMember returns a minimal active Cast entity.
 func newCastMember(castID uuid.UUID) *entity.Cast {
 	now := time.Now().UTC()
 	return &entity.Cast{
 		ID:        castID,
 		Name:      "Jane Doe",
+		Status:    entity.CastStatusActive,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
+}
+
+// newArchivedCastMember returns a minimal archived Cast entity.
+func newArchivedCastMember(castID uuid.UUID) *entity.Cast {
+	c := newCastMember(castID)
+	c.Archive()
+	return c
 }

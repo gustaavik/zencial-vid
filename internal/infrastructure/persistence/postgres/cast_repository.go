@@ -25,9 +25,9 @@ func NewCastRepository(pool *pgxpool.Pool) *CastRepository {
 func (r *CastRepository) Create(ctx context.Context, cast *entity.Cast) error {
 	db := connFromCtx(ctx, r.pool)
 	_, err := db.Exec(ctx, `
-		INSERT INTO casts (id, name, picture_key, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5)
-	`, cast.ID, cast.Name, nullableString(cast.PictureKey), cast.CreatedAt, cast.UpdatedAt)
+		INSERT INTO casts (id, name, status, picture_key, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, cast.ID, cast.Name, cast.Status, nullableString(cast.PictureKey), cast.CreatedAt, cast.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("creating cast: %w", err)
 	}
@@ -37,7 +37,7 @@ func (r *CastRepository) Create(ctx context.Context, cast *entity.Cast) error {
 func (r *CastRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Cast, error) {
 	db := connFromCtx(ctx, r.pool)
 	return scanCast(db.QueryRow(ctx, `
-		SELECT id, name, picture_key, created_at, updated_at
+		SELECT id, name, status, picture_key, created_at, updated_at
 		FROM casts WHERE id = $1
 	`, id))
 }
@@ -45,7 +45,7 @@ func (r *CastRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Cas
 func (r *CastRepository) GetByName(ctx context.Context, name string) (*entity.Cast, error) {
 	db := connFromCtx(ctx, r.pool)
 	return scanCast(db.QueryRow(ctx, `
-		SELECT id, name, picture_key, created_at, updated_at
+		SELECT id, name, status, picture_key, created_at, updated_at
 		FROM casts WHERE name = $1
 	`, name))
 }
@@ -59,8 +59,8 @@ func (r *CastRepository) FindOrCreate(ctx context.Context, name string) (*entity
 
 	// Attempt insert; skip silently if the unique name already exists.
 	_, err := db.Exec(ctx, `
-		INSERT INTO casts (id, name, created_at, updated_at)
-		VALUES ($1, $2, $3, $3)
+		INSERT INTO casts (id, name, status, created_at, updated_at)
+		VALUES ($1, $2, 'active', $3, $3)
 		ON CONFLICT (name) DO NOTHING
 	`, id, name, now)
 	if err != nil {
@@ -68,7 +68,7 @@ func (r *CastRepository) FindOrCreate(ctx context.Context, name string) (*entity
 	}
 
 	return scanCast(db.QueryRow(ctx, `
-		SELECT id, name, picture_key, created_at, updated_at
+		SELECT id, name, status, picture_key, created_at, updated_at
 		FROM casts WHERE name = $1
 	`, name))
 }
@@ -77,9 +77,9 @@ func (r *CastRepository) Update(ctx context.Context, cast *entity.Cast) error {
 	db := connFromCtx(ctx, r.pool)
 	cast.UpdatedAt = time.Now().UTC()
 	_, err := db.Exec(ctx, `
-		UPDATE casts SET name = $2, picture_key = $3, updated_at = $4
+		UPDATE casts SET name = $2, status = $3, picture_key = $4, updated_at = $5
 		WHERE id = $1
-	`, cast.ID, cast.Name, nullableString(cast.PictureKey), cast.UpdatedAt)
+	`, cast.ID, cast.Name, cast.Status, nullableString(cast.PictureKey), cast.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("updating cast: %w", err)
 	}
@@ -114,22 +114,39 @@ func (r *CastRepository) HasVideoWithCaller(ctx context.Context, castID, callerI
 	return exists, nil
 }
 
-// ListAll returns a paginated slice of all cast members ordered by name and
-// the total count of members in the table.
-func (r *CastRepository) ListAll(ctx context.Context, offset, limit int) ([]entity.Cast, int, error) {
+// ListAll returns a paginated slice of cast members ordered by name and the
+// total count. When includeArchived is false only active members are returned.
+func (r *CastRepository) ListAll(ctx context.Context, offset, limit int, includeArchived bool) ([]entity.Cast, int, error) {
 	db := connFromCtx(ctx, r.pool)
 
+	var (
+		countQuery string
+		listQuery  string
+	)
+
+	if includeArchived {
+		countQuery = `SELECT COUNT(*) FROM casts`
+		listQuery = `
+			SELECT id, name, status, picture_key, created_at, updated_at
+			FROM casts
+			ORDER BY name
+			LIMIT $1 OFFSET $2`
+	} else {
+		countQuery = `SELECT COUNT(*) FROM casts WHERE status = 'active'`
+		listQuery = `
+			SELECT id, name, status, picture_key, created_at, updated_at
+			FROM casts
+			WHERE status = 'active'
+			ORDER BY name
+			LIMIT $1 OFFSET $2`
+	}
+
 	var total int
-	if err := db.QueryRow(ctx, `SELECT COUNT(*) FROM casts`).Scan(&total); err != nil {
+	if err := db.QueryRow(ctx, countQuery).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("counting casts: %w", err)
 	}
 
-	rows, err := db.Query(ctx, `
-		SELECT id, name, picture_key, created_at, updated_at
-		FROM casts
-		ORDER BY name
-		LIMIT $1 OFFSET $2
-	`, limit, offset)
+	rows, err := db.Query(ctx, listQuery, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("listing casts: %w", err)
 	}
@@ -139,7 +156,7 @@ func (r *CastRepository) ListAll(ctx context.Context, offset, limit int) ([]enti
 	for rows.Next() {
 		var c entity.Cast
 		var pictureKey *string
-		if err := rows.Scan(&c.ID, &c.Name, &pictureKey, &c.CreatedAt, &c.UpdatedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.Name, &c.Status, &pictureKey, &c.CreatedAt, &c.UpdatedAt); err != nil {
 			return nil, 0, fmt.Errorf("scanning cast row: %w", err)
 		}
 		if pictureKey != nil {
@@ -157,7 +174,7 @@ func (r *CastRepository) ListAll(ctx context.Context, offset, limit int) ([]enti
 func scanCast(row pgx.Row) (*entity.Cast, error) {
 	c := &entity.Cast{}
 	var pictureKey *string
-	err := row.Scan(&c.ID, &c.Name, &pictureKey, &c.CreatedAt, &c.UpdatedAt)
+	err := row.Scan(&c.ID, &c.Name, &c.Status, &pictureKey, &c.CreatedAt, &c.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
