@@ -3,6 +3,7 @@ package v1
 import (
 	"net/http"
 
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/mapper"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
@@ -38,7 +39,7 @@ func extractSessionContext(r *http.Request) authuc.SessionContext {
 	return authuc.SessionContext{
 		DeviceName: r.Header.Get(deviceNameHeader),
 		UserAgent:  r.UserAgent(),
-		IPAddress:  r.RemoteAddr,
+		IPAddress:  chiMiddleware.GetClientIP(r.Context()),
 	}
 }
 

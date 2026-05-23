@@ -189,7 +189,7 @@ func main() {
 	r := chi.NewRouter()
 
 	// Global middleware
-	r.Use(chiMiddleware.RealIP)
+	r.Use(chiMiddleware.ClientIPFromHeader("CF-Connecting-IP"))
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recovery(appLog))
 	r.Use(middleware.Logger(appLog))
