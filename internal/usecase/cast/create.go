@@ -20,9 +20,9 @@ type CreateInput struct {
 	CallerRoles []entity.UserRole
 }
 
-// Create adds a new cast member to a video.
+// Create adds a cast member to a video using find-or-create by name.
 // Publishers may only add cast to videos they uploaded; admins are unrestricted.
-func (s *Service) Create(ctx context.Context, input *CreateInput) (*entity.Cast, *apperror.AppError) {
+func (s *Service) Create(ctx context.Context, input *CreateInput) (*entity.VideoCast, *apperror.AppError) {
 	video, err := s.videoRepo.GetByID(ctx, input.VideoID)
 	if err != nil {
 		s.log.Error("getting video for cast create", "error", err)
@@ -36,10 +36,31 @@ func (s *Service) Create(ctx context.Context, input *CreateInput) (*entity.Cast,
 		return nil, apperror.Forbidden(apperror.CodeVideoOwnershipRequired, "you do not own this video", domain.ErrVideoOwnershipRequired)
 	}
 
-	c := entity.NewCast(input.VideoID, input.Name, input.Role, input.SortOrder)
-	if err := s.castRepo.Create(ctx, c); err != nil {
-		s.log.Error("creating cast", "error", err)
-		return nil, apperror.Internal(apperror.CodeInternalError, "failed to create cast member", err)
+	cast, err := s.castRepo.FindOrCreate(ctx, input.Name)
+	if err != nil {
+		s.log.Error("finding or creating cast member", "error", err)
+		return nil, apperror.Internal(apperror.CodeInternalError, "failed to resolve cast member", err)
 	}
-	return c, nil
+
+	if cast.IsArchived() {
+		return nil, apperror.Conflict(apperror.CodeCastArchived, "cast member is archived; unarchive before crediting", domain.ErrCastArchived)
+	}
+
+	existing, err := s.videoCastRepo.GetByVideoAndCastAndRole(ctx, input.VideoID, cast.ID, input.Role)
+	if err != nil {
+		s.log.Error("checking for duplicate cast credit", "error", err)
+		return nil, apperror.Internal(apperror.CodeInternalError, "failed to check cast credit", err)
+	}
+	if existing != nil {
+		return nil, apperror.Conflict(apperror.CodeCastAlreadyCredited, "cast member already has this role on this video", nil)
+	}
+
+	vc := entity.NewVideoCast(input.VideoID, cast.ID, input.Role, input.SortOrder)
+	vc.Cast = cast
+	if err := s.videoCastRepo.Create(ctx, vc); err != nil {
+		s.log.Error("creating cast credit", "error", err)
+		return nil, apperror.Internal(apperror.CodeInternalError, "failed to create cast credit", err)
+	}
+	s.resolvePictureURL(vc.Cast)
+	return vc, nil
 }

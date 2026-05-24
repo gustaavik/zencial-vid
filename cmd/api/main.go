@@ -38,7 +38,6 @@ import (
 	watchprogressuc "github.com/zenfulcode/zencial/internal/usecase/watchprogress"
 
 	"github.com/go-chi/chi/v5"
-	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "github.com/zenfulcode/zencial/docs"
@@ -107,6 +106,7 @@ func main() {
 	watchProgressRepo := postgres.NewWatchProgressRepository(dbPool, videoRepo)
 	auditLogRepo := postgres.NewAuditLogRepository(dbPool)
 	castRepo := postgres.NewCastRepository(dbPool)
+	videoCastRepo := postgres.NewVideoCastRepository(dbPool)
 	analyticsRepo := postgres.NewAnalyticsRepository(dbPool)
 	seriesRepo := postgres.NewSeriesRepository(dbPool)
 	seriesWatchProgressRepo := postgres.NewSeriesWatchProgressRepository(dbPool)
@@ -173,7 +173,7 @@ func main() {
 	watchlistService := watchlistuc.NewService(watchlistRepo, videoRepo, appLog)
 	watchProgressService := watchprogressuc.NewService(watchProgressRepo, videoRepo, appLog)
 	auditService := audituc.NewService(auditLogRepo, appLog)
-	castService := castuc.NewService(castRepo, videoRepo, appLog)
+	castService := castuc.NewService(castRepo, videoCastRepo, videoRepo, appLog, storageService)
 	analyticsService := analyticsuc.NewService(analyticsRepo, videoRepo, appLog)
 
 	// Persist every dispatched domain event into the audit log.
@@ -188,7 +188,7 @@ func main() {
 	r := chi.NewRouter()
 
 	// Global middleware
-	r.Use(chiMiddleware.RealIP)
+	r.Use(middleware.ClientIP)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recovery(appLog))
 	r.Use(middleware.Logger(appLog))

@@ -1,7 +1,1 @@
-
-Backend (zencial-vid) — blocks full publisher flow
-
-Add publisher role to the API — publisher dashboard is gated behind it
-Add publisher-scoped video endpoints (upload/manage without admin role)
-Add analytics endpoints for publisher dashboard
-Add cast/contributor endpoints
+* make sure all list usecases, uses filters

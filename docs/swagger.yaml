@@ -226,7 +226,37 @@ definitions:
     required:
     - ids
     type: object
-  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastResponse:
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastCreditResponse:
+    properties:
+      cast_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      created_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      name:
+        example: Jane Doe
+        type: string
+      picture_url:
+        example: https://cdn.example.com/cast/picture.jpg
+        type: string
+      role:
+        example: actor
+        type: string
+      sort_order:
+        example: 0
+        type: integer
+      updated_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      video_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastMemberResponse:
     properties:
       created_at:
         example: "2025-01-01T00:00:00Z"
@@ -237,12 +267,54 @@ definitions:
       name:
         example: Jane Doe
         type: string
+      picture_url:
+        example: https://cdn.example.com/cast/picture.jpg
+        type: string
+      status:
+        example: active
+        type: string
+      updated_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastVideoResponse:
+    properties:
+      content_rating:
+        example: PG
+        type: string
+      created_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      duration:
+        example: 3600
+        type: integer
+      episode_number:
+        example: 3
+        type: integer
       role:
         example: actor
+        type: string
+      season_number:
+        example: 1
+        type: integer
+      series_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      slug:
+        example: my-awesome-video-a3f8b2c1
         type: string
       sort_order:
         example: 0
         type: integer
+      status:
+        example: published
+        type: string
+      thumbnail_url:
+        example: https://cdn.example.com/thumbnails/video.jpg
+        type: string
+      title:
+        example: My Awesome Video
+        type: string
       updated_at:
         example: "2025-01-01T00:00:00Z"
         type: string
@@ -759,6 +831,9 @@ definitions:
         maxLength: 255
         minLength: 1
         type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateCreditRequest:
+    properties:
       role:
         example: director
         maxLength: 100
@@ -1126,6 +1201,56 @@ paths:
       summary: List audit logs
       tags:
       - audit-logs
+  /admin/cast:
+    get:
+      description: Returns a paginated list of all cast members ordered by name. Publisher
+        or admin access required.
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Include archived cast members (admin only)
+        in: query
+        name: include_archived
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastMemberResponse'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all cast members
+      tags:
+      - cast
   /admin/genres/bulk-create:
     post:
       consumes:
@@ -2304,10 +2429,10 @@ paths:
       - auth
   /cast/{id}:
     delete:
-      description: Removes a cast member. Publishers may only remove cast from their
-        own videos.
+      description: Soft-deletes a cast member by archiving them. The record and credits
+        are preserved but the member is hidden from normal listings. Admin only.
       parameters:
-      - description: Cast ID
+      - description: Cast member ID
         in: path
         name: id
         required: true
@@ -2335,16 +2460,16 @@ paths:
             $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Remove cast member
+      summary: Archive cast member globally
       tags:
       - cast
     put:
       consumes:
       - application/json
-      description: Updates a cast member. Publishers may only update cast for their
-        own videos.
+      description: Updates a cast member's name globally. Admins are unrestricted;
+        publishers must have the member credited on one of their videos.
       parameters:
-      - description: Cast ID
+      - description: Cast member ID
         in: path
         name: id
         required: true
@@ -2365,7 +2490,7 @@ paths:
             - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastResponse'
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastMemberResponse'
               type: object
         "400":
           description: Bad Request
@@ -2389,7 +2514,159 @@ paths:
             $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Update cast member
+      summary: Update cast member name
+      tags:
+      - cast
+  /cast/{id}/picture:
+    put:
+      consumes:
+      - multipart/form-data
+      description: Uploads or replaces a cast member's picture via multipart form.
+      parameters:
+      - description: Cast member ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Picture image (JPEG, PNG, WebP, or GIF)
+        in: formData
+        name: picture
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastMemberResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload cast member picture
+      tags:
+      - cast
+  /cast/{id}/unarchive:
+    post:
+      description: Restores an archived cast member to active status. Admin only.
+      parameters:
+      - description: Cast member ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastMemberResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Unarchive cast member
+      tags:
+      - cast
+  /cast/{id}/videos:
+    get:
+      description: Returns a paginated list of published videos a cast member appears
+        in, ordered by release date (newest first).
+      parameters:
+      - description: Cast member ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastVideoResponse'
+                  type: array
+                meta:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      summary: List videos for a cast member
       tags:
       - cast
   /genres:
@@ -4539,7 +4816,7 @@ paths:
       - videos
   /videos/{id}/cast:
     get:
-      description: Returns all cast members for a video, ordered by sort_order
+      description: Returns all cast credits for a video, ordered by sort_order
       parameters:
       - description: Video ID
         in: path
@@ -4557,7 +4834,7 @@ paths:
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastResponse'
+                    $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastCreditResponse'
                   type: array
               type: object
         "404":
@@ -4574,8 +4851,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Adds a cast member to a video. Publishers may only add cast to
-        their own videos.
+      description: Adds a cast member to a video using find-or-create by name. Publishers
+        may only add cast to their own videos.
       parameters:
       - description: Video ID
         in: path
@@ -4598,7 +4875,7 @@ paths:
             - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastResponse'
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastCreditResponse'
               type: object
         "400":
           description: Bad Request
@@ -4616,13 +4893,17 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Add cast member
+      summary: Add cast member to video
       tags:
       - cast
   /videos/{id}/publish:
@@ -4830,6 +5111,106 @@ paths:
       summary: Unarchive video
       tags:
       - videos
+  /videos/{videoID}/cast/{creditID}:
+    delete:
+      description: Removes a specific cast credit from a video. Publishers may only
+        remove credits from their own videos.
+      parameters:
+      - description: Video ID
+        in: path
+        name: videoID
+        required: true
+        type: string
+      - description: Cast credit ID
+        in: path
+        name: creditID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove cast credit from video
+      tags:
+      - cast
+    put:
+      consumes:
+      - application/json
+      description: Updates the role or sort_order for a specific cast credit. Publishers
+        may only update credits for their own videos.
+      parameters:
+      - description: Video ID
+        in: path
+        name: videoID
+        required: true
+        type: string
+      - description: Cast credit ID
+        in: path
+        name: creditID
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateCreditRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CastCreditResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update cast credit
+      tags:
+      - cast
   /videos/uploads:
     post:
       consumes:

@@ -9,8 +9,8 @@ import (
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 )
 
-// List returns all cast members for a video.
-func (s *Service) List(ctx context.Context, videoID uuid.UUID) ([]entity.Cast, *apperror.AppError) {
+// List returns all cast credits for a video, ordered by sort_order.
+func (s *Service) List(ctx context.Context, videoID uuid.UUID) ([]entity.VideoCast, *apperror.AppError) {
 	video, err := s.videoRepo.GetByID(ctx, videoID)
 	if err != nil {
 		s.log.Error("getting video for cast list", "error", err)
@@ -20,10 +20,13 @@ func (s *Service) List(ctx context.Context, videoID uuid.UUID) ([]entity.Cast, *
 		return nil, apperror.NotFound(apperror.CodeVideoNotFound, "video not found", domain.ErrVideoNotFound)
 	}
 
-	cast, err := s.castRepo.ListByVideo(ctx, videoID)
+	credits, err := s.videoCastRepo.ListByVideo(ctx, videoID)
 	if err != nil {
 		s.log.Error("listing cast", "error", err)
 		return nil, apperror.Internal(apperror.CodeInternalError, "failed to list cast", err)
 	}
-	return cast, nil
+	for i := range credits {
+		s.resolvePictureURL(credits[i].Cast)
+	}
+	return credits, nil
 }

@@ -32,8 +32,8 @@ func NewAuthHandler(authService *authuc.Service) *AuthHandler {
 }
 
 // extractSessionContext pulls device/network metadata from the inbound
-// request to attach to the new session row. Relies on chi's RealIP
-// middleware having canonicalised r.RemoteAddr from X-Forwarded-For.
+// request to attach to the new session row. r.RemoteAddr reflects the real
+// client IP when the request arrived via a trusted reverse proxy.
 func extractSessionContext(r *http.Request) authuc.SessionContext {
 	return authuc.SessionContext{
 		DeviceName: r.Header.Get(deviceNameHeader),

@@ -53,7 +53,9 @@ const (
 	CodeWatchProgressNotFound = "WATCH_PROGRESS_NOT_FOUND"
 
 	// Cast
-	CodeCastNotFound = "CAST_NOT_FOUND"
+	CodeCastNotFound        = "CAST_NOT_FOUND"
+	CodeCastAlreadyCredited = "CAST_ALREADY_CREDITED"
+	CodeCastArchived        = "CAST_ARCHIVED"
 
 	// Publisher / ownership
 	CodeVideoOwnershipRequired  = "VIDEO_OWNERSHIP_REQUIRED"
