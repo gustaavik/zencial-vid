@@ -38,7 +38,6 @@ import (
 	watchprogressuc "github.com/zenfulcode/zencial/internal/usecase/watchprogress"
 
 	"github.com/go-chi/chi/v5"
-	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "github.com/zenfulcode/zencial/docs"
@@ -189,7 +188,7 @@ func main() {
 	r := chi.NewRouter()
 
 	// Global middleware
-	r.Use(chiMiddleware.ClientIPFromHeader("CF-Connecting-IP"))
+	r.Use(middleware.ClientIP)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recovery(appLog))
 	r.Use(middleware.Logger(appLog))
