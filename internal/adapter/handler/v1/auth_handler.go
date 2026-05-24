@@ -3,7 +3,6 @@ package v1
 import (
 	"net/http"
 
-	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/mapper"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
@@ -33,13 +32,13 @@ func NewAuthHandler(authService *authuc.Service) *AuthHandler {
 }
 
 // extractSessionContext pulls device/network metadata from the inbound
-// request to attach to the new session row. Relies on chi's RealIP
-// middleware having canonicalised r.RemoteAddr from X-Forwarded-For.
+// request to attach to the new session row. r.RemoteAddr reflects the real
+// client IP when the request arrived via a trusted reverse proxy.
 func extractSessionContext(r *http.Request) authuc.SessionContext {
 	return authuc.SessionContext{
 		DeviceName: r.Header.Get(deviceNameHeader),
 		UserAgent:  r.UserAgent(),
-		IPAddress:  chiMiddleware.GetClientIP(r.Context()),
+		IPAddress:  r.RemoteAddr,
 	}
 }
 
