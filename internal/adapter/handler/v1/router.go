@@ -12,9 +12,13 @@ import (
 	audituc "github.com/zenfulcode/zencial/internal/usecase/audit"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
 	billinguc "github.com/zenfulcode/zencial/internal/usecase/billing"
+	captionuc "github.com/zenfulcode/zencial/internal/usecase/caption"
 	castuc "github.com/zenfulcode/zencial/internal/usecase/cast"
+	chapteruc "github.com/zenfulcode/zencial/internal/usecase/chapter"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
+	musiccueuc "github.com/zenfulcode/zencial/internal/usecase/musiccue"
 	planuc "github.com/zenfulcode/zencial/internal/usecase/plan"
+	seasonuc "github.com/zenfulcode/zencial/internal/usecase/season"
 	seriesuc "github.com/zenfulcode/zencial/internal/usecase/series"
 	sessionuc "github.com/zenfulcode/zencial/internal/usecase/session"
 	subscriptionuc "github.com/zenfulcode/zencial/internal/usecase/subscription"
@@ -31,6 +35,10 @@ type Deps struct {
 	User                 *useruc.Service
 	Video                *videouc.Service
 	Series               *seriesuc.Service
+	Season               *seasonuc.Service
+	Chapter              *chapteruc.Service
+	Caption              *captionuc.Service
+	MusicCue             *musiccueuc.Service
 	Plan                 *planuc.Service
 	Subscription         *subscriptionuc.Service
 	Billing              *billinguc.Service
@@ -54,6 +62,10 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 	userHandler := NewUserHandler(deps.User)
 	videoHandler := NewVideoHandler(deps.Video, deps.Subscription, deps.Storage, deps.CDNURLs)
 	seriesHandler := NewSeriesHandler(deps.Series, deps.CDNURLs)
+	seasonHandler := NewSeasonHandler(deps.Season)
+	chapterHandler := NewChapterHandler(deps.Chapter)
+	captionHandler := NewCaptionHandler(deps.Caption)
+	musicCueHandler := NewMusicCueHandler(deps.MusicCue)
 	planHandler := NewPlanHandler(deps.Plan)
 	subscriptionHandler := NewSubscriptionHandler(deps.Subscription)
 	billingHandler := NewBillingHandler(deps.Billing)
@@ -162,6 +174,28 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 			r.Put("/videos/{id}/thumbnail", videoHandler.UploadThumbnail)
 			r.Post("/videos/{id}/publish", videoHandler.PublishOwned)
 			r.Delete("/videos/{id}", videoHandler.DeleteOwned)
+			r.Get("/videos/{id}/preflight", videoHandler.Preflight)
+			r.Post("/videos/{id}/submit", videoHandler.Submit)
+
+			// Chapters
+			r.Get("/videos/{id}/chapters", chapterHandler.List)
+			r.Put("/videos/{id}/chapters", chapterHandler.Replace)
+			r.Delete("/videos/{id}/chapters/{chapterID}", chapterHandler.Delete)
+
+			// Captions
+			r.Get("/videos/{id}/captions", captionHandler.List)
+			r.Post("/videos/{id}/captions", captionHandler.InitiateUpload)
+			r.Post("/videos/{id}/captions/register", captionHandler.Register)
+			r.Delete("/videos/{id}/captions/{lang}", captionHandler.Delete)
+			r.Post("/videos/{id}/captions/{lang}/publish", captionHandler.Publish)
+
+			// Music cues
+			r.Get("/videos/{id}/music-cues", musicCueHandler.List)
+			r.Post("/videos/{id}/music-cues", musicCueHandler.Create)
+			r.Put("/videos/{id}/music-cues/{cueID}", musicCueHandler.Update)
+			r.Delete("/videos/{id}/music-cues/{cueID}", musicCueHandler.Delete)
+			r.Post("/videos/{id}/music-cues/{cueID}/clearance", musicCueHandler.InitiateClearanceUpload)
+			r.Post("/videos/{id}/music-cues/{cueID}/clearance/complete", musicCueHandler.CompleteClearanceUpload)
 
 			// Analytics
 			r.Get("/videos/{id}/analytics", analyticsHandler.VideoStats)
@@ -175,6 +209,12 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 			r.Get("/publisher/series", seriesHandler.ListOwned)
 			r.Post("/publisher/series/{id}/publish", seriesHandler.PublishOwned)
 			r.Delete("/publisher/series/{id}", seriesHandler.ArchiveOwned)
+
+			// Seasons
+			r.Get("/series/{id}/seasons", seasonHandler.List)
+			r.Post("/series/{id}/seasons", seasonHandler.Create)
+			r.Put("/series/{id}/seasons/{seasonID}", seasonHandler.Update)
+			r.Delete("/series/{id}/seasons/{seasonID}", seasonHandler.Delete)
 		})
 
 		// Cast management (publisher or admin)
@@ -233,6 +273,11 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 
 			// Maintenance
 			r.Post("/admin/videos/purge-orphans", videoHandler.PurgeOrphans)
+
+			// Moderation
+			r.Get("/admin/moderation/queue", videoHandler.ModerationQueue)
+			r.Post("/admin/videos/{id}/approve", videoHandler.ApproveSubmission)
+			r.Post("/admin/videos/{id}/reject", videoHandler.RejectSubmission)
 
 			// Admin analytics (any video)
 			r.Get("/admin/videos/{id}/analytics", analyticsHandler.VideoStats)

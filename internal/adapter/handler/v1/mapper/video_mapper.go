@@ -23,22 +23,34 @@ func VideoToResponse(_ context.Context, video *entity.Video, urls ThumbnailURLBu
 	}
 
 	resp := dto.VideoResponse{
-		ID:               video.ID.String(),
-		Title:            video.Title,
-		Slug:             video.Slug.String(),
-		Description:      video.Description,
-		Creator:          video.Creator,
-		Duration:         video.Duration.Seconds,
-		ContentRating:    video.ContentRating,
-		Status:           string(video.Status),
-		FileSize:         video.FileSize,
-		GenreIDs:         genreIDs,
-		MinimumPlanLevel: video.MinimumPlanLevel,
-		TranscodeError:   video.TranscodeError,
-		SeasonNumber:     video.SeasonNumber,
-		EpisodeNumber:    video.EpisodeNumber,
-		CreatedAt:        video.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		UpdatedAt:        video.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:                    video.ID.String(),
+		Title:                 video.Title,
+		Slug:                  video.Slug.String(),
+		Description:           video.Description,
+		Logline:               video.Logline,
+		Creator:               video.Creator,
+		Duration:              video.Duration.Seconds,
+		ContentRating:         video.ContentRating,
+		PrimaryLanguage:       video.PrimaryLanguage,
+		Status:                string(video.Status),
+		Visibility:            string(video.Visibility),
+		FileSize:              video.FileSize,
+		GenreIDs:              genreIDs,
+		MinimumPlanLevel:      video.MinimumPlanLevel,
+		TranscodeError:        video.TranscodeError,
+		SeasonNumber:          video.SeasonNumber,
+		EpisodeNumber:         video.EpisodeNumber,
+		MonetizationTypes:     video.MonetizationTypes,
+		PPVPriceCents:         video.PPVPriceCents,
+		FreePreviewSeconds:    video.FreePreviewSeconds,
+		AdBreakPositions:      video.AdBreakPositions,
+		GeoRestrictionType:    string(video.GeoRestrictionType),
+		GeoRestrictionRegions: video.GeoRestrictionRegions,
+		RequireSignin:         video.RequireSignin,
+		SubmissionStatus:      string(video.SubmissionStatus),
+		ModeratorNotes:        video.ModeratorNotes,
+		CreatedAt:             video.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:             video.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	}
 	if video.SeriesID != nil {
 		s := video.SeriesID.String()
@@ -46,6 +58,14 @@ func VideoToResponse(_ context.Context, video *entity.Video, urls ThumbnailURLBu
 	}
 	if video.ThumbnailKey != "" && urls != nil {
 		resp.ThumbnailURL = urls.ThumbnailURL(video.ID.String())
+	}
+	if video.ScheduledPublishAt != nil {
+		t := video.ScheduledPublishAt.UTC().Format("2006-01-02T15:04:05Z")
+		resp.ScheduledPublishAt = &t
+	}
+	if video.SubmittedAt != nil {
+		t := video.SubmittedAt.UTC().Format("2006-01-02T15:04:05Z")
+		resp.SubmittedAt = &t
 	}
 	return resp
 }

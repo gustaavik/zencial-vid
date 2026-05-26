@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/mapper"
+	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 	"github.com/zenfulcode/zencial/internal/pkg/httputil"
@@ -138,6 +139,7 @@ func (h *CastHandler) Create(w http.ResponseWriter, r *http.Request) {
 		VideoID:     videoID,
 		Name:        req.Name,
 		Role:        req.Role,
+		Department:  entity.CastDepartment(req.Department),
 		SortOrder:   req.SortOrder,
 		CallerID:    callerID,
 		CallerRoles: callerRoles,
@@ -245,13 +247,18 @@ func (h *CastHandler) UpdateCredit(w http.ResponseWriter, r *http.Request) {
 	}
 	callerRoles, _ := middleware.GetUserRoles(r.Context())
 
-	vc, appErr := h.castService.UpdateCredit(r.Context(), &castuc.UpdateCreditInput{
+	updateInput := &castuc.UpdateCreditInput{
 		CreditID:    creditID,
 		Role:        req.Role,
 		SortOrder:   req.SortOrder,
 		CallerID:    callerID,
 		CallerRoles: callerRoles,
-	})
+	}
+	if req.Department != nil {
+		dept := entity.CastDepartment(*req.Department)
+		updateInput.Department = &dept
+	}
+	vc, appErr := h.castService.UpdateCredit(r.Context(), updateInput)
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return

@@ -26,9 +26,13 @@ import (
 	audituc "github.com/zenfulcode/zencial/internal/usecase/audit"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
 	billinguc "github.com/zenfulcode/zencial/internal/usecase/billing"
+	captionuc "github.com/zenfulcode/zencial/internal/usecase/caption"
 	castuc "github.com/zenfulcode/zencial/internal/usecase/cast"
+	chapteruc "github.com/zenfulcode/zencial/internal/usecase/chapter"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
+	musiccueuc "github.com/zenfulcode/zencial/internal/usecase/musiccue"
 	planuc "github.com/zenfulcode/zencial/internal/usecase/plan"
+	seasonuc "github.com/zenfulcode/zencial/internal/usecase/season"
 	seriesuc "github.com/zenfulcode/zencial/internal/usecase/series"
 	sessionuc "github.com/zenfulcode/zencial/internal/usecase/session"
 	subscriptionuc "github.com/zenfulcode/zencial/internal/usecase/subscription"
@@ -110,6 +114,10 @@ func main() {
 	analyticsRepo := postgres.NewAnalyticsRepository(dbPool)
 	seriesRepo := postgres.NewSeriesRepository(dbPool)
 	seriesWatchProgressRepo := postgres.NewSeriesWatchProgressRepository(dbPool)
+	seasonRepo := postgres.NewSeasonRepository(dbPool)
+	chapterRepo := postgres.NewChapterRepository(dbPool)
+	captionRepo := postgres.NewCaptionRepository(dbPool)
+	musicCueRepo := postgres.NewMusicCueRepository(dbPool)
 
 	// Event dispatcher
 	dispatcher := messaging.NewEventDispatcher(appLog)
@@ -159,7 +167,7 @@ func main() {
 		appLog.Error("CDN_UPLOAD_SIGNING_KEY is required when CDN integration is enabled")
 		os.Exit(1)
 	}
-	videoOpts = append(videoOpts, videouc.WithCDN(cdnClient, cfg.CDN.BaseURL))
+	videoOpts = append(videoOpts, videouc.WithCDN(cdnClient, cfg.CDN.BaseURL), videouc.WithMusicCueRepo(musicCueRepo))
 	appLog.Info("CDN integration enabled",
 		"public_url", cfg.CDN.BaseURL,
 		"internal_url", cfg.CDN.InternalURL,
@@ -175,6 +183,10 @@ func main() {
 	auditService := audituc.NewService(auditLogRepo, appLog)
 	castService := castuc.NewService(castRepo, videoCastRepo, videoRepo, appLog, storageService)
 	analyticsService := analyticsuc.NewService(analyticsRepo, videoRepo, appLog)
+	seasonService := seasonuc.NewService(seasonRepo, seriesRepo, appLog)
+	chapterService := chapteruc.NewService(chapterRepo, videoRepo, appLog)
+	captionService := captionuc.NewService(captionRepo, videoRepo, storageService, appLog)
+	musicCueService := musiccueuc.NewService(musicCueRepo, videoRepo, storageService, appLog)
 
 	// Persist every dispatched domain event into the audit log.
 	audituc.Register(dispatcher, auditLogRepo, appLog)
@@ -228,6 +240,10 @@ func main() {
 			User:                 userService,
 			Video:                videoService,
 			Series:               seriesService,
+			Season:               seasonService,
+			Chapter:              chapterService,
+			Caption:              captionService,
+			MusicCue:             musicCueService,
 			Plan:                 planService,
 			Subscription:         subscriptionService,
 			Billing:              billingService,
