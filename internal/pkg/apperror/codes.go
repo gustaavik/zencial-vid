@@ -70,6 +70,26 @@ const (
 	CodeEpisodeAlreadyExists        = "EPISODE_ALREADY_EXISTS"
 	CodeSeriesWatchProgressNotFound = "SERIES_WATCH_PROGRESS_NOT_FOUND"
 
+	// Season
+	CodeSeasonNotFound      = "SEASON_NOT_FOUND"
+	CodeSeasonAlreadyExists = "SEASON_ALREADY_EXISTS"
+
+	// Chapter
+	CodeChapterNotFound = "CHAPTER_NOT_FOUND"
+
+	// Caption
+	CodeCaptionNotFound = "CAPTION_NOT_FOUND"
+
+	// Music cue
+	CodeMusicCueNotFound         = "MUSIC_CUE_NOT_FOUND"
+	CodeMusicCueBlocksSubmission = "MUSIC_CUE_BLOCKS_SUBMISSION"
+
+	// Submission / moderation
+	CodeVideoAlreadySubmitted = "VIDEO_ALREADY_SUBMITTED"
+	CodeVideoNotSubmittable   = "VIDEO_NOT_SUBMITTABLE"
+	CodeVideoEditLocked       = "VIDEO_EDIT_LOCKED"
+	CodeModerationNotFound    = "MODERATION_NOT_FOUND"
+
 	// General
 	CodeValidationFailed = "VALIDATION_FAILED"
 	CodeInternalError    = "INTERNAL_ERROR"

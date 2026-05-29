@@ -56,9 +56,10 @@ func (s *Service) UpdateCast(ctx context.Context, input *UpdateCastInput) (*enti
 
 // UpdateCreditInput holds the fields needed to update a credit's role/sort_order.
 type UpdateCreditInput struct {
-	CreditID  uuid.UUID
-	Role      *string
-	SortOrder *int
+	CreditID   uuid.UUID
+	Role       *string
+	Department *entity.CastDepartment
+	SortOrder  *int
 	// CallerID and CallerRoles enforce publisher ownership.
 	CallerID    uuid.UUID
 	CallerRoles []entity.UserRole
@@ -89,6 +90,9 @@ func (s *Service) UpdateCredit(ctx context.Context, input *UpdateCreditInput) (*
 
 	if input.Role != nil {
 		vc.Role = *input.Role
+	}
+	if input.Department != nil {
+		vc.Department = *input.Department
 	}
 	if input.SortOrder != nil {
 		vc.SortOrder = *input.SortOrder

@@ -81,9 +81,9 @@ type UpdateProfileRequest struct {
 	Pronouns    *string                    `json:"pronouns,omitempty"     validate:"omitempty,max=50"        example:"he/him"`
 	Headline    *string                    `json:"headline,omitempty"     validate:"omitempty,max=200"       example:"Filmmaker · New York"`
 	Bio         *string                    `json:"bio,omitempty"          validate:"omitempty,max=1000"      example:"I make films."`
-	Links       []ProfileLinkRequest       `json:"links,omitempty"        validate:"omitempty,max=5,dive" example:"[{\"label\":\"Website\",\"url\":\"https://example.com\"}]"`
-	Preferences *ProfilePreferencesRequest `json:"preferences,omitempty" example:"{\"allow_mature_content\":true}"`
-	Privacy     *ProfilePrivacyRequest     `json:"privacy,omitempty" example:"{\"profile_visibility\":\"Public\"}"`
+	Links       []ProfileLinkRequest       `json:"links,omitempty"        validate:"omitempty,max=5,dive"`
+	Preferences *ProfilePreferencesRequest `json:"preferences,omitempty"`
+	Privacy     *ProfilePrivacyRequest     `json:"privacy,omitempty"`
 }
 
 // UpdateStatusRequest represents a user status update (admin).
