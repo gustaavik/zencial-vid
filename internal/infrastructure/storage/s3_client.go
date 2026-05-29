@@ -158,6 +158,33 @@ func (s *S3Service) PresignedPutURL(ctx context.Context, key, contentType string
 	return req.URL, nil
 }
 
+// ListObjects returns all object keys under the given prefix, paginating through
+// the full result set automatically.
+func (s *S3Service) ListObjects(ctx context.Context, prefix string) ([]string, error) {
+	var keys []string
+	var token *string
+	for {
+		out, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+			Bucket:            &s.bucket,
+			Prefix:            aws.String(prefix),
+			ContinuationToken: token,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("listing objects: %w", err)
+		}
+		for _, obj := range out.Contents {
+			if obj.Key != nil {
+				keys = append(keys, *obj.Key)
+			}
+		}
+		if !aws.ToBool(out.IsTruncated) {
+			break
+		}
+		token = out.NextContinuationToken
+	}
+	return keys, nil
+}
+
 // Stat returns object metadata, or (nil, nil) when the object does not exist.
 func (s *S3Service) Stat(ctx context.Context, key string) (*ObjectInfo, error) {
 	out, err := s.client.HeadObject(ctx, &s3.HeadObjectInput{

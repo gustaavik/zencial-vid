@@ -112,20 +112,21 @@ func TestService_AdminUpdate(t *testing.T) {
 			getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.User, error) { return user, nil },
 		}, dispatcher, nil)
 
+		newRoles := []entity.UserRole{entity.RoleAdmin}
 		result, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{
 			UserID: user.ID,
-			Role:   new(entity.RoleAdmin),
+			Roles:  &newRoles,
 		})
 
 		require.Nil(t, appErr)
-		assert.Equal(t, entity.RoleAdmin, result.Role)
+		assert.Contains(t, result.Roles, entity.RoleAdmin)
 
 		var found bool
 		for _, evt := range dispatcher.dispatched {
 			if rc, ok := evt.(event.UserRoleChanged); ok {
 				found = true
-				assert.Equal(t, "user", rc.OldRole)
-				assert.Equal(t, "admin", rc.NewRole)
+				assert.Equal(t, []string{"user"}, rc.OldRoles)
+				assert.Equal(t, []string{"admin"}, rc.NewRoles)
 			}
 		}
 		assert.True(t, found, "UserRoleChanged should have been dispatched")
@@ -138,9 +139,10 @@ func TestService_AdminUpdate(t *testing.T) {
 			getByIDFn: func(_ context.Context, _ uuid.UUID) (*entity.User, error) { return user, nil },
 		}, dispatcher, nil)
 
+		sameRoles := []entity.UserRole{entity.RoleUser}
 		_, appErr := svc.AdminUpdate(ctx, &AdminUpdateInput{
 			UserID: user.ID,
-			Role:   new(entity.RoleUser),
+			Roles:  &sameRoles,
 		})
 		require.Nil(t, appErr)
 

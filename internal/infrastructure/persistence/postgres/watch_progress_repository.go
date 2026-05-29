@@ -104,6 +104,7 @@ func (r *WatchProgressRepository) ListInProgress(ctx context.Context, userID uui
 		SELECT v.id, v.title, v.slug, v.description, v.creator, v.duration, v.content_rating,
 		       v.status, v.storage_key, v.content_type, v.file_size, v.thumbnail_key, v.uploaded_by,
 		       v.minimum_plan_level, v.transcode_error, v.created_at, v.updated_at,
+		       v.series_id, v.season_number, v.episode_number,
 		       wp.position_seconds, wp.updated_at
 		FROM user_watch_progress wp
 		INNER JOIN videos v ON v.id = wp.video_id
@@ -131,6 +132,7 @@ func (r *WatchProgressRepository) ListInProgress(ctx context.Context, userID uui
 			&duration, &contentRating, &status,
 			&v.StorageKey, &v.ContentType, &v.FileSize, &v.ThumbnailKey,
 			&v.UploadedBy, &v.MinimumPlanLevel, &transcodeError, &v.CreatedAt, &v.UpdatedAt,
+			&v.SeriesID, &v.SeasonNumber, &v.EpisodeNumber,
 			&positionSeconds, &progressUpdatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scanning watch progress row: %w", err)

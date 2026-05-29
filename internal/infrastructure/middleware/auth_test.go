@@ -75,6 +75,9 @@ func (u *stubUserRepo) Delete(context.Context, uuid.UUID) error    { return nil 
 func (u *stubUserRepo) ExistsByEmail(context.Context, valueobject.Email) (bool, error) {
 	return false, nil
 }
+func (u *stubUserRepo) HandleExists(context.Context, string, uuid.UUID) (bool, error) {
+	return false, nil
+}
 func (u *stubUserRepo) List(context.Context, *filter.FilterSet) ([]entity.User, int64, error) {
 	return nil, 0, nil
 }

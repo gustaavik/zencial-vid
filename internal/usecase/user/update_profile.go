@@ -19,10 +19,17 @@ type UpdateProfileInput struct {
 	DateOfBirth *string // "2006-01-02" format
 	Language    *string
 	Country     *string
+	Handle      *string
+	Pronouns    *string
+	Headline    *string
+	Bio         *string
+	Links       *[]entity.ProfileLink
+	Preferences *entity.ProfilePreferences
+	Privacy     *entity.ProfilePrivacy
 }
 
 // UpdateProfile updates the authenticated user's profile.
-func (s *Service) UpdateProfile(ctx context.Context, input UpdateProfileInput) (*entity.User, *apperror.AppError) {
+func (s *Service) UpdateProfile(ctx context.Context, input *UpdateProfileInput) (*entity.User, *apperror.AppError) {
 	user, err := s.userRepo.GetByID(ctx, input.UserID)
 	if err != nil {
 		s.log.Error("getting user for profile update", "error", err, "userID", input.UserID)
@@ -57,6 +64,37 @@ func (s *Service) UpdateProfile(ctx context.Context, input UpdateProfileInput) (
 	}
 	if input.Country != nil {
 		user.Profile.Country = *input.Country
+	}
+	if input.Handle != nil {
+		if *input.Handle != "" {
+			taken, repoErr := s.userRepo.HandleExists(ctx, *input.Handle, input.UserID)
+			if repoErr != nil {
+				s.log.Error("checking handle existence", "error", repoErr, "userID", input.UserID)
+				return nil, apperror.Internal(apperror.CodeInternalError, "failed to check handle availability", repoErr)
+			}
+			if taken {
+				return nil, apperror.Conflict(apperror.CodeHandleAlreadyExists, "handle is already taken", nil)
+			}
+		}
+		user.Profile.Handle = input.Handle
+	}
+	if input.Pronouns != nil {
+		user.Profile.Pronouns = input.Pronouns
+	}
+	if input.Headline != nil {
+		user.Profile.Headline = input.Headline
+	}
+	if input.Bio != nil {
+		user.Profile.Bio = input.Bio
+	}
+	if input.Links != nil {
+		user.Profile.Links = *input.Links
+	}
+	if input.Preferences != nil {
+		user.Profile.Preferences = *input.Preferences
+	}
+	if input.Privacy != nil {
+		user.Profile.Privacy = *input.Privacy
 	}
 
 	now := time.Now().UTC()

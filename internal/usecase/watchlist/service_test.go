@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zenfulcode/zencial/internal/domain"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
+	"github.com/zenfulcode/zencial/internal/domain/repository"
 	"github.com/zenfulcode/zencial/internal/domain/valueobject"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 	"github.com/zenfulcode/zencial/internal/pkg/filter"
@@ -50,6 +51,19 @@ func (m *mockVideoRepo) ExistsBySlug(context.Context, valueobject.Slug) (bool, e
 func (m *mockVideoRepo) SetGenres(context.Context, uuid.UUID, []uuid.UUID) error { return nil }
 func (m *mockVideoRepo) GetGenreIDs(context.Context, uuid.UUID) ([]uuid.UUID, error) {
 	return nil, nil
+}
+func (m *mockVideoRepo) ListAllStorageKeys(context.Context) ([]repository.VideoStorageInfo, error) {
+	return nil, nil
+}
+func (m *mockVideoRepo) ListByUploader(context.Context, uuid.UUID, *filter.FilterSet) ([]entity.Video, int64, error) {
+	return nil, 0, nil
+}
+func (m *mockVideoRepo) SetSeriesEpisode(context.Context, uuid.UUID, uuid.UUID, int, int) error {
+	return nil
+}
+func (m *mockVideoRepo) RemoveFromSeries(context.Context, uuid.UUID) error { return nil }
+func (m *mockVideoRepo) ListBySeries(context.Context, uuid.UUID, *filter.FilterSet) ([]entity.Video, int64, error) {
+	return nil, 0, nil
 }
 
 // --- Mock WatchlistRepository ---

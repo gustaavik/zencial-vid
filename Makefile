@@ -65,6 +65,11 @@ clean:
 	rm -rf $(BUILD_DIR)
 	rm -f coverage.out coverage.html
 
+## update dependencies: Update Go module dependencies
+update-dependencies:
+	go get -u ./...
+	go mod tidy
+
 ## migrate-up: Run database migrations up
 migrate-up:
 	$(GORUN) $(MAIN_MIGRATE) up

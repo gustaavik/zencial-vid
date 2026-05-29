@@ -35,8 +35,14 @@ func VideoToResponse(_ context.Context, video *entity.Video, urls ThumbnailURLBu
 		GenreIDs:         genreIDs,
 		MinimumPlanLevel: video.MinimumPlanLevel,
 		TranscodeError:   video.TranscodeError,
+		SeasonNumber:     video.SeasonNumber,
+		EpisodeNumber:    video.EpisodeNumber,
 		CreatedAt:        video.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		UpdatedAt:        video.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+	}
+	if video.SeriesID != nil {
+		s := video.SeriesID.String()
+		resp.SeriesID = &s
 	}
 	if video.ThumbnailKey != "" && urls != nil {
 		resp.ThumbnailURL = urls.ThumbnailURL(video.ID.String())
@@ -105,5 +111,24 @@ func StreamToResponse(output *videouc.StreamOutput) dto.VideoStreamResponse {
 		URL:       output.URL,
 		ExpiresAt: output.ExpiresAt.Format("2006-01-02T15:04:05Z"),
 		Type:      output.Type,
+	}
+}
+
+// PurgeOrphansToResponse maps a PurgeOrphansOutput to a PurgeOrphansResponse DTO.
+func PurgeOrphansToResponse(out *videouc.PurgeOrphansOutput, dryRun bool) dto.PurgeOrphansResponse {
+	dbOrphans := make([]string, len(out.DBOrphans))
+	for i, id := range out.DBOrphans {
+		dbOrphans[i] = id.String()
+	}
+
+	s3Orphans := out.S3Orphans
+	if s3Orphans == nil {
+		s3Orphans = []string{}
+	}
+
+	return dto.PurgeOrphansResponse{
+		DryRun:    dryRun,
+		DBOrphans: dbOrphans,
+		S3Orphans: s3Orphans,
 	}
 }

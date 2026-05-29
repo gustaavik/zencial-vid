@@ -16,6 +16,9 @@ type VideoResponse struct {
 	MinimumPlanLevel *int     `json:"minimum_plan_level,omitempty" example:"1"`
 	IsAccessible     *bool    `json:"is_accessible,omitempty"`
 	TranscodeError   string   `json:"transcode_error,omitempty" example:"ffmpeg exited with status 1"`
+	SeriesID         *string  `json:"series_id,omitempty" example:"550e8400-e29b-41d4-a716-446655440000"`
+	SeasonNumber     *int     `json:"season_number,omitempty" example:"1"`
+	EpisodeNumber    *int     `json:"episode_number,omitempty" example:"3"`
 	CreatedAt        string   `json:"created_at" example:"2025-01-01T00:00:00Z"`
 	UpdatedAt        string   `json:"updated_at" example:"2025-01-01T00:00:00Z"`
 }
@@ -77,4 +80,19 @@ type BulkFailureResponse struct {
 type BulkResultResponse struct {
 	Succeeded []string              `json:"succeeded"`
 	Failed    []BulkFailureResponse `json:"failed"`
+}
+
+// PurgeOrphansRequest is the optional body for POST /admin/videos/purge-orphans.
+type PurgeOrphansRequest struct {
+	// IncludeS3Orphans also scans S3 and deletes objects not referenced by any DB row.
+	IncludeS3Orphans bool `json:"include_s3_orphans"`
+	// DryRun reports what would be deleted without committing any changes.
+	DryRun bool `json:"dry_run"`
+}
+
+// PurgeOrphansResponse reports which rows/objects were (or would be) removed.
+type PurgeOrphansResponse struct {
+	DryRun    bool     `json:"dry_run"`
+	DBOrphans []string `json:"db_orphans"`
+	S3Orphans []string `json:"s3_orphans"`
 }

@@ -46,7 +46,7 @@ func TestService_Register(t *testing.T) {
 		assert.NotEmpty(t, output.Token)
 		assert.Equal(t, "user@example.com", output.User.Email.String())
 		assert.Equal(t, "John Doe", output.User.Profile.DisplayName)
-		assert.Equal(t, entity.RoleUser, output.User.Role)
+		assert.Contains(t, output.User.Roles, entity.RoleUser)
 		assert.Equal(t, entity.UserStatusActive, output.User.Status)
 
 		require.Len(t, sessionRepo.created, 1)

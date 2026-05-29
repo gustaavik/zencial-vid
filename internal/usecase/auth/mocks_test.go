@@ -71,6 +71,10 @@ func (m *mockUserRepo) ExistsByEmail(ctx context.Context, email valueobject.Emai
 	return false, nil
 }
 
+func (m *mockUserRepo) HandleExists(_ context.Context, _ string, _ uuid.UUID) (bool, error) {
+	return false, nil
+}
+
 func (m *mockUserRepo) List(ctx context.Context, fs *filter.FilterSet) ([]entity.User, int64, error) {
 	if m.listFn != nil {
 		return m.listFn(ctx, fs)

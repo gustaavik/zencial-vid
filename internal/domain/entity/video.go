@@ -37,6 +37,9 @@ type Video struct {
 	GenreIDs         []uuid.UUID
 	MinimumPlanLevel *int
 	TranscodeError   string
+	SeriesID         *uuid.UUID
+	SeasonNumber     *int
+	EpisodeNumber    *int
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }

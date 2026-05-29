@@ -18,7 +18,7 @@ type LoginRequest struct {
 // authenticate by sending it as Authorization: Bearer <token>.
 type AuthResponse struct {
 	User      UserResponse `json:"user"`
-	Token     string       `json:"token" example:"K7zP_-Qm…"`
+	Token     string       `json:"token" example:"K7zP_-Qm..."`
 	ExpiresAt string       `json:"expires_at" example:"2025-04-01T12:34:56Z"`
 	SessionID string       `json:"session_id" example:"3fa85f64-5717-4562-b3fc-2c963f66afa6"`
 }
