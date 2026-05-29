@@ -3,6 +3,7 @@ package video
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/pkg/apperror"
 	"github.com/zenfulcode/zencial/internal/pkg/filter"
@@ -24,6 +25,16 @@ func (s *Service) ListPublished(ctx context.Context, fs *filter.FilterSet) ([]en
 	if err != nil {
 		s.log.Error("listing published videos", "error", err)
 		return nil, 0, apperror.Internal(apperror.CodeInternalError, "failed to list videos", err)
+	}
+	return videos, total, nil
+}
+
+// ListBySeries returns a paginated list of episodes belonging to a series.
+func (s *Service) ListBySeries(ctx context.Context, seriesID uuid.UUID, fs *filter.FilterSet) ([]entity.Video, int64, *apperror.AppError) {
+	videos, total, err := s.videoRepo.ListBySeries(ctx, seriesID, fs)
+	if err != nil {
+		s.log.Error("listing series episodes", "error", err)
+		return nil, 0, apperror.Internal(apperror.CodeInternalError, "failed to list episodes", err)
 	}
 	return videos, total, nil
 }

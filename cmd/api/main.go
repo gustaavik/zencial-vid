@@ -22,11 +22,14 @@ import (
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
 	"github.com/zenfulcode/zencial/internal/pkg/clock"
 	"github.com/zenfulcode/zencial/internal/pkg/httputil"
+	analyticsuc "github.com/zenfulcode/zencial/internal/usecase/analytics"
 	audituc "github.com/zenfulcode/zencial/internal/usecase/audit"
 	authuc "github.com/zenfulcode/zencial/internal/usecase/auth"
 	billinguc "github.com/zenfulcode/zencial/internal/usecase/billing"
+	castuc "github.com/zenfulcode/zencial/internal/usecase/cast"
 	genreuc "github.com/zenfulcode/zencial/internal/usecase/genre"
 	planuc "github.com/zenfulcode/zencial/internal/usecase/plan"
+	seriesuc "github.com/zenfulcode/zencial/internal/usecase/series"
 	sessionuc "github.com/zenfulcode/zencial/internal/usecase/session"
 	subscriptionuc "github.com/zenfulcode/zencial/internal/usecase/subscription"
 	useruc "github.com/zenfulcode/zencial/internal/usecase/user"
@@ -35,7 +38,6 @@ import (
 	watchprogressuc "github.com/zenfulcode/zencial/internal/usecase/watchprogress"
 
 	"github.com/go-chi/chi/v5"
-	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "github.com/zenfulcode/zencial/docs"
@@ -103,6 +105,11 @@ func main() {
 	watchlistRepo := postgres.NewWatchlistRepository(dbPool, videoRepo)
 	watchProgressRepo := postgres.NewWatchProgressRepository(dbPool, videoRepo)
 	auditLogRepo := postgres.NewAuditLogRepository(dbPool)
+	castRepo := postgres.NewCastRepository(dbPool)
+	videoCastRepo := postgres.NewVideoCastRepository(dbPool)
+	analyticsRepo := postgres.NewAnalyticsRepository(dbPool)
+	seriesRepo := postgres.NewSeriesRepository(dbPool)
+	seriesWatchProgressRepo := postgres.NewSeriesWatchProgressRepository(dbPool)
 
 	// Event dispatcher
 	dispatcher := messaging.NewEventDispatcher(appLog)
@@ -162,9 +169,12 @@ func main() {
 		appLog.Warn("INTERNAL_API_SHARED_SECRET is unset — transcode-completion callbacks will be rejected")
 	}
 	videoService := videouc.NewService(videoRepo, genreRepo, subRepo, planRepo, storageService, dispatcher, appLog, videoOpts...)
+	seriesService := seriesuc.NewService(seriesRepo, seriesWatchProgressRepo, videoRepo, genreRepo, dispatcher, appLog)
 	watchlistService := watchlistuc.NewService(watchlistRepo, videoRepo, appLog)
 	watchProgressService := watchprogressuc.NewService(watchProgressRepo, videoRepo, appLog)
 	auditService := audituc.NewService(auditLogRepo, appLog)
+	castService := castuc.NewService(castRepo, videoCastRepo, videoRepo, appLog, storageService)
+	analyticsService := analyticsuc.NewService(analyticsRepo, videoRepo, appLog)
 
 	// Persist every dispatched domain event into the audit log.
 	audituc.Register(dispatcher, auditLogRepo, appLog)
@@ -178,7 +188,7 @@ func main() {
 	r := chi.NewRouter()
 
 	// Global middleware
-	r.Use(chiMiddleware.RealIP)
+	r.Use(middleware.ClientIP)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recovery(appLog))
 	r.Use(middleware.Logger(appLog))
@@ -217,6 +227,7 @@ func main() {
 			Genre:                genreService,
 			User:                 userService,
 			Video:                videoService,
+			Series:               seriesService,
 			Plan:                 planService,
 			Subscription:         subscriptionService,
 			Billing:              billingService,
@@ -224,6 +235,8 @@ func main() {
 			WatchProgress:        watchProgressService,
 			Audit:                auditService,
 			Session:              sessionService,
+			Analytics:            analyticsService,
+			Cast:                 castService,
 			Authenticator:        authenticator,
 			Storage:              storageService,
 			CDNURLs:              cdnClient,

@@ -48,6 +48,10 @@ func ToSQL(fs *FilterSet, baseCondition string, startArgIdx int) SQLResult {
 			whereParts = append(whereParts, fmt.Sprintf("%s ILIKE $%d", cond.DBColumn, idx))
 			res.Args = append(res.Args, "%"+cond.Value.(string)+"%")
 			idx++
+		case OpArrayContains:
+			whereParts = append(whereParts, fmt.Sprintf("$%d = ANY(%s)", idx, cond.DBColumn))
+			res.Args = append(res.Args, cond.Value)
+			idx++
 		case OpIn:
 			placeholders := make([]string, len(cond.Values))
 			for i, v := range cond.Values {

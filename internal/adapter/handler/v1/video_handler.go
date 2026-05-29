@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/mapper"
+	"github.com/zenfulcode/zencial/internal/domain/entity"
 	"github.com/zenfulcode/zencial/internal/infrastructure/middleware"
 	"github.com/zenfulcode/zencial/internal/infrastructure/persistence/postgres"
 	"github.com/zenfulcode/zencial/internal/infrastructure/storage"
@@ -313,6 +314,9 @@ func (h *VideoHandler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	callerID, _ := middleware.GetUserID(r.Context())
+	callerRoles, _ := middleware.GetUserRoles(r.Context())
+
 	video, appErr := h.videoService.Update(r.Context(), &videouc.UpdateInput{
 		ID:               id,
 		Title:            req.Title,
@@ -321,6 +325,8 @@ func (h *VideoHandler) Update(w http.ResponseWriter, r *http.Request) {
 		ContentRating:    req.ContentRating,
 		GenreIDs:         genreIDs,
 		MinimumPlanLevel: req.MinimumPlanLevel,
+		CallerID:         callerID,
+		CallerRoles:      callerRoles,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
@@ -642,11 +648,16 @@ func (h *VideoHandler) UploadThumbnail(w http.ResponseWriter, r *http.Request) {
 		contentType = "image/jpeg"
 	}
 
-	video, appErr := h.videoService.UpdateThumbnail(r.Context(), videouc.UpdateThumbnailInput{
+	thumbCallerID, _ := middleware.GetUserID(r.Context())
+	thumbCallerRoles, _ := middleware.GetUserRoles(r.Context())
+
+	video, appErr := h.videoService.UpdateThumbnail(r.Context(), &videouc.UpdateThumbnailInput{
 		VideoID:     id,
 		File:        file,
 		FileName:    header.Filename,
 		ContentType: contentType,
+		CallerID:    thumbCallerID,
+		CallerRoles: thumbCallerRoles,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
@@ -654,4 +665,173 @@ func (h *VideoHandler) UploadThumbnail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
+}
+
+// PurgeOrphans godoc
+// @Summary      Purge orphaned video records and/or storage objects
+// @Description  Phase 1 (always): hard-deletes DB rows whose storage_key file is absent in S3. Phase 2 (opt-in via include_s3_orphans): deletes S3 objects not referenced by any DB row. Use dry_run=true to preview without committing changes.
+// @Tags         videos
+// @Accept       json
+// @Produce      json
+// @Param        body body dto.PurgeOrphansRequest false "Purge options"
+// @Success      200 {object} httputil.Response{data=dto.PurgeOrphansResponse}
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/videos/purge-orphans [post]
+func (h *VideoHandler) PurgeOrphans(w http.ResponseWriter, r *http.Request) {
+	var req dto.PurgeOrphansRequest
+	// Body is optional — ignore decode errors (empty body is valid).
+	_ = httputil.DecodeJSON(r, &req)
+
+	out, appErr := h.videoService.PurgeOrphans(r.Context(), videouc.PurgeOrphansInput{
+		IncludeS3Orphans: req.IncludeS3Orphans,
+		DryRun:           req.DryRun,
+	})
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.PurgeOrphansToResponse(out, req.DryRun))
+}
+
+// ListOwned godoc
+// @Summary      List publisher's own videos
+// @Description  Return a paginated list of all videos uploaded by the authenticated publisher (any status)
+// @Tags         publisher
+// @Produce      json
+// @Param        page query int false "Page number" default(1)
+// @Param        per_page query int false "Items per page" default(20)
+// @Param        sort query string false "Sort field (e.g. -created_at)"
+// @Success      200 {object} httputil.Response{data=[]dto.VideoResponse,meta=httputil.Meta}
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /publisher/videos [get]
+func (h *VideoHandler) ListOwned(w http.ResponseWriter, r *http.Request) {
+	uploaderID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
+		return
+	}
+
+	fs, err := filter.FromRequest(r, postgres.VideoFilterConfig())
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, err.Error())
+		return
+	}
+
+	videos, total, appErr := h.videoService.ListOwned(r.Context(), uploaderID, &fs)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.SuccessWithMeta(w, mapper.VideosToResponse(r.Context(), videos, h.cdnURLs), &httputil.Meta{
+		Page:       fs.Pagination.Page,
+		PerPage:    fs.Pagination.PerPage,
+		Total:      total,
+		TotalPages: fs.Pagination.TotalPages(total),
+	})
+}
+
+// PublishOwned godoc
+// @Summary      Publish publisher's own video
+// @Description  Transition a publisher-owned video to the published state. Publishers can only publish their own videos.
+// @Tags         publisher
+// @Produce      json
+// @Param        id path string true "Video ID" format(uuid)
+// @Success      200 {object} httputil.Response{data=dto.VideoResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /publisher/videos/{id}/publish [post]
+func (h *VideoHandler) PublishOwned(w http.ResponseWriter, r *http.Request) {
+	id, err := httputil.URLParamUUID(r, "id")
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid video ID")
+		return
+	}
+
+	callerID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
+		return
+	}
+
+	// Ownership check: non-admins may only publish their own videos.
+	callerRoles, _ := middleware.GetUserRoles(r.Context())
+	if !entity.HasRole(callerRoles, entity.RoleAdmin) {
+		video, appErr := h.videoService.GetByID(r.Context(), id)
+		if appErr != nil {
+			httputil.Error(w, appErr)
+			return
+		}
+		if video.UploadedBy != callerID {
+			httputil.Error(w, apperror.Forbidden(apperror.CodeVideoOwnershipRequired, "you do not own this video", nil))
+			return
+		}
+	}
+
+	video, appErr := h.videoService.Publish(r.Context(), id)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
+}
+
+// DeleteOwned godoc
+// @Summary      Archive publisher's own video
+// @Description  Soft-delete a publisher-owned video. Publishers can only archive their own videos.
+// @Tags         publisher
+// @Param        id path string true "Video ID" format(uuid)
+// @Success      204
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /publisher/videos/{id} [delete]
+func (h *VideoHandler) DeleteOwned(w http.ResponseWriter, r *http.Request) {
+	id, err := httputil.URLParamUUID(r, "id")
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid video ID")
+		return
+	}
+
+	callerID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
+		return
+	}
+
+	// Ownership check: non-admins may only archive their own videos.
+	callerRolesD, _ := middleware.GetUserRoles(r.Context())
+	if !entity.HasRole(callerRolesD, entity.RoleAdmin) {
+		video, appErr := h.videoService.GetByID(r.Context(), id)
+		if appErr != nil {
+			httputil.Error(w, appErr)
+			return
+		}
+		if video.UploadedBy != callerID {
+			httputil.Error(w, apperror.Forbidden(apperror.CodeVideoOwnershipRequired, "you do not own this video", nil))
+			return
+		}
+	}
+
+	if appErr := h.videoService.Delete(r.Context(), id); appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

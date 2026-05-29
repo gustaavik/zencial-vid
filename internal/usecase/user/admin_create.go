@@ -16,7 +16,7 @@ import (
 type AdminCreateInput struct {
 	Email       string
 	Password    string
-	Role        entity.UserRole // optional; defaults to RoleUser when empty
+	Roles       []entity.UserRole // optional; defaults to [RoleUser] when empty
 	DisplayName string
 	AvatarURL   string
 	Language    string
@@ -48,8 +48,8 @@ func (s *Service) AdminCreate(ctx context.Context, input *AdminCreateInput) (*en
 
 	user := entity.NewUser(email, valueobject.NewHashedPassword(hashed))
 
-	if input.Role == entity.RoleAdmin {
-		user.Role = entity.RoleAdmin
+	if len(input.Roles) > 0 {
+		user.Roles = input.Roles
 	}
 	if input.DisplayName != "" {
 		user.Profile.DisplayName = input.DisplayName

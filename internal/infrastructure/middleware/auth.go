@@ -19,7 +19,7 @@ import (
 
 const (
 	userIDKey    contextKey = "user_id"
-	userRoleKey  contextKey = "user_role"
+	userRolesKey contextKey = "user_roles"
 	sessionIDKey contextKey = "session_id"
 )
 
@@ -134,7 +134,7 @@ func (a *SessionAuthenticator) resolve(ctx context.Context, token string) (conte
 	}
 
 	ctx = context.WithValue(ctx, userIDKey, sess.UserID)
-	ctx = context.WithValue(ctx, userRoleKey, user.Role)
+	ctx = context.WithValue(ctx, userRolesKey, user.Roles)
 	ctx = context.WithValue(ctx, sessionIDKey, sess.ID)
 	ctx = actor.WithActor(ctx, sess.UserID)
 	return ctx, "", true
@@ -173,10 +173,19 @@ func GetUserID(ctx context.Context) (uuid.UUID, bool) {
 	return id, ok
 }
 
-// GetUserRole retrieves the authenticated user's role from context.
-func GetUserRole(ctx context.Context) (entity.UserRole, bool) {
-	role, ok := ctx.Value(userRoleKey).(entity.UserRole)
-	return role, ok
+// GetUserRoles retrieves the authenticated user's roles from context.
+func GetUserRoles(ctx context.Context) ([]entity.UserRole, bool) {
+	roles, ok := ctx.Value(userRolesKey).([]entity.UserRole)
+	return roles, ok
+}
+
+// CallerHasRole reports whether the authenticated user holds the given role.
+func CallerHasRole(ctx context.Context, role entity.UserRole) bool {
+	roles, ok := ctx.Value(userRolesKey).([]entity.UserRole)
+	if !ok {
+		return false
+	}
+	return entity.HasRole(roles, role)
 }
 
 // GetSessionID retrieves the authenticated session's ID from context.

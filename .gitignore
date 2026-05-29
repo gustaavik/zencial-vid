@@ -41,3 +41,5 @@ tmp/
 *.log
 
 .claude
+graphify-out/
+CLAUDE.md

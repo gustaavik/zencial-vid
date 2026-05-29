@@ -27,4 +27,7 @@ type StorageService interface {
 	PresignedPutURL(ctx context.Context, key, contentType string, expiry time.Duration) (string, error)
 	// Stat returns object metadata, or (nil, nil) if the object does not exist.
 	Stat(ctx context.Context, key string) (*ObjectInfo, error)
+	// ListObjects returns all object keys under the given prefix.
+	// Pass an empty prefix to list the entire bucket.
+	ListObjects(ctx context.Context, prefix string) ([]string, error)
 }

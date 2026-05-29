@@ -2,6 +2,7 @@ package validator
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
@@ -14,9 +15,15 @@ type Validator struct {
 
 // New creates a new Validator.
 func New() *Validator {
-	return &Validator{
-		validate: validator.New(validator.WithRequiredStructEnabled()),
-	}
+	v := validator.New(validator.WithRequiredStructEnabled())
+	v.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+		if name == "-" || name == "" {
+			return fld.Name
+		}
+		return name
+	})
+	return &Validator{validate: v}
 }
 
 // ValidationError represents a single field validation error.
@@ -34,8 +41,12 @@ func (v *Validator) Validate(s any) []ValidationError {
 
 	var errors []ValidationError
 	for _, e := range err.(validator.ValidationErrors) {
+		ns := e.Namespace()
+		if dot := strings.Index(ns, "."); dot >= 0 {
+			ns = ns[dot+1:]
+		}
 		errors = append(errors, ValidationError{
-			Field:   toSnakeCase(e.Field()),
+			Field:   ns,
 			Message: formatError(e),
 		})
 	}
@@ -61,15 +72,4 @@ func formatError(e validator.FieldError) string {
 	default:
 		return fmt.Sprintf("failed validation: %s", e.Tag())
 	}
-}
-
-func toSnakeCase(s string) string {
-	var result strings.Builder
-	for i, r := range s {
-		if i > 0 && r >= 'A' && r <= 'Z' {
-			result.WriteByte('_')
-		}
-		result.WriteRune(r)
-	}
-	return strings.ToLower(result.String())
 }

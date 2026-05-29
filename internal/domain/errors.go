@@ -58,3 +58,23 @@ var (
 var (
 	ErrWatchProgressNotFound = errors.New("watch progress not found")
 )
+
+// Cast errors.
+var (
+	ErrCastNotFound = errors.New("cast member not found")
+	ErrCastArchived = errors.New("cast member is archived")
+)
+
+// Publisher errors.
+var (
+	ErrVideoOwnershipRequired  = errors.New("caller does not own this video")
+	ErrSeriesOwnershipRequired = errors.New("caller does not own this series")
+)
+
+// Series errors.
+var (
+	ErrSeriesNotFound              = errors.New("series not found")
+	ErrSeriesSlugExists            = errors.New("series slug already exists")
+	ErrEpisodeAlreadyExists        = errors.New("episode already assigned to a series")
+	ErrSeriesWatchProgressNotFound = errors.New("series watch progress not found")
+)

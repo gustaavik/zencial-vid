@@ -40,7 +40,7 @@ func TestService_AdminCreate(t *testing.T) {
 		require.Nil(t, appErr)
 		require.NotNil(t, result)
 		assert.Equal(t, "new@example.com", result.Email.String())
-		assert.Equal(t, entity.RoleUser, result.Role)
+		assert.Contains(t, result.Roles, entity.RoleUser)
 		assert.Equal(t, entity.UserStatusActive, result.Status)
 		assert.Equal(t, "New User", result.Profile.DisplayName)
 		assert.NotNil(t, created)
@@ -57,12 +57,12 @@ func TestService_AdminCreate(t *testing.T) {
 		result, appErr := svc.AdminCreate(ctx, &AdminCreateInput{
 			Email:       "admin@example.com",
 			Password:    "supersecret",
-			Role:        entity.RoleAdmin,
+			Roles:       []entity.UserRole{entity.RoleAdmin},
 			DisplayName: "Admin",
 		})
 
 		require.Nil(t, appErr)
-		assert.Equal(t, entity.RoleAdmin, result.Role)
+		assert.Contains(t, result.Roles, entity.RoleAdmin)
 	})
 
 	t.Run("invalid email", func(t *testing.T) {
