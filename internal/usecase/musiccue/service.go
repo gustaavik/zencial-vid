@@ -19,13 +19,13 @@ type Service struct {
 func NewService(
 	cueRepo repository.MusicCueRepository,
 	videoRepo repository.VideoRepository,
-	storage storage.StorageService,
+	storageSvc storage.StorageService,
 	log *slog.Logger,
 ) *Service {
 	return &Service{
 		cueRepo:   cueRepo,
 		videoRepo: videoRepo,
-		storage:   storage,
+		storage:   storageSvc,
 		log:       log,
 	}
 }

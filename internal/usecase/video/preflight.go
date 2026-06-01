@@ -61,44 +61,45 @@ func (s *Service) Preflight(ctx context.Context, videoID, uploaderID uuid.UUID) 
 }
 
 func buildChecklist(ctx context.Context, v *entity.Video, s *Service) []PreflightItem {
-	items := []PreflightItem{
-		{
+	items := make([]PreflightItem, 0, 8)
+	items = append(items,
+		PreflightItem{
 			Key:     "file_encoded",
 			Label:   "File uploaded & encoded",
 			Passed:  v.Status == entity.VideoStatusPublished || v.Status == entity.VideoStatusProcessing,
 			Blocker: true,
 		},
-		{
+		PreflightItem{
 			Key:     "thumbnail",
 			Label:   "Thumbnail picked",
 			Passed:  v.ThumbnailKey != "",
 			Blocker: false,
 		},
-		{
+		PreflightItem{
 			Key:     "title_description",
 			Label:   "Title & description",
 			Passed:  v.Title != "" && v.Description != "",
 			Blocker: true,
 		},
-		{
+		PreflightItem{
 			Key:     "genres_rating",
 			Label:   "Genres & rating",
 			Passed:  len(v.GenreIDs) > 0 && v.ContentRating != "",
 			Blocker: false,
 		},
-		{
+		PreflightItem{
 			Key:     "visibility",
 			Label:   "Visibility chosen",
 			Passed:  v.Visibility != "",
 			Blocker: true,
 		},
-		{
+		PreflightItem{
 			Key:     "monetization",
 			Label:   "Monetization selected",
 			Passed:  len(v.MonetizationTypes) > 0,
 			Blocker: false,
 		},
-	}
+	)
 
 	// Music rights — check for blocking cues.
 	musicPassed := true
