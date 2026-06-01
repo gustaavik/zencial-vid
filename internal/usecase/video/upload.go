@@ -43,7 +43,7 @@ func (s *Service) InitiateUpload(ctx context.Context, input *InitiateUploadInput
 		contentType = "video/mp4"
 	}
 
-	videoID := uuid.New()
+	videoID := uuid.Must(uuid.NewV7())
 	ext := extensionFromContentType(contentType)
 	if ext == "" {
 		ext = filepath.Ext(input.FileName)

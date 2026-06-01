@@ -58,7 +58,7 @@ func (r *AuditLogRepository) Create(ctx context.Context, log *entity.AuditLog) e
 	}
 
 	if log.ID == uuid.Nil {
-		log.ID = uuid.New()
+		log.ID = uuid.Must(uuid.NewV7())
 	}
 
 	_, err = db.Exec(ctx, `

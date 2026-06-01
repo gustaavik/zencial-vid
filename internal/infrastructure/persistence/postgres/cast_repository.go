@@ -55,7 +55,7 @@ func (r *CastRepository) GetByName(ctx context.Context, name string) (*entity.Ca
 func (r *CastRepository) FindOrCreate(ctx context.Context, name string) (*entity.Cast, error) {
 	db := connFromCtx(ctx, r.pool)
 	now := time.Now().UTC()
-	id := uuid.New()
+	id := uuid.Must(uuid.NewV7())
 
 	// Attempt insert; skip silently if the unique name already exists.
 	_, err := db.Exec(ctx, `
