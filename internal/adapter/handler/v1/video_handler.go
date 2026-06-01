@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/mapper"
@@ -834,4 +835,194 @@ func (h *VideoHandler) DeleteOwned(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// Preflight godoc
+// @Summary      Pre-flight checklist
+// @Description  Returns the submission readiness checklist for a video.
+// @Tags         videos
+// @Produce      json
+// @Param        id path string true "Video ID"
+// @Success      200 {object} httputil.Response{data=dto.PreflightResponse}
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /publisher/videos/{id}/preflight [get]
+func (h *VideoHandler) Preflight(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid video ID")
+		return
+	}
+
+	callerID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
+		return
+	}
+
+	result, appErr := h.videoService.Preflight(r.Context(), id, callerID)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	items := make([]dto.PreflightItemResponse, len(result.Items))
+	for i, item := range result.Items {
+		items[i] = dto.PreflightItemResponse{
+			Key:     item.Key,
+			Label:   item.Label,
+			Passed:  item.Passed,
+			Blocker: item.Blocker,
+		}
+	}
+
+	httputil.Success(w, http.StatusOK, dto.PreflightResponse{
+		VideoID:    result.VideoID,
+		ReadyCount: result.ReadyCount,
+		TotalCount: result.TotalCount,
+		Blockers:   result.Blockers,
+		Items:      items,
+	})
+}
+
+// Submit godoc
+// @Summary      Submit video for review
+// @Description  Locks a video and queues it for moderation. Validates pre-flight before locking.
+// @Tags         videos
+// @Produce      json
+// @Param        id path string true "Video ID"
+// @Success      200 {object} httputil.Response{data=dto.VideoResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      409 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /publisher/videos/{id}/submit [post]
+func (h *VideoHandler) Submit(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid video ID")
+		return
+	}
+
+	callerID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
+		return
+	}
+
+	video, appErr := h.videoService.SubmitForReview(r.Context(), id, callerID)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
+}
+
+// ApproveSubmission godoc
+// @Summary      Approve submission
+// @Description  Approves a video submission and triggers the publish flow. Admin only.
+// @Tags         videos
+// @Produce      json
+// @Param        id path string true "Video ID"
+// @Success      200 {object} httputil.Response{data=dto.VideoResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/videos/{id}/approve [post]
+func (h *VideoHandler) ApproveSubmission(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid video ID")
+		return
+	}
+
+	video, appErr := h.videoService.ApproveSubmission(r.Context(), id)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
+}
+
+// RejectSubmission godoc
+// @Summary      Reject submission
+// @Description  Rejects a video submission with moderator notes. Admin only.
+// @Tags         videos
+// @Accept       json
+// @Produce      json
+// @Param        id   path string                       true "Video ID"
+// @Param        body body dto.RejectSubmissionRequest  true "Rejection reason"
+// @Success      200 {object} httputil.Response{data=dto.VideoResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/videos/{id}/reject [post]
+func (h *VideoHandler) RejectSubmission(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid video ID")
+		return
+	}
+
+	var req dto.RejectSubmissionRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
+		return
+	}
+	if errs := h.validator.Validate(req); errs != nil {
+		httputil.ErrorWithDetails(w, apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil), errs)
+		return
+	}
+
+	video, appErr := h.videoService.RejectSubmission(r.Context(), id, req.Notes)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
+}
+
+// ModerationQueue godoc
+// @Summary      Moderation queue
+// @Description  Returns videos pending moderation review. Admin only.
+// @Tags         videos
+// @Produce      json
+// @Success      200 {object} httputil.Response{data=[]dto.VideoResponse}
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/moderation/queue [get]
+func (h *VideoHandler) ModerationQueue(w http.ResponseWriter, r *http.Request) {
+	fs, err := filter.FromRequest(r, postgres.VideoFilterConfig())
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid filter parameters")
+		return
+	}
+
+	videos, total, appErr := h.videoService.List(r.Context(), &fs)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.SuccessWithMeta(w,
+		mapper.VideosToResponse(r.Context(), videos, h.cdnURLs),
+		&httputil.Meta{Total: total},
+	)
 }

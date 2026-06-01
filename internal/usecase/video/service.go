@@ -29,15 +29,16 @@ type CDNClient interface {
 
 // Service handles video use cases.
 type Service struct {
-	videoRepo  repository.VideoRepository
-	genreRepo  repository.GenreRepository
-	subRepo    repository.SubscriptionRepository
-	planRepo   repository.PlanRepository
-	storage    storage.StorageService
-	dispatcher event.Dispatcher
-	cdn        CDNClient
-	cdnBaseURL string
-	log        *slog.Logger
+	videoRepo    repository.VideoRepository
+	genreRepo    repository.GenreRepository
+	subRepo      repository.SubscriptionRepository
+	planRepo     repository.PlanRepository
+	musicCueRepo repository.MusicCueRepository
+	storage      storage.StorageService
+	dispatcher   event.Dispatcher
+	cdn          CDNClient
+	cdnBaseURL   string
+	log          *slog.Logger
 }
 
 // NewService creates a new video Service.
@@ -74,5 +75,12 @@ func WithCDN(client CDNClient, baseURL string) Option {
 	return func(s *Service) {
 		s.cdn = client
 		s.cdnBaseURL = baseURL
+	}
+}
+
+// WithMusicCueRepo wires the music cue repository for submit/preflight checks.
+func WithMusicCueRepo(repo repository.MusicCueRepository) Option {
+	return func(s *Service) {
+		s.musicCueRepo = repo
 	}
 }

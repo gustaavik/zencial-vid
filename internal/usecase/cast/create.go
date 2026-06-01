@@ -11,10 +11,11 @@ import (
 
 // CreateInput holds the fields needed to add a cast member to a video.
 type CreateInput struct {
-	VideoID   uuid.UUID
-	Name      string
-	Role      string
-	SortOrder int
+	VideoID    uuid.UUID
+	Name       string
+	Role       string
+	Department entity.CastDepartment
+	SortOrder  int
 	// CallerID and CallerRoles are used to enforce publisher ownership.
 	CallerID    uuid.UUID
 	CallerRoles []entity.UserRole
@@ -55,7 +56,11 @@ func (s *Service) Create(ctx context.Context, input *CreateInput) (*entity.Video
 		return nil, apperror.Conflict(apperror.CodeCastAlreadyCredited, "cast member already has this role on this video", nil)
 	}
 
-	vc := entity.NewVideoCast(input.VideoID, cast.ID, input.Role, input.SortOrder)
+	dept := input.Department
+	if dept == "" {
+		dept = entity.DepartmentPerformance
+	}
+	vc := entity.NewVideoCast(input.VideoID, cast.ID, input.Role, dept, input.SortOrder)
 	vc.Cast = cast
 	if err := s.videoCastRepo.Create(ctx, vc); err != nil {
 		s.log.Error("creating cast credit", "error", err)

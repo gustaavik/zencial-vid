@@ -2,25 +2,61 @@ package dto
 
 // VideoResponse represents a video in API responses.
 type VideoResponse struct {
-	ID               string   `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
-	Title            string   `json:"title" example:"My Awesome Video"`
-	Slug             string   `json:"slug" example:"my-awesome-video-a3f8b2c1"`
-	Description      string   `json:"description" example:"A great video about..."`
-	Creator          string   `json:"creator" example:"John Doe"`
-	Duration         int64    `json:"duration" example:"3600"`
-	ContentRating    string   `json:"content_rating" example:"PG"`
-	Status           string   `json:"status" example:"published"`
-	ThumbnailURL     string   `json:"thumbnail_url,omitempty" example:"https://..."`
-	FileSize         int64    `json:"file_size" example:"104857600"`
-	GenreIDs         []string `json:"genre_ids"`
-	MinimumPlanLevel *int     `json:"minimum_plan_level,omitempty" example:"1"`
-	IsAccessible     *bool    `json:"is_accessible,omitempty"`
-	TranscodeError   string   `json:"transcode_error,omitempty" example:"ffmpeg exited with status 1"`
-	SeriesID         *string  `json:"series_id,omitempty" example:"550e8400-e29b-41d4-a716-446655440000"`
-	SeasonNumber     *int     `json:"season_number,omitempty" example:"1"`
-	EpisodeNumber    *int     `json:"episode_number,omitempty" example:"3"`
-	CreatedAt        string   `json:"created_at" example:"2025-01-01T00:00:00Z"`
-	UpdatedAt        string   `json:"updated_at" example:"2025-01-01T00:00:00Z"`
+	ID                    string   `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Title                 string   `json:"title" example:"My Awesome Video"`
+	Slug                  string   `json:"slug" example:"my-awesome-video-a3f8b2c1"`
+	Description           string   `json:"description" example:"A great video about..."`
+	Logline               string   `json:"logline,omitempty" example:"A boy and his dog change the world."`
+	Creator               string   `json:"creator" example:"John Doe"`
+	Duration              int64    `json:"duration" example:"3600"`
+	ContentRating         string   `json:"content_rating" example:"PG"`
+	PrimaryLanguage       string   `json:"primary_language" example:"en"`
+	Status                string   `json:"status" example:"published"`
+	Visibility            string   `json:"visibility" example:"public"`
+	ThumbnailURL          string   `json:"thumbnail_url,omitempty" example:"https://..."`
+	FileSize              int64    `json:"file_size" example:"104857600"`
+	GenreIDs              []string `json:"genre_ids"`
+	MinimumPlanLevel      *int     `json:"minimum_plan_level,omitempty" example:"1"`
+	IsAccessible          *bool    `json:"is_accessible,omitempty"`
+	TranscodeError        string   `json:"transcode_error,omitempty" example:"ffmpeg exited with status 1"`
+	SeriesID              *string  `json:"series_id,omitempty"`
+	SeasonNumber          *int     `json:"season_number,omitempty" example:"1"`
+	EpisodeNumber         *int     `json:"episode_number,omitempty" example:"3"`
+	ScheduledPublishAt    *string  `json:"scheduled_publish_at,omitempty"`
+	MonetizationTypes     []string `json:"monetization_types,omitempty"`
+	PPVPriceCents         *int     `json:"ppv_price_cents,omitempty"`
+	FreePreviewSeconds    *int     `json:"free_preview_seconds,omitempty"`
+	AdBreakPositions      []int    `json:"ad_break_positions,omitempty"`
+	GeoRestrictionType    string   `json:"geo_restriction_type,omitempty"`
+	GeoRestrictionRegions []string `json:"geo_restriction_regions,omitempty"`
+	RequireSignin         bool     `json:"require_signin,omitempty"`
+	SubmissionStatus      string   `json:"submission_status" example:"draft"`
+	SubmittedAt           *string  `json:"submitted_at,omitempty"`
+	ModeratorNotes        string   `json:"moderator_notes,omitempty"`
+	CreatedAt             string   `json:"created_at" example:"2025-01-01T00:00:00Z"`
+	UpdatedAt             string   `json:"updated_at" example:"2025-01-01T00:00:00Z"`
+}
+
+// PreflightItemResponse is a single checklist item.
+type PreflightItemResponse struct {
+	Key     string `json:"key"`
+	Label   string `json:"label"`
+	Passed  bool   `json:"passed"`
+	Blocker bool   `json:"blocker"`
+}
+
+// PreflightResponse is the submission readiness checklist.
+type PreflightResponse struct {
+	VideoID    string                  `json:"video_id"`
+	ReadyCount int                     `json:"ready_count"`
+	TotalCount int                     `json:"total_count"`
+	Blockers   int                     `json:"blockers"`
+	Items      []PreflightItemResponse `json:"items"`
+}
+
+// RejectSubmissionRequest carries the moderator rejection reason.
+type RejectSubmissionRequest struct {
+	Notes string `json:"notes" validate:"required,min=1,max=2000"`
 }
 
 // VideoStreamResponse returns the streaming URL (presigned or HLS).

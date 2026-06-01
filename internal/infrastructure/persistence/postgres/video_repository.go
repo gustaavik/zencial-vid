@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -36,6 +37,18 @@ func VideoFilterConfig() filter.Config {
 	return videoFilterConfig
 }
 
+const videoSelectCols = `
+	id, title, slug, description, logline, creator, duration, content_rating,
+	primary_language, status, visibility,
+	storage_key, content_type, file_size, thumbnail_key, thumbnail_candidates,
+	uploaded_by, minimum_plan_level, transcode_error,
+	series_id, season_number, episode_number,
+	scheduled_publish_at,
+	monetization_types, ppv_price_cents, free_preview_seconds, ad_break_positions,
+	geo_restriction_type, geo_restriction_regions, require_signin,
+	submission_status, submitted_at, moderator_notes,
+	created_at, updated_at`
+
 // VideoRepository implements repository.VideoRepository using PostgreSQL.
 type VideoRepository struct {
 	pool *pgxpool.Pool
@@ -49,16 +62,41 @@ func NewVideoRepository(pool *pgxpool.Pool) *VideoRepository {
 func (r *VideoRepository) Create(ctx context.Context, video *entity.Video) error {
 	db := connFromCtx(ctx, r.pool)
 
+	monetizationJSON, _ := json.Marshal(video.MonetizationTypes)
+	adBreakJSON, _ := json.Marshal(video.AdBreakPositions)
+	geoRegionsJSON, _ := json.Marshal(video.GeoRestrictionRegions)
+	thumbnailCandidatesJSON, _ := json.Marshal(video.ThumbnailCandidates)
+
 	_, err := db.Exec(ctx, `
-		INSERT INTO videos (id, title, slug, description, creator, duration, content_rating,
-		                    status, storage_key, content_type, file_size, thumbnail_key, uploaded_by,
-		                    minimum_plan_level, transcode_error, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-	`, video.ID, video.Title, video.Slug.String(), video.Description, video.Creator,
-		video.Duration.Seconds, video.ContentRating,
-		string(video.Status), video.StorageKey, video.ContentType, video.FileSize,
-		video.ThumbnailKey, video.UploadedBy, video.MinimumPlanLevel, video.TranscodeError,
-		video.CreatedAt, video.UpdatedAt)
+		INSERT INTO videos (
+			id, title, slug, description, logline, creator, duration, content_rating,
+			primary_language, status, visibility,
+			storage_key, content_type, file_size, thumbnail_key, thumbnail_candidates,
+			uploaded_by, minimum_plan_level, transcode_error,
+			monetization_types, ppv_price_cents, free_preview_seconds, ad_break_positions,
+			geo_restriction_type, geo_restriction_regions, require_signin,
+			submission_status, moderator_notes,
+			created_at, updated_at
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8,
+			$9, $10, $11,
+			$12, $13, $14, $15, $16,
+			$17, $18, $19,
+			$20, $21, $22, $23,
+			$24, $25, $26,
+			$27, $28,
+			$29, $30
+		)`,
+		video.ID, video.Title, video.Slug.String(), video.Description, video.Logline,
+		video.Creator, video.Duration.Seconds, video.ContentRating,
+		video.PrimaryLanguage, string(video.Status), string(video.Visibility),
+		video.StorageKey, video.ContentType, video.FileSize, video.ThumbnailKey, thumbnailCandidatesJSON,
+		video.UploadedBy, video.MinimumPlanLevel, video.TranscodeError,
+		monetizationJSON, video.PPVPriceCents, video.FreePreviewSeconds, adBreakJSON,
+		string(video.GeoRestrictionType), geoRegionsJSON, video.RequireSignin,
+		string(video.SubmissionStatus), video.ModeratorNotes,
+		video.CreatedAt, video.UpdatedAt,
+	)
 	if err != nil {
 		return fmt.Errorf("creating video: %w", err)
 	}
@@ -74,39 +112,50 @@ func (r *VideoRepository) Create(ctx context.Context, video *entity.Video) error
 
 func (r *VideoRepository) GetByID(ctx context.Context, id uuid.UUID) (*entity.Video, error) {
 	db := connFromCtx(ctx, r.pool)
-	return r.scanVideo(ctx, db, `
-		SELECT id, title, slug, description, creator, duration, content_rating,
-		       status, storage_key, content_type, file_size, thumbnail_key, uploaded_by,
-		       minimum_plan_level, transcode_error, created_at, updated_at,
-		       series_id, season_number, episode_number
-		FROM videos WHERE id = $1
-	`, id)
+	return r.scanVideo(ctx, db, `SELECT `+videoSelectCols+` FROM videos v WHERE id = $1`, id)
 }
 
 func (r *VideoRepository) GetBySlug(ctx context.Context, slug valueobject.Slug) (*entity.Video, error) {
 	db := connFromCtx(ctx, r.pool)
-	return r.scanVideo(ctx, db, `
-		SELECT id, title, slug, description, creator, duration, content_rating,
-		       status, storage_key, content_type, file_size, thumbnail_key, uploaded_by,
-		       minimum_plan_level, transcode_error, created_at, updated_at,
-		       series_id, season_number, episode_number
-		FROM videos WHERE slug = $1
-	`, slug.String())
+	return r.scanVideo(ctx, db, `SELECT `+videoSelectCols+` FROM videos v WHERE slug = $1`, slug.String())
 }
 
 func (r *VideoRepository) Update(ctx context.Context, video *entity.Video) error {
 	db := connFromCtx(ctx, r.pool)
 
+	monetizationJSON, _ := json.Marshal(video.MonetizationTypes)
+	adBreakJSON, _ := json.Marshal(video.AdBreakPositions)
+	geoRegionsJSON, _ := json.Marshal(video.GeoRestrictionRegions)
+	thumbnailCandidatesJSON, _ := json.Marshal(video.ThumbnailCandidates)
+
 	_, err := db.Exec(ctx, `
-		UPDATE videos SET title = $2, slug = $3, description = $4, creator = $5,
-		       duration = $6, content_rating = $7, status = $8,
-		       storage_key = $9, content_type = $10, file_size = $11, thumbnail_key = $12,
-		       minimum_plan_level = $13, transcode_error = $14, updated_at = $15
-		WHERE id = $1
-	`, video.ID, video.Title, video.Slug.String(), video.Description, video.Creator,
-		video.Duration.Seconds, video.ContentRating,
-		string(video.Status), video.StorageKey, video.ContentType, video.FileSize,
-		video.ThumbnailKey, video.MinimumPlanLevel, video.TranscodeError, video.UpdatedAt)
+		UPDATE videos SET
+			title = $2, slug = $3, description = $4, logline = $5, creator = $6,
+			duration = $7, content_rating = $8, primary_language = $9,
+			status = $10, visibility = $11,
+			storage_key = $12, content_type = $13, file_size = $14, thumbnail_key = $15,
+			thumbnail_candidates = $16,
+			minimum_plan_level = $17, transcode_error = $18,
+			scheduled_publish_at = $19,
+			monetization_types = $20, ppv_price_cents = $21, free_preview_seconds = $22,
+			ad_break_positions = $23,
+			geo_restriction_type = $24, geo_restriction_regions = $25, require_signin = $26,
+			submission_status = $27, submitted_at = $28, moderator_notes = $29,
+			updated_at = $30
+		WHERE id = $1`,
+		video.ID, video.Title, video.Slug.String(), video.Description, video.Logline,
+		video.Creator, video.Duration.Seconds, video.ContentRating, video.PrimaryLanguage,
+		string(video.Status), string(video.Visibility),
+		video.StorageKey, video.ContentType, video.FileSize, video.ThumbnailKey,
+		thumbnailCandidatesJSON,
+		video.MinimumPlanLevel, video.TranscodeError,
+		video.ScheduledPublishAt,
+		monetizationJSON, video.PPVPriceCents, video.FreePreviewSeconds,
+		adBreakJSON,
+		string(video.GeoRestrictionType), geoRegionsJSON, video.RequireSignin,
+		string(video.SubmissionStatus), video.SubmittedAt, video.ModeratorNotes,
+		video.UpdatedAt,
+	)
 	if err != nil {
 		return fmt.Errorf("updating video: %w", err)
 	}
@@ -134,7 +183,6 @@ func (r *VideoRepository) ListPublished(ctx context.Context, fs *filter.FilterSe
 func (r *VideoRepository) ListByUploader(ctx context.Context, uploaderID uuid.UUID, fs *filter.FilterSet) ([]entity.Video, int64, error) {
 	db := connFromCtx(ctx, r.pool)
 
-	// uploaderID is $1; filter conditions start at $2.
 	baseCondition := "v.uploaded_by = $1"
 	baseArgs := []any{uploaderID}
 
@@ -149,14 +197,8 @@ func (r *VideoRepository) ListByUploader(ctx context.Context, uploaderID uuid.UU
 
 	sql := filter.ToSQL(fs, baseCondition, 2)
 	dataArgs := append(append([]any{}, baseArgs...), sql.Args...)
-	dataQuery := fmt.Sprintf(`
-		SELECT id, title, slug, description, creator, duration, content_rating,
-		       status, storage_key, content_type, file_size, thumbnail_key, uploaded_by,
-		       minimum_plan_level, transcode_error, created_at, updated_at,
-		       series_id, season_number, episode_number
-		FROM videos v
-		%s %s %s
-	`, sql.WhereClause, sql.OrderClause, sql.LimitClause)
+	dataQuery := fmt.Sprintf(`SELECT `+videoSelectCols+` FROM videos v %s %s %s`,
+		sql.WhereClause, sql.OrderClause, sql.LimitClause)
 
 	rows, err := db.Query(ctx, dataQuery, dataArgs...)
 	if err != nil {
@@ -164,21 +206,9 @@ func (r *VideoRepository) ListByUploader(ctx context.Context, uploaderID uuid.UU
 	}
 	defer rows.Close()
 
-	var videos []entity.Video
-	for rows.Next() {
-		v, err := r.scanVideoRow(rows)
-		if err != nil {
-			return nil, 0, err
-		}
-		videos = append(videos, *v)
-	}
-
-	for i := range videos {
-		genreIDs, err := r.GetGenreIDs(ctx, videos[i].ID)
-		if err != nil {
-			return nil, 0, err
-		}
-		videos[i].GenreIDs = genreIDs
+	videos, err := r.collectVideoRows(ctx, rows)
+	if err != nil {
+		return nil, 0, err
 	}
 
 	return videos, total, nil
@@ -187,7 +217,6 @@ func (r *VideoRepository) ListByUploader(ctx context.Context, uploaderID uuid.UU
 func (r *VideoRepository) listWithBase(ctx context.Context, fs *filter.FilterSet, baseCondition string) ([]entity.Video, int64, error) {
 	db := connFromCtx(ctx, r.pool)
 
-	// Count
 	countWhere, countArgs, _ := filter.CountSQL(fs, baseCondition, 1)
 	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM videos v %s`, countWhere)
 
@@ -196,16 +225,9 @@ func (r *VideoRepository) listWithBase(ctx context.Context, fs *filter.FilterSet
 		return nil, 0, fmt.Errorf("counting videos: %w", err)
 	}
 
-	// Data
 	sql := filter.ToSQL(fs, baseCondition, 1)
-	dataQuery := fmt.Sprintf(`
-		SELECT id, title, slug, description, creator, duration, content_rating,
-		       status, storage_key, content_type, file_size, thumbnail_key, uploaded_by,
-		       minimum_plan_level, transcode_error, created_at, updated_at,
-		       series_id, season_number, episode_number
-		FROM videos v
-		%s %s %s
-	`, sql.WhereClause, sql.OrderClause, sql.LimitClause)
+	dataQuery := fmt.Sprintf(`SELECT `+videoSelectCols+` FROM videos v %s %s %s`,
+		sql.WhereClause, sql.OrderClause, sql.LimitClause)
 
 	rows, err := db.Query(ctx, dataQuery, sql.Args...)
 	if err != nil {
@@ -213,22 +235,9 @@ func (r *VideoRepository) listWithBase(ctx context.Context, fs *filter.FilterSet
 	}
 	defer rows.Close()
 
-	var videos []entity.Video
-	for rows.Next() {
-		v, err := r.scanVideoRow(rows)
-		if err != nil {
-			return nil, 0, err
-		}
-		videos = append(videos, *v)
-	}
-
-	// Load genre IDs for each video
-	for i := range videos {
-		genreIDs, err := r.GetGenreIDs(ctx, videos[i].ID)
-		if err != nil {
-			return nil, 0, err
-		}
-		videos[i].GenreIDs = genreIDs
+	videos, err := r.collectVideoRows(ctx, rows)
+	if err != nil {
+		return nil, 0, err
 	}
 
 	return videos, total, nil
@@ -253,9 +262,7 @@ func (r *VideoRepository) SetGenres(ctx context.Context, videoID uuid.UUID, genr
 	}
 
 	for _, genreID := range genreIDs {
-		_, err := db.Exec(ctx, `
-			INSERT INTO video_genres (video_id, genre_id) VALUES ($1, $2)
-		`, videoID, genreID)
+		_, err := db.Exec(ctx, `INSERT INTO video_genres (video_id, genre_id) VALUES ($1, $2)`, videoID, genreID)
 		if err != nil {
 			return fmt.Errorf("setting video genre: %w", err)
 		}
@@ -306,66 +313,6 @@ func (r *VideoRepository) ListAllStorageKeys(ctx context.Context) ([]repository.
 	return infos, nil
 }
 
-func (r *VideoRepository) scanVideo(ctx context.Context, db DBTX, query string, args ...any) (*entity.Video, error) {
-	var v entity.Video
-	var slug, contentRating, status, transcodeError string
-	var duration int64
-
-	err := db.QueryRow(ctx, query, args...).Scan(
-		&v.ID, &v.Title, &slug, &v.Description, &v.Creator,
-		&duration, &contentRating, &status,
-		&v.StorageKey, &v.ContentType, &v.FileSize, &v.ThumbnailKey,
-		&v.UploadedBy, &v.MinimumPlanLevel, &transcodeError, &v.CreatedAt, &v.UpdatedAt,
-		&v.SeriesID, &v.SeasonNumber, &v.EpisodeNumber,
-	)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("scanning video: %w", err)
-	}
-
-	v.Slug = valueobject.SlugFromTrusted(slug)
-	v.Duration = valueobject.NewDuration(duration)
-	v.ContentRating = contentRating
-	v.Status = entity.VideoStatus(status)
-	v.TranscodeError = transcodeError
-
-	// Load genre IDs
-	genreIDs, err := r.GetGenreIDs(ctx, v.ID)
-	if err != nil {
-		return nil, err
-	}
-	v.GenreIDs = genreIDs
-
-	return &v, nil
-}
-
-func (r *VideoRepository) scanVideoRow(rows pgx.Rows) (*entity.Video, error) {
-	var v entity.Video
-	var slug, contentRating, status, transcodeError string
-	var duration int64
-
-	err := rows.Scan(
-		&v.ID, &v.Title, &slug, &v.Description, &v.Creator,
-		&duration, &contentRating, &status,
-		&v.StorageKey, &v.ContentType, &v.FileSize, &v.ThumbnailKey,
-		&v.UploadedBy, &v.MinimumPlanLevel, &transcodeError, &v.CreatedAt, &v.UpdatedAt,
-		&v.SeriesID, &v.SeasonNumber, &v.EpisodeNumber,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("scanning video row: %w", err)
-	}
-
-	v.Slug = valueobject.SlugFromTrusted(slug)
-	v.Duration = valueobject.NewDuration(duration)
-	v.ContentRating = contentRating
-	v.Status = entity.VideoStatus(status)
-	v.TranscodeError = transcodeError
-
-	return &v, nil
-}
-
 func (r *VideoRepository) SetSeriesEpisode(ctx context.Context, videoID, seriesID uuid.UUID, season, episode int) error {
 	db := connFromCtx(ctx, r.pool)
 	_, err := db.Exec(ctx, `
@@ -411,16 +358,9 @@ func (r *VideoRepository) ListBySeries(ctx context.Context, seriesID uuid.UUID, 
 
 	sql := filter.ToSQL(fs, baseCondition, 2)
 	dataArgs := append(append([]any{}, baseArgs...), sql.Args...)
-	// Primary sort by episode order; secondary sort uses the filter sort clause.
 	orderClause := "ORDER BY v.season_number ASC NULLS LAST, v.episode_number ASC NULLS LAST"
-	dataQuery := fmt.Sprintf(`
-		SELECT id, title, slug, description, creator, duration, content_rating,
-		       status, storage_key, content_type, file_size, thumbnail_key, uploaded_by,
-		       minimum_plan_level, transcode_error, created_at, updated_at,
-		       series_id, season_number, episode_number
-		FROM videos v
-		%s %s %s
-	`, sql.WhereClause, orderClause, sql.LimitClause)
+	dataQuery := fmt.Sprintf(`SELECT `+videoSelectCols+` FROM videos v %s %s %s`,
+		sql.WhereClause, orderClause, sql.LimitClause)
 
 	rows, err := db.Query(ctx, dataQuery, dataArgs...)
 	if err != nil {
@@ -428,22 +368,136 @@ func (r *VideoRepository) ListBySeries(ctx context.Context, seriesID uuid.UUID, 
 	}
 	defer rows.Close()
 
+	videos, err := r.collectVideoRows(ctx, rows)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return videos, total, nil
+}
+
+// collectVideoRows scans all rows and loads genre IDs for each video.
+func (r *VideoRepository) collectVideoRows(ctx context.Context, rows pgx.Rows) ([]entity.Video, error) {
 	var videos []entity.Video
 	for rows.Next() {
 		v, err := r.scanVideoRow(rows)
 		if err != nil {
-			return nil, 0, err
+			return nil, err
 		}
 		videos = append(videos, *v)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	for i := range videos {
 		genreIDs, err := r.GetGenreIDs(ctx, videos[i].ID)
 		if err != nil {
-			return nil, 0, err
+			return nil, err
 		}
 		videos[i].GenreIDs = genreIDs
 	}
 
-	return videos, total, nil
+	return videos, nil
+}
+
+func (r *VideoRepository) scanVideo(ctx context.Context, db DBTX, query string, args ...any) (*entity.Video, error) {
+	row := db.QueryRow(ctx, query, args...)
+
+	var (
+		v                                                   entity.Video
+		slug, status, visibility, geoType, submissionStatus string
+		duration                                            int64
+		monetizationJSON                                    json.RawMessage
+		adBreakJSON                                         json.RawMessage
+		geoRegionsJSON                                      json.RawMessage
+		thumbnailCandidatesJSON                             json.RawMessage
+	)
+
+	err := row.Scan(
+		&v.ID, &v.Title, &slug, &v.Description, &v.Logline, &v.Creator,
+		&duration, &v.ContentRating,
+		&v.PrimaryLanguage, &status, &visibility,
+		&v.StorageKey, &v.ContentType, &v.FileSize, &v.ThumbnailKey, &thumbnailCandidatesJSON,
+		&v.UploadedBy, &v.MinimumPlanLevel, &v.TranscodeError,
+		&v.SeriesID, &v.SeasonNumber, &v.EpisodeNumber,
+		&v.ScheduledPublishAt,
+		&monetizationJSON, &v.PPVPriceCents, &v.FreePreviewSeconds, &adBreakJSON,
+		&geoType, &geoRegionsJSON, &v.RequireSignin,
+		&submissionStatus, &v.SubmittedAt, &v.ModeratorNotes,
+		&v.CreatedAt, &v.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("scanning video: %w", err)
+	}
+
+	v.Slug = valueobject.SlugFromTrusted(slug)
+	v.Duration = valueobject.NewDuration(duration)
+	v.Status = entity.VideoStatus(status)
+	v.Visibility = entity.VideoVisibility(visibility)
+	v.GeoRestrictionType = entity.GeoRestrictionType(geoType)
+	v.SubmissionStatus = entity.SubmissionStatus(submissionStatus)
+	unmarshalJSONOrEmpty(monetizationJSON, &v.MonetizationTypes)
+	unmarshalJSONOrEmpty(adBreakJSON, &v.AdBreakPositions)
+	unmarshalJSONOrEmpty(geoRegionsJSON, &v.GeoRestrictionRegions)
+	unmarshalJSONOrEmpty(thumbnailCandidatesJSON, &v.ThumbnailCandidates)
+
+	genreIDs, err := r.GetGenreIDs(ctx, v.ID)
+	if err != nil {
+		return nil, err
+	}
+	v.GenreIDs = genreIDs
+
+	return &v, nil
+}
+
+func (r *VideoRepository) scanVideoRow(rows pgx.Rows) (*entity.Video, error) {
+	var (
+		v                                                   entity.Video
+		slug, status, visibility, geoType, submissionStatus string
+		duration                                            int64
+		monetizationJSON                                    json.RawMessage
+		adBreakJSON                                         json.RawMessage
+		geoRegionsJSON                                      json.RawMessage
+		thumbnailCandidatesJSON                             json.RawMessage
+	)
+
+	err := rows.Scan(
+		&v.ID, &v.Title, &slug, &v.Description, &v.Logline, &v.Creator,
+		&duration, &v.ContentRating,
+		&v.PrimaryLanguage, &status, &visibility,
+		&v.StorageKey, &v.ContentType, &v.FileSize, &v.ThumbnailKey, &thumbnailCandidatesJSON,
+		&v.UploadedBy, &v.MinimumPlanLevel, &v.TranscodeError,
+		&v.SeriesID, &v.SeasonNumber, &v.EpisodeNumber,
+		&v.ScheduledPublishAt,
+		&monetizationJSON, &v.PPVPriceCents, &v.FreePreviewSeconds, &adBreakJSON,
+		&geoType, &geoRegionsJSON, &v.RequireSignin,
+		&submissionStatus, &v.SubmittedAt, &v.ModeratorNotes,
+		&v.CreatedAt, &v.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("scanning video row: %w", err)
+	}
+
+	v.Slug = valueobject.SlugFromTrusted(slug)
+	v.Duration = valueobject.NewDuration(duration)
+	v.Status = entity.VideoStatus(status)
+	v.Visibility = entity.VideoVisibility(visibility)
+	v.GeoRestrictionType = entity.GeoRestrictionType(geoType)
+	v.SubmissionStatus = entity.SubmissionStatus(submissionStatus)
+	unmarshalJSONOrEmpty(monetizationJSON, &v.MonetizationTypes)
+	unmarshalJSONOrEmpty(adBreakJSON, &v.AdBreakPositions)
+	unmarshalJSONOrEmpty(geoRegionsJSON, &v.GeoRestrictionRegions)
+	unmarshalJSONOrEmpty(thumbnailCandidatesJSON, &v.ThumbnailCandidates)
+
+	return &v, nil
+}
+
+func unmarshalJSONOrEmpty[T any](data json.RawMessage, dest *T) {
+	if len(data) > 0 {
+		_ = json.Unmarshal(data, dest)
+	}
 }
