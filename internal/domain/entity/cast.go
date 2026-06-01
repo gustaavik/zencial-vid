@@ -30,7 +30,7 @@ type Cast struct {
 func NewCast(name string) *Cast {
 	now := time.Now().UTC()
 	return &Cast{
-		ID:        uuid.New(),
+		ID:        uuid.Must(uuid.NewV7()),
 		Name:      name,
 		Status:    CastStatusActive,
 		CreatedAt: now,

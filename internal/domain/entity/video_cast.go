@@ -50,7 +50,7 @@ type VideoCast struct {
 func NewVideoCast(videoID, castID uuid.UUID, role string, department CastDepartment, sortOrder int) *VideoCast {
 	now := time.Now().UTC()
 	return &VideoCast{
-		ID:           uuid.New(),
+		ID:           uuid.Must(uuid.NewV7()),
 		VideoID:      videoID,
 		CastID:       castID,
 		Role:         role,
