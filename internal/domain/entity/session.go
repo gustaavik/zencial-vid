@@ -36,7 +36,7 @@ func NewSession(
 	idleTimeout, absoluteTimeout time.Duration,
 ) *Session {
 	return &Session{
-		ID:                uuid.New(),
+		ID:                uuid.Must(uuid.NewV7()),
 		UserID:            userID,
 		TokenHash:         tokenHash,
 		DeviceName:        deviceName,

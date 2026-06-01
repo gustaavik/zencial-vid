@@ -36,7 +36,7 @@ type Series struct {
 func NewSeries(title string, slug valueobject.Slug, description, creator string, uploadedBy uuid.UUID) *Series {
 	now := time.Now().UTC()
 	return &Series{
-		ID:          uuid.New(),
+		ID:          uuid.Must(uuid.NewV7()),
 		Title:       title,
 		Slug:        slug,
 		Description: description,

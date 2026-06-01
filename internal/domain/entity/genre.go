@@ -29,7 +29,7 @@ type Genre struct {
 func NewGenre(slug valueobject.Slug) *Genre {
 	now := time.Now().UTC()
 	return &Genre{
-		ID:        uuid.New(),
+		ID:        uuid.Must(uuid.NewV7()),
 		Slug:      slug,
 		CreatedAt: now,
 		UpdatedAt: now,
@@ -47,7 +47,7 @@ func (g *Genre) AddTranslation(langCode valueobject.LanguageCode, name, descript
 		}
 	}
 	g.Translations = append(g.Translations, GenreTranslation{
-		ID:           uuid.New(),
+		ID:           uuid.Must(uuid.NewV7()),
 		GenreID:      g.ID,
 		LanguageCode: langCode,
 		Name:         name,

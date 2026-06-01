@@ -25,7 +25,7 @@ type Plan struct {
 func NewPlan(name string, slug valueobject.Slug, description string, price float64, level int) *Plan {
 	now := time.Now().UTC()
 	return &Plan{
-		ID:          uuid.New(),
+		ID:          uuid.Must(uuid.NewV7()),
 		Name:        name,
 		Slug:        slug,
 		Description: description,

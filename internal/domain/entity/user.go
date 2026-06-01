@@ -83,7 +83,7 @@ type UserProfile struct {
 // NewUser creates a new User with default values.
 func NewUser(email valueobject.Email, passwordHash valueobject.HashedPassword) *User {
 	now := time.Now().UTC()
-	id := uuid.New()
+	id := uuid.Must(uuid.NewV7())
 	return &User{
 		ID:           id,
 		Email:        email,

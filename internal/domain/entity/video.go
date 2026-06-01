@@ -58,7 +58,7 @@ func NewVideo(
 ) *Video {
 	now := time.Now().UTC()
 	return &Video{
-		ID:            uuid.New(),
+		ID:            uuid.Must(uuid.NewV7()),
 		Title:         title,
 		Slug:          slug,
 		Description:   description,

@@ -33,7 +33,7 @@ type Subscription struct {
 func NewSubscription(userID, planID uuid.UUID, expiresAt *time.Time) *Subscription {
 	now := time.Now().UTC()
 	return &Subscription{
-		ID:        uuid.New(),
+		ID:        uuid.Must(uuid.NewV7()),
 		UserID:    userID,
 		PlanID:    planID,
 		Status:    SubscriptionStatusActive,
