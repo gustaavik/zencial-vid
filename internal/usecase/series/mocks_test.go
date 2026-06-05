@@ -195,6 +195,11 @@ func (m *mockVideoRepo) ListBySeries(ctx context.Context, seriesID uuid.UUID, fs
 	}
 	return nil, 0, nil
 }
+func (m *mockVideoRepo) ListFeatured(_ context.Context, _ *filter.FilterSet) ([]entity.Video, int64, error) {
+	return nil, 0, nil
+}
+func (m *mockVideoRepo) SetFeatured(_ context.Context, _ uuid.UUID, _ string) error { return nil }
+func (m *mockVideoRepo) UnsetFeatured(_ context.Context, _ uuid.UUID) error         { return nil }
 
 // --- Stub GenreRepository ---
 

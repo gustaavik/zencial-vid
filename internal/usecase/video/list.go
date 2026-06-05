@@ -29,6 +29,16 @@ func (s *Service) ListPublished(ctx context.Context, fs *filter.FilterSet) ([]en
 	return videos, total, nil
 }
 
+// ListFeatured returns a paginated list of featured published videos (public use).
+func (s *Service) ListFeatured(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, *apperror.AppError) {
+	videos, total, err := s.videoRepo.ListFeatured(ctx, fs)
+	if err != nil {
+		s.log.Error("listing featured videos", "error", err)
+		return nil, 0, apperror.Internal(apperror.CodeInternalError, "failed to list featured videos", err)
+	}
+	return videos, total, nil
+}
+
 // ListBySeries returns a paginated list of episodes belonging to a series.
 func (s *Service) ListBySeries(ctx context.Context, seriesID uuid.UUID, fs *filter.FilterSet) ([]entity.Video, int64, *apperror.AppError) {
 	videos, total, err := s.videoRepo.ListBySeries(ctx, seriesID, fs)

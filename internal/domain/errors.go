@@ -18,8 +18,9 @@ var (
 
 // Video errors.
 var (
-	ErrVideoNotFound    = errors.New("video not found")
-	ErrVideoNotPlayable = errors.New("video is not playable")
+	ErrVideoNotFound     = errors.New("video not found")
+	ErrVideoNotPlayable  = errors.New("video is not playable")
+	ErrVideoNotPublished = errors.New("video is not published")
 )
 
 // Genre errors.

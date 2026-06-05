@@ -63,7 +63,7 @@ services:
       - POSTGRES_PASSWORD=${DB_PASSWORD:-zencial_secret}
       - POSTGRES_DB=${DB_NAME:-zencial}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-zencial}"]
       interval: 5s
