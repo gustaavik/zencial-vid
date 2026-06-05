@@ -1,3 +1,4 @@
+-- +goose Up
 -- Requires PostgreSQL 18+ (native uuidv7() built-in)
 -- Switch all primary-key defaults from UUIDv4 to UUIDv7 for better index locality.
 ALTER TABLE users              ALTER COLUMN id SET DEFAULT uuidv7();
@@ -10,3 +11,15 @@ ALTER TABLE audit_logs         ALTER COLUMN id SET DEFAULT uuidv7();
 ALTER TABLE user_sessions      ALTER COLUMN id SET DEFAULT uuidv7();
 ALTER TABLE video_cast         ALTER COLUMN id SET DEFAULT uuidv7();
 ALTER TABLE casts              ALTER COLUMN id SET DEFAULT uuidv7();
+
+-- +goose Down
+ALTER TABLE users              ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE genres             ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE genre_translations ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE videos             ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE plans              ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE user_subscriptions ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE audit_logs         ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE user_sessions      ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE video_cast         ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE casts              ALTER COLUMN id SET DEFAULT gen_random_uuid();
