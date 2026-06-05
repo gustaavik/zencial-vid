@@ -413,6 +413,7 @@ func (r *VideoRepository) scanVideo(ctx context.Context, db DBTX, query string, 
 		adBreakJSON                                         json.RawMessage
 		geoRegionsJSON                                      json.RawMessage
 		thumbnailCandidatesJSON                             json.RawMessage
+		featuredDesc                                        *string
 	)
 
 	err := row.Scan(
@@ -426,7 +427,7 @@ func (r *VideoRepository) scanVideo(ctx context.Context, db DBTX, query string, 
 		&monetizationJSON, &v.PPVPriceCents, &v.FreePreviewSeconds, &adBreakJSON,
 		&geoType, &geoRegionsJSON, &v.RequireSignin,
 		&submissionStatus, &v.SubmittedAt, &v.ModeratorNotes,
-		&v.IsFeatured, &v.FeaturedDescription, &v.FeaturedAt,
+		&v.IsFeatured, &featuredDesc, &v.FeaturedAt,
 		&v.CreatedAt, &v.UpdatedAt,
 	)
 	if err != nil {
@@ -434,6 +435,9 @@ func (r *VideoRepository) scanVideo(ctx context.Context, db DBTX, query string, 
 			return nil, nil
 		}
 		return nil, fmt.Errorf("scanning video: %w", err)
+	}
+	if featuredDesc != nil {
+		v.FeaturedDescription = *featuredDesc
 	}
 
 	v.Slug = valueobject.SlugFromTrusted(slug)
@@ -465,6 +469,7 @@ func (r *VideoRepository) scanVideoRow(rows pgx.Rows) (*entity.Video, error) {
 		adBreakJSON                                         json.RawMessage
 		geoRegionsJSON                                      json.RawMessage
 		thumbnailCandidatesJSON                             json.RawMessage
+		featuredDesc                                        *string
 	)
 
 	err := rows.Scan(
@@ -478,11 +483,14 @@ func (r *VideoRepository) scanVideoRow(rows pgx.Rows) (*entity.Video, error) {
 		&monetizationJSON, &v.PPVPriceCents, &v.FreePreviewSeconds, &adBreakJSON,
 		&geoType, &geoRegionsJSON, &v.RequireSignin,
 		&submissionStatus, &v.SubmittedAt, &v.ModeratorNotes,
-		&v.IsFeatured, &v.FeaturedDescription, &v.FeaturedAt,
+		&v.IsFeatured, &featuredDesc, &v.FeaturedAt,
 		&v.CreatedAt, &v.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scanning video row: %w", err)
+	}
+	if featuredDesc != nil {
+		v.FeaturedDescription = *featuredDesc
 	}
 
 	v.Slug = valueobject.SlugFromTrusted(slug)
