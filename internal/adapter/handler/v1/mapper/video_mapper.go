@@ -67,6 +67,12 @@ func VideoToResponse(_ context.Context, video *entity.Video, urls ThumbnailURLBu
 		t := video.SubmittedAt.UTC().Format("2006-01-02T15:04:05Z")
 		resp.SubmittedAt = &t
 	}
+	resp.IsFeatured = video.IsFeatured
+	resp.FeaturedDescription = video.FeaturedDescription
+	if video.FeaturedAt != nil {
+		t := video.FeaturedAt.UTC().Format("2006-01-02T15:04:05Z")
+		resp.FeaturedAt = &t
+	}
 	return resp
 }
 

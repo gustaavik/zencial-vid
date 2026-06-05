@@ -33,8 +33,16 @@ type VideoResponse struct {
 	SubmissionStatus      string   `json:"submission_status" example:"draft"`
 	SubmittedAt           *string  `json:"submitted_at,omitempty"`
 	ModeratorNotes        string   `json:"moderator_notes,omitempty"`
+	IsFeatured            bool     `json:"is_featured"`
+	FeaturedDescription   string   `json:"featured_description,omitempty"`
+	FeaturedAt            *string  `json:"featured_at,omitempty"`
 	CreatedAt             string   `json:"created_at" example:"2025-01-01T00:00:00Z"`
 	UpdatedAt             string   `json:"updated_at" example:"2025-01-01T00:00:00Z"`
+}
+
+// SetFeaturedRequest is the body for POST /admin/videos/{id}/feature.
+type SetFeaturedRequest struct {
+	FeaturedDescription string `json:"featured_description,omitempty" validate:"omitempty,max=500"`
 }
 
 // PreflightItemResponse is a single checklist item.

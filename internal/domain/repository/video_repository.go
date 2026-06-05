@@ -34,4 +34,7 @@ type VideoRepository interface {
 	SetSeriesEpisode(ctx context.Context, videoID, seriesID uuid.UUID, season, episode int) error
 	RemoveFromSeries(ctx context.Context, videoID uuid.UUID) error
 	ListBySeries(ctx context.Context, seriesID uuid.UUID, fs *filter.FilterSet) ([]entity.Video, int64, error)
+	ListFeatured(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error)
+	SetFeatured(ctx context.Context, videoID uuid.UUID, description string) error
+	UnsetFeatured(ctx context.Context, videoID uuid.UUID) error
 }

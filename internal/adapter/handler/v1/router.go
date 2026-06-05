@@ -106,6 +106,7 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 		r.Use(deps.Authenticator.OptionalAuthenticate)
 
 		r.Get("/videos", videoHandler.ListPublished)
+		r.Get("/videos/featured", videoHandler.GetFeatured)
 		r.Get("/videos/{id}", videoHandler.GetByID)
 
 		// Cast is public (anyone can see who's in a video, or all videos for a cast member)
@@ -273,6 +274,10 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 
 			// Maintenance
 			r.Post("/admin/videos/purge-orphans", videoHandler.PurgeOrphans)
+
+			// Featured
+			r.Post("/admin/videos/{id}/feature", videoHandler.SetFeatured)
+			r.Delete("/admin/videos/{id}/feature", videoHandler.UnsetFeatured)
 
 			// Moderation
 			r.Get("/admin/moderation/queue", videoHandler.ModerationQueue)

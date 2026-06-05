@@ -65,6 +65,11 @@ func (m *mockVideoRepo) RemoveFromSeries(context.Context, uuid.UUID) error { ret
 func (m *mockVideoRepo) ListBySeries(context.Context, uuid.UUID, *filter.FilterSet) ([]entity.Video, int64, error) {
 	return nil, 0, nil
 }
+func (m *mockVideoRepo) ListFeatured(context.Context, *filter.FilterSet) ([]entity.Video, int64, error) {
+	return nil, 0, nil
+}
+func (m *mockVideoRepo) SetFeatured(_ context.Context, _ uuid.UUID, _ string) error { return nil }
+func (m *mockVideoRepo) UnsetFeatured(_ context.Context, _ uuid.UUID) error         { return nil }
 
 // --- Mock WatchlistRepository ---
 
