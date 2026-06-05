@@ -47,4 +47,3 @@ func (s *Service) UnsetFeatured(ctx context.Context, videoID uuid.UUID) *apperro
 	}
 	return nil
 }
-

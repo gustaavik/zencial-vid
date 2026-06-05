@@ -19,8 +19,8 @@ func newPublishedVideo(t *testing.T) *entity.Video {
 	slug, err := valueobject.NewSlug("featured-clip")
 	require.NoError(t, err)
 	v := entity.NewVideo("Featured Clip", slug, "", "", "G", "videos/x.mp4", "video/mp4", 0, uuid.New())
-	v.Publish()          // processing
-	v.MarkTranscoded()   // published
+	v.Publish()        // processing
+	v.MarkTranscoded() // published
 	return v
 }
 
