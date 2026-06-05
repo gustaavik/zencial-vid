@@ -79,8 +79,12 @@ type Video struct {
 	SubmissionStatus SubmissionStatus
 	SubmittedAt      *time.Time
 	ModeratorNotes   string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	// Featured
+	IsFeatured          bool
+	FeaturedDescription string
+	FeaturedAt          *time.Time
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 // NewVideo creates a new Video entity in draft status.

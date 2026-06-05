@@ -47,6 +47,7 @@ const videoSelectCols = `
 	monetization_types, ppv_price_cents, free_preview_seconds, ad_break_positions,
 	geo_restriction_type, geo_restriction_regions, require_signin,
 	submission_status, submitted_at, moderator_notes,
+	is_featured, featured_description, featured_at,
 	created_at, updated_at`
 
 // VideoRepository implements repository.VideoRepository using PostgreSQL.
@@ -412,6 +413,7 @@ func (r *VideoRepository) scanVideo(ctx context.Context, db DBTX, query string, 
 		adBreakJSON                                         json.RawMessage
 		geoRegionsJSON                                      json.RawMessage
 		thumbnailCandidatesJSON                             json.RawMessage
+		featuredDesc                                        *string
 	)
 
 	err := row.Scan(
@@ -425,6 +427,7 @@ func (r *VideoRepository) scanVideo(ctx context.Context, db DBTX, query string, 
 		&monetizationJSON, &v.PPVPriceCents, &v.FreePreviewSeconds, &adBreakJSON,
 		&geoType, &geoRegionsJSON, &v.RequireSignin,
 		&submissionStatus, &v.SubmittedAt, &v.ModeratorNotes,
+		&v.IsFeatured, &featuredDesc, &v.FeaturedAt,
 		&v.CreatedAt, &v.UpdatedAt,
 	)
 	if err != nil {
@@ -432,6 +435,9 @@ func (r *VideoRepository) scanVideo(ctx context.Context, db DBTX, query string, 
 			return nil, nil
 		}
 		return nil, fmt.Errorf("scanning video: %w", err)
+	}
+	if featuredDesc != nil {
+		v.FeaturedDescription = *featuredDesc
 	}
 
 	v.Slug = valueobject.SlugFromTrusted(slug)
@@ -463,6 +469,7 @@ func (r *VideoRepository) scanVideoRow(rows pgx.Rows) (*entity.Video, error) {
 		adBreakJSON                                         json.RawMessage
 		geoRegionsJSON                                      json.RawMessage
 		thumbnailCandidatesJSON                             json.RawMessage
+		featuredDesc                                        *string
 	)
 
 	err := rows.Scan(
@@ -476,10 +483,14 @@ func (r *VideoRepository) scanVideoRow(rows pgx.Rows) (*entity.Video, error) {
 		&monetizationJSON, &v.PPVPriceCents, &v.FreePreviewSeconds, &adBreakJSON,
 		&geoType, &geoRegionsJSON, &v.RequireSignin,
 		&submissionStatus, &v.SubmittedAt, &v.ModeratorNotes,
+		&v.IsFeatured, &featuredDesc, &v.FeaturedAt,
 		&v.CreatedAt, &v.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scanning video row: %w", err)
+	}
+	if featuredDesc != nil {
+		v.FeaturedDescription = *featuredDesc
 	}
 
 	v.Slug = valueobject.SlugFromTrusted(slug)
@@ -494,6 +505,36 @@ func (r *VideoRepository) scanVideoRow(rows pgx.Rows) (*entity.Video, error) {
 	unmarshalJSONOrEmpty(thumbnailCandidatesJSON, &v.ThumbnailCandidates)
 
 	return &v, nil
+}
+
+func (r *VideoRepository) ListFeatured(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error) {
+	return r.listWithBase(ctx, fs, "v.is_featured = TRUE AND v.status = 'published'")
+}
+
+func (r *VideoRepository) SetFeatured(ctx context.Context, videoID uuid.UUID, description string) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		UPDATE videos
+		SET is_featured = TRUE, featured_description = $2, featured_at = NOW(), updated_at = NOW()
+		WHERE id = $1
+	`, videoID, description)
+	if err != nil {
+		return fmt.Errorf("setting video as featured: %w", err)
+	}
+	return nil
+}
+
+func (r *VideoRepository) UnsetFeatured(ctx context.Context, videoID uuid.UUID) error {
+	db := connFromCtx(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		UPDATE videos
+		SET is_featured = FALSE, featured_description = NULL, featured_at = NULL, updated_at = NOW()
+		WHERE id = $1
+	`, videoID)
+	if err != nil {
+		return fmt.Errorf("unsetting video as featured: %w", err)
+	}
+	return nil
 }
 
 func unmarshalJSONOrEmpty[T any](data json.RawMessage, dest *T) {

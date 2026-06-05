@@ -997,6 +997,108 @@ func (h *VideoHandler) RejectSubmission(w http.ResponseWriter, r *http.Request) 
 	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
 }
 
+// GetFeatured godoc
+// @Summary      List featured videos
+// @Description  Return a paginated list of admin-designated featured published videos.
+// @Tags         videos
+// @Produce      json
+// @Param        page     query int false "Page number" default(1)
+// @Param        per_page query int false "Items per page" default(20)
+// @Success      200 {object} httputil.Response{data=[]dto.VideoResponse,meta=httputil.Meta}
+// @Failure      500 {object} httputil.ErrorResponse
+// @Router       /videos/featured [get]
+func (h *VideoHandler) GetFeatured(w http.ResponseWriter, r *http.Request) {
+	fs, err := filter.FromRequest(r, postgres.VideoFilterConfig())
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, err.Error())
+		return
+	}
+
+	videos, total, appErr := h.videoService.ListFeatured(r.Context(), &fs)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	planLevel := h.resolveUserPlanLevel(r.Context())
+	httputil.SuccessWithMeta(w, mapper.VideosToResponseWithAccess(r.Context(), videos, h.cdnURLs, planLevel), &httputil.Meta{
+		Page:       fs.Pagination.Page,
+		PerPage:    fs.Pagination.PerPage,
+		Total:      total,
+		TotalPages: fs.Pagination.TotalPages(total),
+	})
+}
+
+// SetFeatured godoc
+// @Summary      Feature a video
+// @Description  Mark a published video as featured on the home page (admin only).
+// @Tags         videos
+// @Accept       json
+// @Produce      json
+// @Param        id   path string                    true "Video ID" format(uuid)
+// @Param        body body dto.SetFeaturedRequest    false "Optional featured description"
+// @Success      200 {object} httputil.Response{data=dto.VideoResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      409 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/videos/{id}/feature [post]
+func (h *VideoHandler) SetFeatured(w http.ResponseWriter, r *http.Request) {
+	id, err := httputil.URLParamUUID(r, "id")
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid video ID")
+		return
+	}
+
+	var req dto.SetFeaturedRequest
+	// Body is optional — ignore decode errors (empty body is valid).
+	_ = httputil.DecodeJSON(r, &req)
+
+	if appErr := h.videoService.SetFeatured(r.Context(), id, req.FeaturedDescription); appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	video, appErr := h.videoService.GetByID(r.Context(), id)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
+}
+
+// UnsetFeatured godoc
+// @Summary      Unfeature a video
+// @Description  Remove a video from the featured list (admin only).
+// @Tags         videos
+// @Param        id path string true "Video ID" format(uuid)
+// @Success      204
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/videos/{id}/feature [delete]
+func (h *VideoHandler) UnsetFeatured(w http.ResponseWriter, r *http.Request) {
+	id, err := httputil.URLParamUUID(r, "id")
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid video ID")
+		return
+	}
+
+	if appErr := h.videoService.UnsetFeatured(r.Context(), id); appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // ModerationQueue godoc
 // @Summary      Moderation queue
 // @Description  Returns videos pending moderation review. Admin only.

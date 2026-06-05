@@ -124,6 +124,11 @@ func (m *mockVideoRepo) RemoveFromSeries(_ context.Context, _ uuid.UUID) error {
 func (m *mockVideoRepo) ListBySeries(_ context.Context, _ uuid.UUID, _ *filter.FilterSet) ([]entity.Video, int64, error) {
 	return nil, 0, nil
 }
+func (m *mockVideoRepo) ListFeatured(_ context.Context, _ *filter.FilterSet) ([]entity.Video, int64, error) {
+	return nil, 0, nil
+}
+func (m *mockVideoRepo) SetFeatured(_ context.Context, _ uuid.UUID, _ string) error { return nil }
+func (m *mockVideoRepo) UnsetFeatured(_ context.Context, _ uuid.UUID) error         { return nil }
 
 // mockStorageSvc is a closure-field mock for storage.StorageService.
 type mockStorageSvc struct {

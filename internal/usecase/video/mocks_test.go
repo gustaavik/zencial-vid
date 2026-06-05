@@ -33,6 +33,9 @@ type mockVideoRepo struct {
 	setSeriesEpisodeFn   func(ctx context.Context, videoID, seriesID uuid.UUID, season, episode int) error
 	removeFromSeriesFn   func(ctx context.Context, videoID uuid.UUID) error
 	listBySeriesFn       func(ctx context.Context, seriesID uuid.UUID, fs *filter.FilterSet) ([]entity.Video, int64, error)
+	listFeaturedFn       func(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error)
+	setFeaturedFn        func(ctx context.Context, videoID uuid.UUID, description string) error
+	unsetFeaturedFn      func(ctx context.Context, videoID uuid.UUID) error
 }
 
 func (m *mockVideoRepo) Create(ctx context.Context, v *entity.Video) error {
@@ -135,6 +138,27 @@ func (m *mockVideoRepo) ListBySeries(ctx context.Context, seriesID uuid.UUID, fs
 		return m.listBySeriesFn(ctx, seriesID, fs)
 	}
 	return nil, 0, nil
+}
+
+func (m *mockVideoRepo) ListFeatured(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error) {
+	if m.listFeaturedFn != nil {
+		return m.listFeaturedFn(ctx, fs)
+	}
+	return nil, 0, nil
+}
+
+func (m *mockVideoRepo) SetFeatured(ctx context.Context, videoID uuid.UUID, description string) error {
+	if m.setFeaturedFn != nil {
+		return m.setFeaturedFn(ctx, videoID, description)
+	}
+	return nil
+}
+
+func (m *mockVideoRepo) UnsetFeatured(ctx context.Context, videoID uuid.UUID) error {
+	if m.unsetFeaturedFn != nil {
+		return m.unsetFeaturedFn(ctx, videoID)
+	}
+	return nil
 }
 
 // --- Stub repos for fields the callback tests don't use ---

@@ -90,6 +90,9 @@ const (
 	CodeVideoEditLocked       = "VIDEO_EDIT_LOCKED"
 	CodeModerationNotFound    = "MODERATION_NOT_FOUND"
 
+	// Featured
+	CodeVideoNotPublished = "VIDEO_NOT_PUBLISHED"
+
 	// General
 	CodeValidationFailed = "VALIDATION_FAILED"
 	CodeInternalError    = "INTERNAL_ERROR"
