@@ -25,6 +25,7 @@ type ServerConfig struct {
 	ReadTimeout     time.Duration `env:"SERVER_READ_TIMEOUT" envDefault:"5m"`
 	WriteTimeout    time.Duration `env:"SERVER_WRITE_TIMEOUT" envDefault:"10m"`
 	ShutdownTimeout time.Duration `env:"SERVER_SHUTDOWN_TIMEOUT" envDefault:"15s"`
+	AppEnv          string        `env:"APP_ENV" envDefault:"development"`
 }
 
 // Addr returns the server address in host:port format.
