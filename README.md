@@ -14,6 +14,7 @@ This repository (`zencial-vid`) hosts the **Zencial VoD API** — the Go backend
 ## Table of Contents
 
 - [Zencial](#zencial)
+  - [Table of Contents](#table-of-contents)
   - [Platform Overview](#platform-overview)
   - [Features](#features)
     - [User Features](#user-features)
@@ -80,13 +81,13 @@ Available to **Admins** and **Moderators**:
 
 ## Roles & Permissions
 
-| Role          | Granted by                               | Capabilities                                                                                |
-| ------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------- |
-| **Viewer**    | Registration                             | Watch ad-supported content, build watchlists, track history.                                |
-| **Subscriber**| Active subscription plan                 | All Viewer rights plus ad-free playback, 4K streaming, premium content, plan-tier perks.    |
-| **Publisher** | First video approved by a moderator      | All Subscriber rights plus upload, manage own catalog, and (planned) the Publisher Dashboard. Releasing paid content requires an active subscription. |
-| **Moderator** | Granted by Admin                         | Review and approve/reject submissions (planned), moderate content and users.                |
-| **Admin**     | Set directly in the database             | Full access to users, content, plans, billing, categories, and audit logs.                  |
+| Role           | Granted by                          | Capabilities                                                                                                                                          |
+| -------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Viewer**     | Registration                        | Watch ad-supported content, build watchlists, track history.                                                                                          |
+| **Subscriber** | Active subscription plan            | All Viewer rights plus ad-free playback, 4K streaming, premium content, plan-tier perks.                                                              |
+| **Publisher**  | First video approved by a moderator | All Subscriber rights plus upload, manage own catalog, and (planned) the Publisher Dashboard. Releasing paid content requires an active subscription. |
+| **Moderator**  | Granted by Admin                    | Review and approve/reject submissions (planned), moderate content and users.                                                                          |
+| **Admin**      | Set directly in the database        | Full access to users, content, plans, billing, categories, and audit logs.                                                                            |
 
 ---
 
@@ -133,8 +134,7 @@ docs/                        — Swagger / OpenAPI docs
 **Prerequisites**
 
 - Go 1.26+
-- PostgreSQL 16+
-- Redis 7+
+- PostgreSQL 18+
 - Minio or S3-compatible storage
 
 **Quick start (development)**
