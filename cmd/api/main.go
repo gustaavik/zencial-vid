@@ -204,6 +204,7 @@ func main() {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recovery(appLog))
 	r.Use(middleware.Logger(appLog))
+	r.Use(middleware.Security(cfg.Server))
 	r.Use(middleware.CORS(cfg.Server))
 
 	// API info
