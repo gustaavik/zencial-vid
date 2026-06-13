@@ -207,13 +207,13 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 			r.Get("/analytics/summary", analyticsHandler.Summary)
 
 			// Series management (own series)
+			r.Get("/series", seriesHandler.ListOwned)
 			r.Post("/series", seriesHandler.Create)
 			r.Put("/series/{id}", seriesHandler.Update)
 			r.Post("/series/{id}/episodes", seriesHandler.AddEpisode)
 			r.Delete("/series/{id}/episodes/{videoID}", seriesHandler.RemoveEpisode)
-			r.Get("/publisher/series", seriesHandler.ListOwned)
-			r.Post("/publisher/series/{id}/publish", seriesHandler.PublishOwned)
-			r.Delete("/publisher/series/{id}", seriesHandler.ArchiveOwned)
+			r.Post("/series/{id}/publish", seriesHandler.PublishOwned)
+			r.Delete("/series/{id}", seriesHandler.ArchiveOwned)
 
 			// Seasons
 			r.Get("/series/{id}/seasons", seasonHandler.List)
