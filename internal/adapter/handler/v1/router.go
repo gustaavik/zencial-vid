@@ -173,6 +173,7 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 
 			// Video management (own videos only for publishers)
 			r.Get("/videos", videoHandler.ListOwned)
+			r.Get("/videos/{id}", videoHandler.GetOwned)
 			r.Post("/videos/uploads", videoHandler.InitiateUpload)
 			r.Post("/videos", videoHandler.CompleteUpload)
 			r.Put("/videos/{id}", videoHandler.Update)

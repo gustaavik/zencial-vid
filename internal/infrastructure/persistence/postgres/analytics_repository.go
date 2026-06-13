@@ -48,7 +48,7 @@ func (r *AnalyticsRepository) GetTotals(ctx context.Context, scope repository.Pl
 	err := db.QueryRow(ctx, `
 		SELECT
 			COUNT(*) FILTER (WHERE ps.is_view)                                                  AS views,
-			COALESCE(SUM(ps.watched_seconds), 0)                                                AS watched_seconds,
+			COALESCE(SUM(ps.watched_seconds) FILTER (WHERE ps.is_view), 0)                      AS watched_seconds,
 			COUNT(DISTINCT ps.user_id) FILTER (WHERE ps.is_view AND ps.user_id IS NOT NULL)     AS unique_viewers,
 			COALESCE(AVG(
 				CASE WHEN v.duration > 0
@@ -79,7 +79,7 @@ func (r *AnalyticsRepository) GetDailySeries(ctx context.Context, scope reposito
 		SELECT
 			date_trunc('day', ps.started_at)     AS day,
 			COUNT(*) FILTER (WHERE ps.is_view)   AS views,
-			COALESCE(SUM(ps.watched_seconds), 0) AS watched_seconds
+			COALESCE(SUM(ps.watched_seconds) FILTER (WHERE ps.is_view), 0) AS watched_seconds
 		FROM playback_sessions ps
 		JOIN videos v ON v.id = ps.video_id
 		WHERE `+where+`
@@ -117,7 +117,7 @@ func (r *AnalyticsRepository) GetTopVideos(ctx context.Context, uploaderID *uuid
 		SELECT
 			v.id, v.title, v.status,
 			COUNT(ps.id) FILTER (WHERE ps.is_view)  AS views,
-			COALESCE(SUM(ps.watched_seconds), 0)    AS watched_seconds,
+			COALESCE(SUM(ps.watched_seconds) FILTER (WHERE ps.is_view), 0) AS watched_seconds,
 			COALESCE(AVG(
 				CASE WHEN v.duration > 0
 				     THEN LEAST(ps.max_position::float / v.duration::float * 100, 100)
