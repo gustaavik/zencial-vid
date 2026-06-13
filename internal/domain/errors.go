@@ -66,6 +66,13 @@ var (
 	ErrCastArchived = errors.New("cast member is archived")
 )
 
+// Playback session errors.
+var (
+	// ErrPlaybackSessionConflict is returned when a heartbeat's session ID
+	// already belongs to a different video or user.
+	ErrPlaybackSessionConflict = errors.New("playback session belongs to another video or user")
+)
+
 // Publisher errors.
 var (
 	ErrVideoOwnershipRequired  = errors.New("caller does not own this video")

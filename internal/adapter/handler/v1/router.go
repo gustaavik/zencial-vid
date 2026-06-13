@@ -158,6 +158,10 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 		// Video streaming (any authenticated user)
 		r.Get("/videos/{id}/stream", videoHandler.Stream)
 
+		// Playback analytics ingestion (cumulative heartbeats from players)
+		r.With(middleware.RateLimit(2, 10)).
+			Post("/videos/{id}/playback-events", analyticsHandler.RecordPlayback)
+
 		// Series watch progress (any authenticated user)
 		r.Get("/series/{id}/next-episode", seriesHandler.GetNextEpisode)
 		r.Put("/series/{id}/watch-progress", seriesHandler.UpdateWatchProgress)
@@ -286,6 +290,7 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 
 			// Admin analytics (any video)
 			r.Get("/admin/videos/{id}/analytics", analyticsHandler.VideoStats)
+			r.Get("/admin/analytics/summary", analyticsHandler.AdminSummary)
 
 			// Series management (admin)
 			r.Get("/admin/series", seriesHandler.AdminListAll)

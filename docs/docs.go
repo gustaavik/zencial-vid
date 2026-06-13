@@ -23,6 +23,82 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/admin/analytics/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns aggregate viewing statistics over a reporting range for all videos on the platform (admin only).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "analytics"
+                ],
+                "summary": "Get platform-wide analytics summary (admin)",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "90d",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Reporting range",
+                        "name": "range",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.PublisherSummaryResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/audit-logs": {
             "get": {
                 "security": [
@@ -349,7 +425,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns videos pending moderation review. Admin only.",
+                "description": "Returns videos pending moderation review. Without a submission_status filter, defaults to submitted and under_review. Admin only.",
                 "produces": [
                     "application/json"
                 ],
@@ -357,6 +433,20 @@ const docTemplate = `{
                     "videos"
                 ],
                 "summary": "Moderation queue",
+                "parameters": [
+                    {
+                        "enum": [
+                            "submitted",
+                            "under_review",
+                            "approved",
+                            "rejected"
+                        ],
+                        "type": "string",
+                        "description": "Filter by submission status",
+                        "name": "submission_status",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2035,6 +2125,157 @@ const docTemplate = `{
                                 }
                             ]
                         }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/videos/{id}/feature": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Mark a published video as featured on the home page (admin only).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "videos"
+                ],
+                "summary": "Feature a video",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Video ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Optional featured description",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SetFeaturedRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove a video from the featured list (admin only).",
+                "tags": [
+                    "videos"
+                ],
+                "summary": "Unfeature a video",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Video ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -4363,7 +4604,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns aggregate viewing statistics for all videos uploaded by the authenticated publisher",
+                "description": "Returns aggregate viewing statistics over a reporting range for all videos uploaded by the authenticated publisher, including a daily time series and top videos.",
                 "produces": [
                     "application/json"
                 ],
@@ -4371,6 +4612,21 @@ const docTemplate = `{
                     "analytics"
                 ],
                 "summary": "Get publisher analytics summary",
+                "parameters": [
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "90d",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Reporting range",
+                        "name": "range",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -4383,14 +4639,17 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoStatsResponse"
-                                            }
+                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.PublisherSummaryResponse"
                                         }
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
                         }
                     },
                     "401": {
@@ -5055,7 +5314,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns viewing statistics for a single video. Publishers may only query their own videos.",
+                "description": "Returns viewing statistics for a single video over a reporting range, including a retention curve and source/country/platform breakdowns. Publishers may only query their own videos.",
                 "produces": [
                     "application/json"
                 ],
@@ -5070,6 +5329,19 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "enum": [
+                            "7d",
+                            "30d",
+                            "90d",
+                            "all"
+                        ],
+                        "type": "string",
+                        "default": "30d",
+                        "description": "Reporting range",
+                        "name": "range",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -5084,11 +5356,17 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoStatsResponse"
+                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoAnalyticsResponse"
                                         }
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
                         }
                     },
                     "401": {
@@ -7414,6 +7692,66 @@ const docTemplate = `{
                 }
             }
         },
+        "/videos/featured": {
+            "get": {
+                "description": "Return a paginated list of admin-designated featured published videos.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "videos"
+                ],
+                "summary": "List featured videos",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse"
+                                            }
+                                        },
+                                        "meta": {
+                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Meta"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/videos/uploads": {
             "post": {
                 "security": [
@@ -7828,6 +8166,70 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/videos/{id}/playback-events": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Ingest one cumulative playback heartbeat for a client-generated session ID. All fields are cumulative for the session, so heartbeats are idempotent.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "analytics"
+                ],
+                "summary": "Record a playback heartbeat",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cumulative playback heartbeat",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.RecordPlaybackRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
                         }
@@ -8450,6 +8852,73 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AnalyticsDailyPoint": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2026-05-13"
+                },
+                "views": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "watch_time_minutes": {
+                    "type": "integer",
+                    "example": 1630
+                }
+            }
+        },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AnalyticsDeltas": {
+            "type": "object",
+            "properties": {
+                "avg_percent_watched_pts": {
+                    "type": "number",
+                    "example": -4.1
+                },
+                "finish_rate_pts": {
+                    "type": "number",
+                    "example": 3
+                },
+                "unique_viewers_pct": {
+                    "type": "number",
+                    "example": 10.4
+                },
+                "views_pct": {
+                    "type": "number",
+                    "example": 22
+                },
+                "watch_time_pct": {
+                    "type": "number",
+                    "example": 18.2
+                }
+            }
+        },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AnalyticsTotals": {
+            "type": "object",
+            "properties": {
+                "avg_percent_watched": {
+                    "type": "number",
+                    "example": 46.1
+                },
+                "finish_rate": {
+                    "type": "number",
+                    "example": 31
+                },
+                "unique_viewers": {
+                    "type": "integer",
+                    "example": 411
+                },
+                "views": {
+                    "type": "integer",
+                    "example": 1382
+                },
+                "watch_time_minutes": {
+                    "type": "integer",
+                    "example": 51234
+                }
+            }
+        },
         "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AssignSubscriptionRequest": {
             "type": "object",
             "required": [
@@ -8523,6 +8992,23 @@ const docTemplate = `{
                 },
                 "user": {
                     "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UserResponse"
+                }
+            }
+        },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BreakdownItem": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string",
+                    "example": "home"
+                },
+                "pct": {
+                    "type": "number",
+                    "example": 32.1
+                },
+                "views": {
+                    "type": "integer",
+                    "example": 412
                 }
             }
         },
@@ -9670,6 +10156,41 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.PublisherSummaryResponse": {
+            "type": "object",
+            "properties": {
+                "deltas": {
+                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AnalyticsDeltas"
+                },
+                "end_date": {
+                    "type": "string",
+                    "example": "2026-06-12"
+                },
+                "range": {
+                    "type": "string",
+                    "example": "30d"
+                },
+                "start_date": {
+                    "type": "string",
+                    "example": "2026-05-13"
+                },
+                "timeseries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AnalyticsDailyPoint"
+                    }
+                },
+                "top_videos": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.TopVideoItem"
+                    }
+                },
+                "totals": {
+                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AnalyticsTotals"
+                }
+            }
+        },
         "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.PurgeOrphansRequest": {
             "type": "object",
             "properties": {
@@ -9700,6 +10221,47 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.RecordPlaybackRequest": {
+            "type": "object",
+            "required": [
+                "session_id"
+            ],
+            "properties": {
+                "completed": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "platform": {
+                    "type": "string",
+                    "example": "ios"
+                },
+                "position_seconds": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "example": 184
+                },
+                "session_id": {
+                    "type": "string",
+                    "example": "01975c8e-1c3a-7000-8000-000000000000"
+                },
+                "source": {
+                    "type": "string",
+                    "example": "home"
+                },
+                "watched_buckets": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "watched_seconds": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "example": 122
                 }
             }
         },
@@ -9948,6 +10510,15 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SetFeaturedRequest": {
+            "type": "object",
+            "properties": {
+                "featured_description": {
+                    "type": "string",
+                    "maxLength": 500
+                }
+            }
+        },
         "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SubscriptionResponse": {
             "type": "object",
             "properties": {
@@ -9986,6 +10557,39 @@ const docTemplate = `{
                 "user_id": {
                     "type": "string",
                     "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.TopVideoItem": {
+            "type": "object",
+            "properties": {
+                "avg_percent_watched": {
+                    "type": "number",
+                    "example": 70.1
+                },
+                "finish_rate": {
+                    "type": "number",
+                    "example": 64.2
+                },
+                "status": {
+                    "type": "string",
+                    "example": "published"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Saturnine — S1·E1"
+                },
+                "video_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "views": {
+                    "type": "integer",
+                    "example": 412
+                },
+                "watch_time_minutes": {
+                    "type": "integer",
+                    "example": 9000
                 }
             }
         },
@@ -10357,6 +10961,64 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoAnalyticsResponse": {
+            "type": "object",
+            "properties": {
+                "countries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BreakdownItem"
+                    }
+                },
+                "deltas": {
+                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AnalyticsDeltas"
+                },
+                "end_date": {
+                    "type": "string",
+                    "example": "2026-06-12"
+                },
+                "platforms": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BreakdownItem"
+                    }
+                },
+                "range": {
+                    "type": "string",
+                    "example": "30d"
+                },
+                "retention": {
+                    "description": "Retention has 100 entries; entry i is the percentage of views that\nwatched the i-th percent of the video.",
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                },
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BreakdownItem"
+                    }
+                },
+                "start_date": {
+                    "type": "string",
+                    "example": "2026-05-13"
+                },
+                "timeseries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AnalyticsDailyPoint"
+                    }
+                },
+                "totals": {
+                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AnalyticsTotals"
+                },
+                "video_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
         "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoResponse": {
             "type": "object",
             "properties": {
@@ -10390,6 +11052,12 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 3
                 },
+                "featured_at": {
+                    "type": "string"
+                },
+                "featured_description": {
+                    "type": "string"
+                },
                 "file_size": {
                     "type": "integer",
                     "example": 104857600
@@ -10417,6 +11085,9 @@ const docTemplate = `{
                     "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "is_accessible": {
+                    "type": "boolean"
+                },
+                "is_featured": {
                     "type": "boolean"
                 },
                 "logline": {
@@ -10490,27 +11161,6 @@ const docTemplate = `{
                 "visibility": {
                     "type": "string",
                     "example": "public"
-                }
-            }
-        },
-        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.VideoStatsResponse": {
-            "type": "object",
-            "properties": {
-                "avg_progress_pct": {
-                    "type": "number",
-                    "example": 72.5
-                },
-                "completion_rate": {
-                    "type": "number",
-                    "example": 45.2
-                },
-                "total_viewers": {
-                    "type": "integer",
-                    "example": 1234
-                },
-                "video_id": {
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 }
             }
         },

@@ -112,6 +112,7 @@ func main() {
 	castRepo := postgres.NewCastRepository(dbPool)
 	videoCastRepo := postgres.NewVideoCastRepository(dbPool)
 	analyticsRepo := postgres.NewAnalyticsRepository(dbPool)
+	playbackSessionRepo := postgres.NewPlaybackSessionRepository(dbPool)
 	seriesRepo := postgres.NewSeriesRepository(dbPool)
 	seriesWatchProgressRepo := postgres.NewSeriesWatchProgressRepository(dbPool)
 	seasonRepo := postgres.NewSeasonRepository(dbPool)
@@ -182,7 +183,7 @@ func main() {
 	watchProgressService := watchprogressuc.NewService(watchProgressRepo, videoRepo, appLog)
 	auditService := audituc.NewService(auditLogRepo, appLog)
 	castService := castuc.NewService(castRepo, videoCastRepo, videoRepo, appLog, storageService)
-	analyticsService := analyticsuc.NewService(analyticsRepo, videoRepo, appLog)
+	analyticsService := analyticsuc.NewService(analyticsRepo, playbackSessionRepo, videoRepo, appLog, clk)
 	seasonService := seasonuc.NewService(seasonRepo, seriesRepo, appLog)
 	chapterService := chapteruc.NewService(chapterRepo, videoRepo, appLog)
 	captionService := captionuc.NewService(captionRepo, videoRepo, storageService, appLog)
@@ -200,6 +201,9 @@ func main() {
 	r := chi.NewRouter()
 
 	// Global middleware
+	// Country must run before ClientIP: it trusts geo headers only when the
+	// direct peer is a private proxy address, which ClientIP rewrites.
+	r.Use(middleware.Country)
 	r.Use(middleware.ClientIP)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recovery(appLog))
