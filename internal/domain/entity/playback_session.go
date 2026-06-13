@@ -67,10 +67,7 @@ func NormalizePlaybackPlatform(raw string) PlaybackPlatform {
 // playback session counts as a view: 30 seconds, or half the video for
 // content shorter than a minute, with a floor of 1 second.
 func ViewThresholdSeconds(durationSeconds int64) int64 {
-	half := durationSeconds / 2
-	if half < 1 {
-		half = 1
-	}
+	half := max(durationSeconds/2, 1)
 	if half < 30 {
 		return half
 	}
