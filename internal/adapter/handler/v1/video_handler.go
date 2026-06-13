@@ -1101,9 +1101,10 @@ func (h *VideoHandler) UnsetFeatured(w http.ResponseWriter, r *http.Request) {
 
 // ModerationQueue godoc
 // @Summary      Moderation queue
-// @Description  Returns videos pending moderation review. Admin only.
+// @Description  Returns videos pending moderation review. Without a submission_status filter, defaults to submitted and under_review. Admin only.
 // @Tags         videos
 // @Produce      json
+// @Param        submission_status query string false "Filter by submission status" Enums(submitted, under_review, approved, rejected)
 // @Success      200 {object} httputil.Response{data=[]dto.VideoResponse}
 // @Failure      401 {object} httputil.ErrorResponse
 // @Failure      403 {object} httputil.ErrorResponse
@@ -1115,6 +1116,26 @@ func (h *VideoHandler) ModerationQueue(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid filter parameters")
 		return
+	}
+
+	// Default the queue to actionable submissions when no explicit
+	// submission_status filter was requested.
+	hasSubmissionFilter := false
+	for _, c := range fs.Conditions {
+		if c.DBColumn == "v.submission_status" {
+			hasSubmissionFilter = true
+			break
+		}
+	}
+	if !hasSubmissionFilter {
+		fs.Conditions = append(fs.Conditions, filter.Condition{
+			DBColumn: "v.submission_status",
+			Op:       filter.OpIn,
+			Values: []any{
+				string(entity.SubmissionStatusSubmitted),
+				string(entity.SubmissionStatusUnderReview),
+			},
+		})
 	}
 
 	videos, total, appErr := h.videoService.List(r.Context(), &fs)
