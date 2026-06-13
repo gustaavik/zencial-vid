@@ -35,7 +35,7 @@ func (r *PlaybackSessionRepository) UpsertHeartbeat(ctx context.Context, hb *rep
 			id, video_id, user_id, source, platform, country_code,
 			last_position, max_position, watched_seconds, watched_buckets, is_view, completed
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8, $9::bit(100), $8 >= $10, $11)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8::bigint, $9::bit(100), $8::bigint >= $10::bigint, $11)
 		ON CONFLICT (id) DO UPDATE SET
 			last_event_at   = NOW(),
 			last_position   = EXCLUDED.last_position,
@@ -46,7 +46,7 @@ func (r *PlaybackSessionRepository) UpsertHeartbeat(ctx context.Context, hb *rep
 			),
 			watched_buckets = playback_sessions.watched_buckets | EXCLUDED.watched_buckets,
 			is_view         = playback_sessions.is_view OR EXCLUDED.is_view
-				OR GREATEST(playback_sessions.watched_seconds, EXCLUDED.watched_seconds) >= $10,
+				OR GREATEST(playback_sessions.watched_seconds, EXCLUDED.watched_seconds) >= $10::bigint,
 			completed       = playback_sessions.completed OR EXCLUDED.completed
 		WHERE playback_sessions.video_id = EXCLUDED.video_id
 		  AND playback_sessions.user_id IS NOT DISTINCT FROM EXCLUDED.user_id
