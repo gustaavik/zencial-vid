@@ -158,6 +158,10 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 		// Video streaming (any authenticated user)
 		r.Get("/videos/{id}/stream", videoHandler.Stream)
 
+		// Playback analytics ingestion (cumulative heartbeats from players)
+		r.With(middleware.RateLimit(2, 10)).
+			Post("/videos/{id}/playback-events", analyticsHandler.RecordPlayback)
+
 		// Series watch progress (any authenticated user)
 		r.Get("/series/{id}/next-episode", seriesHandler.GetNextEpisode)
 		r.Put("/series/{id}/watch-progress", seriesHandler.UpdateWatchProgress)
@@ -169,6 +173,7 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 
 			// Video management (own videos only for publishers)
 			r.Get("/videos", videoHandler.ListOwned)
+			r.Get("/videos/{id}", videoHandler.GetOwned)
 			r.Post("/videos/uploads", videoHandler.InitiateUpload)
 			r.Post("/videos", videoHandler.CompleteUpload)
 			r.Put("/videos/{id}", videoHandler.Update)
@@ -203,13 +208,13 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 			r.Get("/analytics/summary", analyticsHandler.Summary)
 
 			// Series management (own series)
+			r.Get("/series", seriesHandler.ListOwned)
 			r.Post("/series", seriesHandler.Create)
 			r.Put("/series/{id}", seriesHandler.Update)
 			r.Post("/series/{id}/episodes", seriesHandler.AddEpisode)
 			r.Delete("/series/{id}/episodes/{videoID}", seriesHandler.RemoveEpisode)
-			r.Get("/publisher/series", seriesHandler.ListOwned)
-			r.Post("/publisher/series/{id}/publish", seriesHandler.PublishOwned)
-			r.Delete("/publisher/series/{id}", seriesHandler.ArchiveOwned)
+			r.Post("/series/{id}/publish", seriesHandler.PublishOwned)
+			r.Delete("/series/{id}", seriesHandler.ArchiveOwned)
 
 			// Seasons
 			r.Get("/series/{id}/seasons", seasonHandler.List)
@@ -286,6 +291,7 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 
 			// Admin analytics (any video)
 			r.Get("/admin/videos/{id}/analytics", analyticsHandler.VideoStats)
+			r.Get("/admin/analytics/summary", analyticsHandler.AdminSummary)
 
 			// Series management (admin)
 			r.Get("/admin/series", seriesHandler.AdminListAll)

@@ -19,10 +19,11 @@ import (
 
 var videoFilterConfig = filter.Config{
 	Columns: map[string]filter.ColumnDef{
-		"status":         {DBColumn: "v.status", AllowedOps: []filter.Op{filter.OpEq}, Type: filter.TypeString},
-		"creator":        {DBColumn: "v.creator", AllowedOps: []filter.Op{filter.OpEq, filter.OpLike}, Type: filter.TypeString},
-		"content_rating": {DBColumn: "v.content_rating", AllowedOps: []filter.Op{filter.OpEq, filter.OpIn}, Type: filter.TypeString},
-		"title":          {DBColumn: "v.title", AllowedOps: []filter.Op{filter.OpLike}, Type: filter.TypeString},
+		"status":            {DBColumn: "v.status", AllowedOps: []filter.Op{filter.OpEq}, Type: filter.TypeString},
+		"creator":           {DBColumn: "v.creator", AllowedOps: []filter.Op{filter.OpEq, filter.OpLike}, Type: filter.TypeString},
+		"content_rating":    {DBColumn: "v.content_rating", AllowedOps: []filter.Op{filter.OpEq, filter.OpIn}, Type: filter.TypeString},
+		"title":             {DBColumn: "v.title", AllowedOps: []filter.Op{filter.OpLike}, Type: filter.TypeString},
+		"submission_status": {DBColumn: "v.submission_status", AllowedOps: []filter.Op{filter.OpEq, filter.OpIn}, Type: filter.TypeString},
 	},
 	SortColumns: map[string]filter.SortDef{
 		"title":      {DBColumn: "v.title"},
