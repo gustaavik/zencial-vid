@@ -739,6 +739,48 @@ func (h *VideoHandler) ListOwned(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GetOwned godoc
+// @Summary      Get publisher's own video
+// @Description  Return a single video owned by the authenticated publisher, regardless of status. Admins may fetch any video.
+// @Tags         publisher
+// @Produce      json
+// @Param        id path string true "Video ID" format(uuid)
+// @Success      200 {object} httputil.Response{data=dto.VideoResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      404 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /publisher/videos/{id} [get]
+func (h *VideoHandler) GetOwned(w http.ResponseWriter, r *http.Request) {
+	id, err := httputil.URLParamUUID(r, "id")
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid video ID")
+		return
+	}
+
+	callerID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		httputil.Unauthorized(w, apperror.CodeUnauthorized, "authentication required")
+		return
+	}
+
+	video, appErr := h.videoService.GetByID(r.Context(), id)
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	callerRoles, _ := middleware.GetUserRoles(r.Context())
+	if !entity.HasRole(callerRoles, entity.RoleAdmin) && video.UploadedBy != callerID {
+		httputil.Error(w, apperror.Forbidden(apperror.CodeVideoOwnershipRequired, "you do not own this video", nil))
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.VideoToResponse(r.Context(), video, h.cdnURLs))
+}
+
 // PublishOwned godoc
 // @Summary      Publish publisher's own video
 // @Description  Transition a publisher-owned video to the published state. Publishers can only publish their own videos.
@@ -1101,9 +1143,10 @@ func (h *VideoHandler) UnsetFeatured(w http.ResponseWriter, r *http.Request) {
 
 // ModerationQueue godoc
 // @Summary      Moderation queue
-// @Description  Returns videos pending moderation review. Admin only.
+// @Description  Returns videos pending moderation review. Without a submission_status filter, defaults to submitted and under_review. Admin only.
 // @Tags         videos
 // @Produce      json
+// @Param        submission_status query string false "Filter by submission status" Enums(submitted, under_review, approved, rejected)
 // @Success      200 {object} httputil.Response{data=[]dto.VideoResponse}
 // @Failure      401 {object} httputil.ErrorResponse
 // @Failure      403 {object} httputil.ErrorResponse
@@ -1115,6 +1158,26 @@ func (h *VideoHandler) ModerationQueue(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid filter parameters")
 		return
+	}
+
+	// Default the queue to actionable submissions when no explicit
+	// submission_status filter was requested.
+	hasSubmissionFilter := false
+	for _, c := range fs.Conditions {
+		if c.DBColumn == "v.submission_status" {
+			hasSubmissionFilter = true
+			break
+		}
+	}
+	if !hasSubmissionFilter {
+		fs.Conditions = append(fs.Conditions, filter.Condition{
+			DBColumn: "v.submission_status",
+			Op:       filter.OpIn,
+			Values: []any{
+				string(entity.SubmissionStatusSubmitted),
+				string(entity.SubmissionStatusUnderReview),
+			},
+		})
 	}
 
 	videos, total, appErr := h.videoService.List(r.Context(), &fs)

@@ -62,7 +62,8 @@ const (
 	CodeSeriesOwnershipRequired = "SERIES_OWNERSHIP_REQUIRED"
 
 	// Analytics
-	CodeAnalyticsNotFound = "ANALYTICS_NOT_FOUND"
+	CodeAnalyticsNotFound     = "ANALYTICS_NOT_FOUND"
+	CodeInvalidAnalyticsRange = "INVALID_ANALYTICS_RANGE"
 
 	// Series
 	CodeSeriesNotFound              = "SERIES_NOT_FOUND"
