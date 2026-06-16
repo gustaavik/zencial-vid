@@ -236,6 +236,10 @@ func (h *VideoHandler) ListPublished(w http.ResponseWriter, r *http.Request) {
 // @Param        per_page query int false "Items per page" default(20)
 // @Param        sort query string false "Sort field (e.g. -created_at)"
 // @Param        status query string false "Filter by status (draft, published, archived)"
+// @Param        submission_status query string false "Filter by submission status"
+// @Param        content_rating query string false "Filter by content rating"
+// @Param        title query string false "Search by title (substring match)"
+// @Param        genre_id query string false "Filter by genre UUID" format(uuid)
 // @Success      200 {object} httputil.Response{data=[]dto.VideoResponse,meta=httputil.Meta}
 // @Failure      400 {object} httputil.ErrorResponse
 // @Failure      401 {object} httputil.ErrorResponse
@@ -244,13 +248,24 @@ func (h *VideoHandler) ListPublished(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /admin/videos [get]
 func (h *VideoHandler) ListAll(w http.ResponseWriter, r *http.Request) {
-	fs, err := filter.FromRequest(r, postgres.VideoFilterConfig())
+	fs, err := filter.FromRequest(r, postgres.AdminVideoFilterConfig())
 	if err != nil {
 		httputil.BadRequest(w, apperror.CodeBadRequest, err.Error())
 		return
 	}
 
-	videos, total, appErr := h.videoService.List(r.Context(), &fs)
+	// genre_id is filtered via an EXISTS join, not the column whitelist.
+	var genreID *uuid.UUID
+	if g := r.URL.Query().Get("genre_id"); g != "" {
+		parsed, perr := uuid.Parse(g)
+		if perr != nil {
+			httputil.BadRequest(w, apperror.CodeBadRequest, "invalid genre_id")
+			return
+		}
+		genreID = &parsed
+	}
+
+	videos, total, appErr := h.videoService.ListAdmin(r.Context(), &fs, genreID)
 	if appErr != nil {
 		httputil.Error(w, appErr)
 		return
@@ -262,6 +277,90 @@ func (h *VideoHandler) ListAll(w http.ResponseWriter, r *http.Request) {
 		Total:      total,
 		TotalPages: fs.Pagination.TotalPages(total),
 	})
+}
+
+// Stats godoc
+// @Summary      Catalog stats (admin)
+// @Description  Returns platform-wide catalog aggregates: video counts grouped by status and submission status, plus a per-genre title count (admin only).
+// @Tags         videos
+// @Produce      json
+// @Success      200 {object} httputil.Response{data=dto.AdminContentStatsResponse}
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/videos/stats [get]
+func (h *VideoHandler) Stats(w http.ResponseWriter, r *http.Request) {
+	stats, appErr := h.videoService.Stats(r.Context())
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.VideoStatsToResponse(stats))
+}
+
+// BulkUpdate godoc
+// @Summary      Bulk update videos (admin)
+// @Description  Reassign category and/or change rating for multiple videos in a single request (admin only). Returns succeeded and failed entries.
+// @Tags         videos
+// @Accept       json
+// @Produce      json
+// @Param        body body dto.BulkUpdateVideosRequest true "Video IDs and fields to update"
+// @Success      200 {object} httputil.Response{data=dto.BulkResultResponse}
+// @Failure      400 {object} httputil.ErrorResponse
+// @Failure      401 {object} httputil.ErrorResponse
+// @Failure      403 {object} httputil.ErrorResponse
+// @Failure      500 {object} httputil.ErrorResponse
+// @Security     BearerAuth
+// @Router       /admin/videos/bulk-update [post]
+func (h *VideoHandler) BulkUpdate(w http.ResponseWriter, r *http.Request) {
+	var req dto.BulkUpdateVideosRequest
+	if err := httputil.DecodeJSON(r, &req); err != nil {
+		httputil.BadRequest(w, apperror.CodeBadRequest, "invalid request body")
+		return
+	}
+
+	if errs := h.validator.Validate(req); errs != nil {
+		httputil.ErrorWithDetails(w,
+			apperror.BadRequest(apperror.CodeValidationFailed, "validation failed", nil),
+			errs,
+		)
+		return
+	}
+
+	ids, err := parseUUIDs(req.IDs)
+	if err != nil {
+		httputil.BadRequest(w, apperror.CodeValidationFailed, err.Error())
+		return
+	}
+
+	// A present (even empty) genre_ids array replaces the category set; an
+	// absent one leaves categories untouched.
+	var genreIDs []uuid.UUID
+	if req.GenreIDs != nil {
+		genreIDs, err = parseUUIDs(req.GenreIDs)
+		if err != nil {
+			httputil.BadRequest(w, apperror.CodeValidationFailed, err.Error())
+			return
+		}
+	}
+
+	callerID, _ := middleware.GetUserID(r.Context())
+	callerRoles, _ := middleware.GetUserRoles(r.Context())
+
+	result, appErr := h.videoService.BulkUpdate(r.Context(), ids, videouc.BulkUpdateInput{
+		GenreIDs:      genreIDs,
+		ContentRating: req.ContentRating,
+		CallerID:      callerID,
+		CallerRoles:   callerRoles,
+	})
+	if appErr != nil {
+		httputil.Error(w, appErr)
+		return
+	}
+
+	httputil.Success(w, http.StatusOK, mapper.BulkResultToResponse(result))
 }
 
 // Update godoc

@@ -38,6 +38,41 @@ func VideoFilterConfig() filter.Config {
 	return videoFilterConfig
 }
 
+// adminVideoFilterConfig extends the base config with a "views" sort backed by
+// the playback-aggregate join only present in the admin list query. It is kept
+// separate so public/publisher list paths never reference the pv alias.
+// (genre_id is handled outside the filter via an EXISTS predicate.)
+var adminVideoFilterConfig = filter.Config{
+	Columns: map[string]filter.ColumnDef{
+		"status":            {DBColumn: "v.status", AllowedOps: []filter.Op{filter.OpEq}, Type: filter.TypeString},
+		"creator":           {DBColumn: "v.creator", AllowedOps: []filter.Op{filter.OpEq, filter.OpLike}, Type: filter.TypeString},
+		"content_rating":    {DBColumn: "v.content_rating", AllowedOps: []filter.Op{filter.OpEq, filter.OpIn}, Type: filter.TypeString},
+		"title":             {DBColumn: "v.title", AllowedOps: []filter.Op{filter.OpLike}, Type: filter.TypeString},
+		"submission_status": {DBColumn: "v.submission_status", AllowedOps: []filter.Op{filter.OpEq, filter.OpIn}, Type: filter.TypeString},
+	},
+	SortColumns: map[string]filter.SortDef{
+		"title":      {DBColumn: "v.title"},
+		"created_at": {DBColumn: "v.created_at"},
+		"duration":   {DBColumn: "v.duration"},
+		"views":      {DBColumn: "COALESCE(pv.views, 0)"},
+	},
+	DefaultSort: "v.created_at DESC",
+}
+
+// AdminVideoFilterConfig returns the filter configuration for the admin video list.
+func AdminVideoFilterConfig() filter.Config {
+	return adminVideoFilterConfig
+}
+
+// videoViewsJoin is the LEFT JOIN that exposes an all-time qualifying view
+// count per video as pv.views. A session qualifies as a view when is_view was
+// set at write time (matching the analytics repository semantics).
+const videoViewsJoin = `LEFT JOIN (
+		SELECT video_id, COUNT(*) FILTER (WHERE is_view) AS views
+		FROM playback_sessions
+		GROUP BY video_id
+	) pv ON pv.video_id = v.id`
+
 const videoSelectCols = `
 	id, title, slug, description, logline, creator, duration, content_rating,
 	primary_language, status, visibility,
@@ -245,6 +280,118 @@ func (r *VideoRepository) listWithBase(ctx context.Context, fs *filter.FilterSet
 	return videos, total, nil
 }
 
+// ListAdmin lists videos in any status with an all-time view count populated
+// per row (via videoViewsJoin), optionally restricted to a single genre.
+func (r *VideoRepository) ListAdmin(ctx context.Context, fs *filter.FilterSet, genreID *uuid.UUID) ([]entity.Video, int64, error) {
+	db := connFromCtx(ctx, r.pool)
+
+	// A genre filter is applied as a parameterized EXISTS predicate prepended
+	// to the WHERE clause; filter args then start at $2 (cf. ListByUploader).
+	baseCondition := ""
+	var baseArgs []any
+	startIdx := 1
+	if genreID != nil {
+		baseCondition = "EXISTS (SELECT 1 FROM video_genres vg WHERE vg.video_id = v.id AND vg.genre_id = $1)"
+		baseArgs = []any{*genreID}
+		startIdx = 2
+	}
+
+	countWhere, countFilterArgs, _ := filter.CountSQL(fs, baseCondition, startIdx)
+	countArgs := append(append([]any{}, baseArgs...), countFilterArgs...)
+	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM videos v %s`, countWhere)
+
+	var total int64
+	if err := db.QueryRow(ctx, countQuery, countArgs...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("counting admin videos: %w", err)
+	}
+
+	sql := filter.ToSQL(fs, baseCondition, startIdx)
+	dataArgs := append(append([]any{}, baseArgs...), sql.Args...)
+	dataQuery := fmt.Sprintf(`SELECT `+videoSelectCols+`, COALESCE(pv.views, 0) AS views
+		FROM videos v
+		`+videoViewsJoin+`
+		%s %s %s`, sql.WhereClause, sql.OrderClause, sql.LimitClause)
+
+	rows, err := db.Query(ctx, dataQuery, dataArgs...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("listing admin videos: %w", err)
+	}
+	defer rows.Close()
+
+	videos, err := r.collectAdminVideoRows(ctx, rows)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return videos, total, nil
+}
+
+// Stats returns platform-wide catalog aggregates: video counts grouped by
+// status and by submission status, plus a per-genre title count.
+func (r *VideoRepository) Stats(ctx context.Context) (*repository.VideoStats, error) {
+	db := connFromCtx(ctx, r.pool)
+
+	stats := &repository.VideoStats{
+		ByStatus:     map[string]int64{},
+		BySubmission: map[string]int64{},
+	}
+
+	statusRows, err := db.Query(ctx, `SELECT status, COUNT(*) FROM videos GROUP BY status`)
+	if err != nil {
+		return nil, fmt.Errorf("counting videos by status: %w", err)
+	}
+	for statusRows.Next() {
+		var status string
+		var count int64
+		if err := statusRows.Scan(&status, &count); err != nil {
+			statusRows.Close()
+			return nil, fmt.Errorf("scanning status count: %w", err)
+		}
+		stats.ByStatus[status] = count
+		stats.Total += count
+	}
+	statusRows.Close()
+	if err := statusRows.Err(); err != nil {
+		return nil, err
+	}
+
+	subRows, err := db.Query(ctx, `SELECT submission_status, COUNT(*) FROM videos GROUP BY submission_status`)
+	if err != nil {
+		return nil, fmt.Errorf("counting videos by submission status: %w", err)
+	}
+	for subRows.Next() {
+		var sub string
+		var count int64
+		if err := subRows.Scan(&sub, &count); err != nil {
+			subRows.Close()
+			return nil, fmt.Errorf("scanning submission status count: %w", err)
+		}
+		stats.BySubmission[sub] = count
+	}
+	subRows.Close()
+	if err := subRows.Err(); err != nil {
+		return nil, err
+	}
+
+	catRows, err := db.Query(ctx, `SELECT genre_id, COUNT(*) FROM video_genres GROUP BY genre_id ORDER BY COUNT(*) DESC`)
+	if err != nil {
+		return nil, fmt.Errorf("counting videos by genre: %w", err)
+	}
+	defer catRows.Close()
+	for catRows.Next() {
+		var item repository.CategoryCount
+		if err := catRows.Scan(&item.GenreID, &item.Count); err != nil {
+			return nil, fmt.Errorf("scanning genre count: %w", err)
+		}
+		stats.ByCategory = append(stats.ByCategory, item)
+	}
+	if err := catRows.Err(); err != nil {
+		return nil, err
+	}
+
+	return stats, nil
+}
+
 func (r *VideoRepository) ExistsBySlug(ctx context.Context, slug valueobject.Slug) (bool, error) {
 	db := connFromCtx(ctx, r.pool)
 	var exists bool
@@ -387,6 +534,73 @@ func (r *VideoRepository) collectVideoRows(ctx context.Context, rows pgx.Rows) (
 			return nil, err
 		}
 		videos = append(videos, *v)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	for i := range videos {
+		genreIDs, err := r.GetGenreIDs(ctx, videos[i].ID)
+		if err != nil {
+			return nil, err
+		}
+		videos[i].GenreIDs = genreIDs
+	}
+
+	return videos, nil
+}
+
+// collectAdminVideoRows scans rows that carry a trailing view-count column and
+// loads genre IDs for each video.
+func (r *VideoRepository) collectAdminVideoRows(ctx context.Context, rows pgx.Rows) ([]entity.Video, error) {
+	var videos []entity.Video
+	for rows.Next() {
+		var (
+			v                                                   entity.Video
+			slug, status, visibility, geoType, submissionStatus string
+			duration, views                                     int64
+			monetizationJSON                                    json.RawMessage
+			adBreakJSON                                         json.RawMessage
+			geoRegionsJSON                                      json.RawMessage
+			thumbnailCandidatesJSON                             json.RawMessage
+			featuredDesc                                        *string
+		)
+
+		err := rows.Scan(
+			&v.ID, &v.Title, &slug, &v.Description, &v.Logline, &v.Creator,
+			&duration, &v.ContentRating,
+			&v.PrimaryLanguage, &status, &visibility,
+			&v.StorageKey, &v.ContentType, &v.FileSize, &v.ThumbnailKey, &thumbnailCandidatesJSON,
+			&v.UploadedBy, &v.MinimumPlanLevel, &v.TranscodeError,
+			&v.SeriesID, &v.SeasonNumber, &v.EpisodeNumber,
+			&v.ScheduledPublishAt,
+			&monetizationJSON, &v.PPVPriceCents, &v.FreePreviewSeconds, &adBreakJSON,
+			&geoType, &geoRegionsJSON, &v.RequireSignin,
+			&submissionStatus, &v.SubmittedAt, &v.ModeratorNotes,
+			&v.IsFeatured, &featuredDesc, &v.FeaturedAt,
+			&v.CreatedAt, &v.UpdatedAt,
+			&views,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scanning admin video row: %w", err)
+		}
+		if featuredDesc != nil {
+			v.FeaturedDescription = *featuredDesc
+		}
+
+		v.Slug = valueobject.SlugFromTrusted(slug)
+		v.Duration = valueobject.NewDuration(duration)
+		v.Status = entity.VideoStatus(status)
+		v.Visibility = entity.VideoVisibility(visibility)
+		v.GeoRestrictionType = entity.GeoRestrictionType(geoType)
+		v.SubmissionStatus = entity.SubmissionStatus(submissionStatus)
+		v.Views = views
+		unmarshalJSONOrEmpty(monetizationJSON, &v.MonetizationTypes)
+		unmarshalJSONOrEmpty(adBreakJSON, &v.AdBreakPositions)
+		unmarshalJSONOrEmpty(geoRegionsJSON, &v.GeoRestrictionRegions)
+		unmarshalJSONOrEmpty(thumbnailCandidatesJSON, &v.ThumbnailCandidates)
+
+		videos = append(videos, v)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

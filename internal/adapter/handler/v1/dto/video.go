@@ -36,8 +36,34 @@ type VideoResponse struct {
 	IsFeatured            bool     `json:"is_featured"`
 	FeaturedDescription   string   `json:"featured_description,omitempty"`
 	FeaturedAt            *string  `json:"featured_at,omitempty"`
-	CreatedAt             string   `json:"created_at" example:"2025-01-01T00:00:00Z"`
-	UpdatedAt             string   `json:"updated_at" example:"2025-01-01T00:00:00Z"`
+	// Views is the all-time qualifying playback count. Populated only by the
+	// admin catalog list; omitted (0) elsewhere.
+	Views     int64  `json:"views,omitempty" example:"162408"`
+	CreatedAt string `json:"created_at" example:"2025-01-01T00:00:00Z"`
+	UpdatedAt string `json:"updated_at" example:"2025-01-01T00:00:00Z"`
+}
+
+// CategoryCountResponse is a per-genre title count for the catalog breakdown.
+type CategoryCountResponse struct {
+	GenreID string `json:"genre_id"`
+	Count   int64  `json:"count"`
+}
+
+// AdminContentStatsResponse holds platform-wide catalog aggregates powering the
+// admin "All content" stat cards and category breakdown.
+type AdminContentStatsResponse struct {
+	Total        int64                   `json:"total"`
+	ByStatus     map[string]int64        `json:"by_status"`
+	BySubmission map[string]int64        `json:"by_submission"`
+	ByCategory   []CategoryCountResponse `json:"by_category"`
+}
+
+// BulkUpdateVideosRequest reassigns category and/or changes rating for many
+// videos at once. At least one of genre_ids / content_rating must be present.
+type BulkUpdateVideosRequest struct {
+	IDs           []string `json:"ids" validate:"required,min=1,dive,uuid"`
+	GenreIDs      []string `json:"genre_ids,omitempty" validate:"omitempty,dive,uuid"`
+	ContentRating *string  `json:"content_rating,omitempty" validate:"omitempty,oneof=G PG PG13 R NC17"`
 }
 
 // SetFeaturedRequest is the body for POST /admin/videos/{id}/feature.

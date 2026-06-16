@@ -19,6 +19,17 @@ func (s *Service) List(ctx context.Context, fs *filter.FilterSet) ([]entity.Vide
 	return videos, total, nil
 }
 
+// ListAdmin returns a paginated list of all videos with per-row view counts,
+// optionally restricted to a single genre (admin catalog dashboard).
+func (s *Service) ListAdmin(ctx context.Context, fs *filter.FilterSet, genreID *uuid.UUID) ([]entity.Video, int64, *apperror.AppError) {
+	videos, total, err := s.videoRepo.ListAdmin(ctx, fs, genreID)
+	if err != nil {
+		s.log.Error("listing admin videos", "error", err)
+		return nil, 0, apperror.Internal(apperror.CodeInternalError, "failed to list videos", err)
+	}
+	return videos, total, nil
+}
+
 // ListPublished returns a paginated list of published videos (public use).
 func (s *Service) ListPublished(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, *apperror.AppError) {
 	videos, total, err := s.videoRepo.ListPublished(ctx, fs)

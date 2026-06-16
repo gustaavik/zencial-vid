@@ -25,6 +25,8 @@ type mockVideoRepo struct {
 	updateFn             func(ctx context.Context, video *entity.Video) error
 	deleteFn             func(ctx context.Context, id uuid.UUID) error
 	listFn               func(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error)
+	listAdminFn          func(ctx context.Context, fs *filter.FilterSet, genreID *uuid.UUID) ([]entity.Video, int64, error)
+	statsFn              func(ctx context.Context) (*repository.VideoStats, error)
 	listPublishedFn      func(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error)
 	existsBySlugFn       func(ctx context.Context, slug valueobject.Slug) (bool, error)
 	setGenresFn          func(ctx context.Context, videoID uuid.UUID, genreIDs []uuid.UUID) error
@@ -78,6 +80,20 @@ func (m *mockVideoRepo) List(ctx context.Context, fs *filter.FilterSet) ([]entit
 		return m.listFn(ctx, fs)
 	}
 	return nil, 0, nil
+}
+
+func (m *mockVideoRepo) ListAdmin(ctx context.Context, fs *filter.FilterSet, genreID *uuid.UUID) ([]entity.Video, int64, error) {
+	if m.listAdminFn != nil {
+		return m.listAdminFn(ctx, fs, genreID)
+	}
+	return nil, 0, nil
+}
+
+func (m *mockVideoRepo) Stats(ctx context.Context) (*repository.VideoStats, error) {
+	if m.statsFn != nil {
+		return m.statsFn(ctx)
+	}
+	return &repository.VideoStats{ByStatus: map[string]int64{}, BySubmission: map[string]int64{}}, nil
 }
 
 func (m *mockVideoRepo) ListPublished(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error) {
