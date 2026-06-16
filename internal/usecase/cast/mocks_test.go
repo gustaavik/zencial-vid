@@ -104,6 +104,12 @@ func (m *mockVideoRepo) List(_ context.Context, _ *filter.FilterSet) ([]entity.V
 func (m *mockVideoRepo) ListPublished(_ context.Context, _ *filter.FilterSet) ([]entity.Video, int64, error) {
 	return nil, 0, nil
 }
+func (m *mockVideoRepo) ListAdmin(_ context.Context, _ *filter.FilterSet, _ *uuid.UUID) ([]entity.Video, int64, error) {
+	return nil, 0, nil
+}
+func (m *mockVideoRepo) Stats(_ context.Context) (*repository.VideoStats, error) {
+	return &repository.VideoStats{ByStatus: map[string]int64{}, BySubmission: map[string]int64{}}, nil
+}
 func (m *mockVideoRepo) ListByUploader(_ context.Context, _ uuid.UUID, _ *filter.FilterSet) ([]entity.Video, int64, error) {
 	return nil, 0, nil
 }

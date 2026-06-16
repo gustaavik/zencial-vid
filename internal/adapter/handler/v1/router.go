@@ -269,13 +269,15 @@ func RegisterRoutes(r chi.Router, deps *Deps) {
 			r.Post("/videos/{id}/unarchive", videoHandler.Unarchive)
 			r.Delete("/videos/{id}", videoHandler.Delete)
 
-			// Admin video listing (all statuses)
+			// Admin video listing (all statuses) + catalog stats
 			r.Get("/admin/videos", videoHandler.ListAll)
+			r.Get("/admin/videos/stats", videoHandler.Stats)
 
 			// Bulk video operations
 			r.Post("/admin/videos/bulk-publish", videoHandler.BulkPublish)
 			r.Post("/admin/videos/bulk-archive", videoHandler.BulkDelete)
 			r.Post("/admin/videos/bulk-unarchive", videoHandler.BulkUnarchive)
+			r.Post("/admin/videos/bulk-update", videoHandler.BulkUpdate)
 
 			// Maintenance
 			r.Post("/admin/videos/purge-orphans", videoHandler.PurgeOrphans)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/zenfulcode/zencial/internal/adapter/handler/v1/dto"
 	"github.com/zenfulcode/zencial/internal/domain/entity"
+	"github.com/zenfulcode/zencial/internal/domain/repository"
 	videouc "github.com/zenfulcode/zencial/internal/usecase/video"
 )
 
@@ -49,6 +50,7 @@ func VideoToResponse(_ context.Context, video *entity.Video, urls ThumbnailURLBu
 		RequireSignin:         video.RequireSignin,
 		SubmissionStatus:      string(video.SubmissionStatus),
 		ModeratorNotes:        video.ModeratorNotes,
+		Views:                 video.Views,
 		CreatedAt:             video.CreatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 		UpdatedAt:             video.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z"),
 	}
@@ -128,6 +130,23 @@ func BulkResultToResponse(result *videouc.BulkResult) dto.BulkResultResponse {
 	return dto.BulkResultResponse{
 		Succeeded: succeeded,
 		Failed:    failed,
+	}
+}
+
+// VideoStatsToResponse maps repository VideoStats to the admin stats DTO.
+func VideoStatsToResponse(stats *repository.VideoStats) dto.AdminContentStatsResponse {
+	byCategory := make([]dto.CategoryCountResponse, len(stats.ByCategory))
+	for i, c := range stats.ByCategory {
+		byCategory[i] = dto.CategoryCountResponse{
+			GenreID: c.GenreID.String(),
+			Count:   c.Count,
+		}
+	}
+	return dto.AdminContentStatsResponse{
+		Total:        stats.Total,
+		ByStatus:     stats.ByStatus,
+		BySubmission: stats.BySubmission,
+		ByCategory:   byCategory,
 	}
 }
 

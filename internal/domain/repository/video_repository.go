@@ -17,6 +17,20 @@ type VideoStorageInfo struct {
 	ThumbnailKey string
 }
 
+// CategoryCount is the number of videos associated with a single genre.
+type CategoryCount struct {
+	GenreID uuid.UUID
+	Count   int64
+}
+
+// VideoStats holds platform-wide catalog aggregates for the admin dashboard.
+type VideoStats struct {
+	Total        int64
+	ByStatus     map[string]int64
+	BySubmission map[string]int64
+	ByCategory   []CategoryCount
+}
+
 // VideoRepository defines persistence operations for videos.
 type VideoRepository interface {
 	Create(ctx context.Context, video *entity.Video) error
@@ -25,6 +39,11 @@ type VideoRepository interface {
 	Update(ctx context.Context, video *entity.Video) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error)
+	// ListAdmin lists videos in any status with per-row view counts populated,
+	// optionally filtered to videos tagged with genreID (nil = no genre filter).
+	ListAdmin(ctx context.Context, fs *filter.FilterSet, genreID *uuid.UUID) ([]entity.Video, int64, error)
+	// Stats returns platform-wide catalog aggregates for the admin dashboard.
+	Stats(ctx context.Context) (*VideoStats, error)
 	ListPublished(ctx context.Context, fs *filter.FilterSet) ([]entity.Video, int64, error)
 	ListByUploader(ctx context.Context, uploaderID uuid.UUID, fs *filter.FilterSet) ([]entity.Video, int64, error)
 	ExistsBySlug(ctx context.Context, slug valueobject.Slug) (bool, error)

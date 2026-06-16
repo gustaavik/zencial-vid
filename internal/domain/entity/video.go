@@ -85,6 +85,9 @@ type Video struct {
 	FeaturedAt          *time.Time
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
+	// Views is a transient, read-only aggregate populated only by admin list
+	// queries (all-time qualifying playback views). It is never persisted.
+	Views int64
 }
 
 // NewVideo creates a new Video entity in draft status.
