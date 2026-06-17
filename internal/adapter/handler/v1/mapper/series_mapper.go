@@ -12,18 +12,36 @@ func SeriesToResponse(series *entity.Series) dto.SeriesResponse {
 		genreIDs[i] = gid.String()
 	}
 
+	monetization := series.DefaultMonetization
+	if monetization == nil {
+		monetization = []string{}
+	}
+
 	return dto.SeriesResponse{
-		ID:               series.ID.String(),
-		Title:            series.Title,
-		Slug:             series.Slug.String(),
-		Description:      series.Description,
-		Creator:          series.Creator,
-		Status:           string(series.Status),
-		CoverImageKey:    series.CoverImageKey,
-		GenreIDs:         genreIDs,
-		MinimumPlanLevel: series.MinimumPlanLevel,
-		CreatedAt:        series.CreatedAt.Format("2006-01-02T15:04:05Z"),
-		UpdatedAt:        series.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:                  series.ID.String(),
+		Title:               series.Title,
+		Slug:                series.Slug.String(),
+		Description:         series.Description,
+		Creator:             series.Creator,
+		Status:              string(series.Status),
+		SeriesType:          string(series.SeriesType),
+		Logline:             series.Logline,
+		PrimaryLanguage:     series.PrimaryLanguage,
+		OriginCountry:       series.OriginCountry,
+		ContentRating:       series.ContentRating,
+		CoverImageKey:       series.CoverImageKey,
+		PosterKey:           series.PosterKey,
+		BannerKey:           series.BannerKey,
+		TitleLogoKey:        series.TitleLogoKey,
+		GenreIDs:            genreIDs,
+		MinimumPlanLevel:    series.MinimumPlanLevel,
+		AutoplayNext:        series.AutoplayNext,
+		BingeMode:           series.BingeMode,
+		HideEpisodeCount:    series.HideEpisodeCount,
+		DefaultVisibility:   string(series.DefaultVisibility),
+		DefaultMonetization: monetization,
+		CreatedAt:           series.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:           series.UpdatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 }
 

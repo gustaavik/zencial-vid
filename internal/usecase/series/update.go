@@ -15,15 +15,28 @@ import (
 
 // UpdateInput holds the data needed to update a series.
 type UpdateInput struct {
-	ID               uuid.UUID
-	Title            *string
-	Description      *string
-	Creator          *string
-	CoverImageKey    *string
-	GenreIDs         []uuid.UUID
-	MinimumPlanLevel *int
-	CallerID         uuid.UUID
-	CallerRoles      []entity.UserRole
+	ID                  uuid.UUID
+	Title               *string
+	Description         *string
+	Creator             *string
+	SeriesType          *string
+	Logline             *string
+	PrimaryLanguage     *string
+	OriginCountry       *string
+	ContentRating       *string
+	CoverImageKey       *string
+	PosterKey           *string
+	BannerKey           *string
+	TitleLogoKey        *string
+	GenreIDs            []uuid.UUID
+	MinimumPlanLevel    *int
+	AutoplayNext        *bool
+	BingeMode           *bool
+	HideEpisodeCount    *bool
+	DefaultVisibility   *string
+	DefaultMonetization []string
+	CallerID            uuid.UUID
+	CallerRoles         []entity.UserRole
 }
 
 // Update updates a series' metadata.
@@ -55,11 +68,50 @@ func (s *Service) Update(ctx context.Context, input *UpdateInput) (*entity.Serie
 	if input.Creator != nil {
 		series.Creator = *input.Creator
 	}
+	if input.SeriesType != nil {
+		series.SeriesType = entity.SeriesType(*input.SeriesType)
+	}
+	if input.Logline != nil {
+		series.Logline = *input.Logline
+	}
+	if input.PrimaryLanguage != nil {
+		series.PrimaryLanguage = *input.PrimaryLanguage
+	}
+	if input.OriginCountry != nil {
+		series.OriginCountry = *input.OriginCountry
+	}
+	if input.ContentRating != nil {
+		series.ContentRating = *input.ContentRating
+	}
 	if input.CoverImageKey != nil {
 		series.CoverImageKey = *input.CoverImageKey
 	}
+	if input.PosterKey != nil {
+		series.PosterKey = *input.PosterKey
+	}
+	if input.BannerKey != nil {
+		series.BannerKey = *input.BannerKey
+	}
+	if input.TitleLogoKey != nil {
+		series.TitleLogoKey = *input.TitleLogoKey
+	}
 	if input.MinimumPlanLevel != nil {
 		series.MinimumPlanLevel = input.MinimumPlanLevel
+	}
+	if input.AutoplayNext != nil {
+		series.AutoplayNext = *input.AutoplayNext
+	}
+	if input.BingeMode != nil {
+		series.BingeMode = *input.BingeMode
+	}
+	if input.HideEpisodeCount != nil {
+		series.HideEpisodeCount = *input.HideEpisodeCount
+	}
+	if input.DefaultVisibility != nil {
+		series.DefaultVisibility = entity.VideoVisibility(*input.DefaultVisibility)
+	}
+	if input.DefaultMonetization != nil {
+		series.DefaultMonetization = input.DefaultMonetization
 	}
 
 	series.UpdatedAt = time.Now().UTC()

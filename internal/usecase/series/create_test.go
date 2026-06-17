@@ -70,6 +70,69 @@ func TestService_Create(t *testing.T) {
 		assert.Equal(t, apperror.CodeInternalError, appErr.Code)
 	})
 
+	t.Run("applies extended metadata fields to the entity", func(t *testing.T) {
+		var created *entity.Series
+		repo := &mockSeriesRepo{
+			createFn: func(_ context.Context, s *entity.Series) error {
+				created = s
+				return nil
+			},
+		}
+		svc := newTestService(repo, nil, nil, nil)
+
+		hide := true
+		autoplay := false
+		out, appErr := svc.Create(ctx, &CreateInput{
+			Title:               "Bedford Street",
+			UploadedBy:          uploaderID,
+			SeriesType:          "limited",
+			Logline:             "A neighborhood comes alive after dark.",
+			PrimaryLanguage:     "en",
+			OriginCountry:       "United States",
+			ContentRating:       "TV-14",
+			PosterKey:           "series/x/poster.jpg",
+			AutoplayNext:        &autoplay,
+			HideEpisodeCount:    &hide,
+			DefaultVisibility:   "followers_only",
+			DefaultMonetization: []string{"premium"},
+		})
+
+		require.Nil(t, appErr)
+		require.NotNil(t, created)
+		assert.Equal(t, entity.SeriesTypeLimited, created.SeriesType)
+		assert.Equal(t, "A neighborhood comes alive after dark.", created.Logline)
+		assert.Equal(t, "United States", created.OriginCountry)
+		assert.Equal(t, "TV-14", created.ContentRating)
+		assert.Equal(t, "series/x/poster.jpg", created.PosterKey)
+		assert.False(t, created.AutoplayNext)
+		assert.True(t, created.HideEpisodeCount)
+		assert.Equal(t, entity.VideoVisibilityFollowers, created.DefaultVisibility)
+		assert.Equal(t, []string{"premium"}, created.DefaultMonetization)
+		assert.Equal(t, created.ID, out.Series.ID)
+	})
+
+	t.Run("keeps entity defaults when extended fields are omitted", func(t *testing.T) {
+		var created *entity.Series
+		repo := &mockSeriesRepo{
+			createFn: func(_ context.Context, s *entity.Series) error {
+				created = s
+				return nil
+			},
+		}
+		svc := newTestService(repo, nil, nil, nil)
+
+		_, appErr := svc.Create(ctx, &CreateInput{Title: "Defaults", UploadedBy: uploaderID})
+
+		require.Nil(t, appErr)
+		require.NotNil(t, created)
+		assert.Equal(t, entity.SeriesTypeOngoing, created.SeriesType)
+		assert.Equal(t, "en", created.PrimaryLanguage)
+		assert.True(t, created.AutoplayNext)
+		assert.True(t, created.BingeMode)
+		assert.False(t, created.HideEpisodeCount)
+		assert.Equal(t, entity.VideoVisibilityPublic, created.DefaultVisibility)
+	})
+
 	t.Run("sets GenreIDs when provided", func(t *testing.T) {
 		genreID := uuid.New()
 		repo := &mockSeriesRepo{
