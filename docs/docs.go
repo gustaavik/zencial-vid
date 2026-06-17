@@ -1736,6 +1736,31 @@ const docTemplate = `{
                         "description": "Filter by status (draft, published, archived)",
                         "name": "status",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by submission status",
+                        "name": "submission_status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by content rating",
+                        "name": "content_rating",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by title (substring match)",
+                        "name": "title",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Filter by genre UUID",
+                        "name": "genre_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -2015,6 +2040,81 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/videos/bulk-update": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Reassign category and/or change rating for multiple videos in a single request (admin only). Returns succeeded and failed entries.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "videos"
+                ],
+                "summary": "Bulk update videos (admin)",
+                "parameters": [
+                    {
+                        "description": "Video IDs and fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkUpdateVideosRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkResultResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/videos/purge-orphans": {
             "post": {
                 "security": [
@@ -2056,6 +2156,61 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.PurgeOrphansResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/videos/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns platform-wide catalog aggregates: video counts grouped by status and submission status, plus a per-genre title count (admin only).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "videos"
+                ],
+                "summary": "Catalog stats (admin)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AdminContentStatsResponse"
                                         }
                                     }
                                 }
@@ -8829,6 +8984,34 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AdminContentStatsResponse": {
+            "type": "object",
+            "properties": {
+                "by_category": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CategoryCountResponse"
+                    }
+                },
+                "by_status": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "by_submission": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AdminCreateUserRequest": {
             "type": "object",
             "required": [
@@ -9201,6 +9384,37 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkUpdateVideosRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "content_rating": {
+                    "type": "string",
+                    "enum": [
+                        "G",
+                        "PG",
+                        "PG13",
+                        "R",
+                        "NC17"
+                    ]
+                },
+                "genre_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkVideoIDsRequest": {
             "type": "object",
             "required": [
@@ -9391,6 +9605,17 @@ const docTemplate = `{
                 "video_id": {
                     "type": "string",
                     "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
+        "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CategoryCountResponse": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "genre_id": {
+                    "type": "string"
                 }
             }
         },
@@ -9716,6 +9941,20 @@ const docTemplate = `{
                 "title"
             ],
             "properties": {
+                "autoplay_next": {
+                    "type": "boolean"
+                },
+                "banner_key": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "binge_mode": {
+                    "type": "boolean"
+                },
+                "content_rating": {
+                    "type": "string",
+                    "maxLength": 20
+                },
                 "cover_image_key": {
                     "type": "string",
                     "maxLength": 1000
@@ -9724,6 +9963,21 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 200,
                     "minLength": 3
+                },
+                "default_monetization": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "default_visibility": {
+                    "type": "string",
+                    "enum": [
+                        "public",
+                        "unlisted",
+                        "followers_only",
+                        "private"
+                    ]
                 },
                 "description": {
                     "type": "string",
@@ -9735,15 +9989,47 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "hide_episode_count": {
+                    "type": "boolean"
+                },
+                "logline": {
+                    "type": "string",
+                    "maxLength": 160
+                },
                 "minimum_plan_level": {
                     "type": "integer",
                     "minimum": 0
+                },
+                "origin_country": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "poster_key": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "primary_language": {
+                    "type": "string",
+                    "maxLength": 10
+                },
+                "series_type": {
+                    "type": "string",
+                    "enum": [
+                        "ongoing",
+                        "limited",
+                        "anthology",
+                        "documentary"
+                    ]
                 },
                 "title": {
                     "type": "string",
                     "maxLength": 500,
                     "minLength": 1,
                     "example": "My Great Show"
+                },
+                "title_logo_key": {
+                    "type": "string",
+                    "maxLength": 1000
                 }
             }
         },
@@ -10485,6 +10771,22 @@ const docTemplate = `{
         "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SeriesResponse": {
             "type": "object",
             "properties": {
+                "autoplay_next": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "banner_key": {
+                    "type": "string",
+                    "example": "series/550e8400/banner.jpg"
+                },
+                "binge_mode": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "content_rating": {
+                    "type": "string",
+                    "example": "TV-14"
+                },
                 "cover_image_key": {
                     "type": "string",
                     "example": "series/550e8400/cover.jpg"
@@ -10497,6 +10799,16 @@ const docTemplate = `{
                     "type": "string",
                     "example": "Studio ABC"
                 },
+                "default_monetization": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "default_visibility": {
+                    "type": "string",
+                    "example": "public"
+                },
                 "description": {
                     "type": "string",
                     "example": "A compelling drama series..."
@@ -10507,13 +10819,37 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "hide_episode_count": {
+                    "type": "boolean",
+                    "example": false
+                },
                 "id": {
                     "type": "string",
                     "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
+                "logline": {
+                    "type": "string",
+                    "example": "A neighborhood comes alive after dark."
+                },
                 "minimum_plan_level": {
                     "type": "integer",
                     "example": 1
+                },
+                "origin_country": {
+                    "type": "string",
+                    "example": "United States"
+                },
+                "poster_key": {
+                    "type": "string",
+                    "example": "series/550e8400/poster.jpg"
+                },
+                "primary_language": {
+                    "type": "string",
+                    "example": "en"
+                },
+                "series_type": {
+                    "type": "string",
+                    "example": "ongoing"
                 },
                 "slug": {
                     "type": "string",
@@ -10526,6 +10862,10 @@ const docTemplate = `{
                 "title": {
                     "type": "string",
                     "example": "My Great Show"
+                },
+                "title_logo_key": {
+                    "type": "string",
+                    "example": "series/550e8400/logo.png"
                 },
                 "updated_at": {
                     "type": "string",
@@ -10896,6 +11236,20 @@ const docTemplate = `{
         "github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateSeriesRequest": {
             "type": "object",
             "properties": {
+                "autoplay_next": {
+                    "type": "boolean"
+                },
+                "banner_key": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "binge_mode": {
+                    "type": "boolean"
+                },
+                "content_rating": {
+                    "type": "string",
+                    "maxLength": 20
+                },
                 "cover_image_key": {
                     "type": "string",
                     "maxLength": 1000
@@ -10904,6 +11258,21 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 200,
                     "minLength": 3
+                },
+                "default_monetization": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "default_visibility": {
+                    "type": "string",
+                    "enum": [
+                        "public",
+                        "unlisted",
+                        "followers_only",
+                        "private"
+                    ]
                 },
                 "description": {
                     "type": "string",
@@ -10915,14 +11284,46 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "hide_episode_count": {
+                    "type": "boolean"
+                },
+                "logline": {
+                    "type": "string",
+                    "maxLength": 160
+                },
                 "minimum_plan_level": {
                     "type": "integer",
                     "minimum": 0
+                },
+                "origin_country": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "poster_key": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "primary_language": {
+                    "type": "string",
+                    "maxLength": 10
+                },
+                "series_type": {
+                    "type": "string",
+                    "enum": [
+                        "ongoing",
+                        "limited",
+                        "anthology",
+                        "documentary"
+                    ]
                 },
                 "title": {
                     "type": "string",
                     "maxLength": 500,
                     "minLength": 1
+                },
+                "title_logo_key": {
+                    "type": "string",
+                    "maxLength": 1000
                 }
             }
         },
@@ -11232,6 +11633,11 @@ const docTemplate = `{
                 "updated_at": {
                     "type": "string",
                     "example": "2025-01-01T00:00:00Z"
+                },
+                "views": {
+                    "description": "Views is the all-time qualifying playback count. Populated only by the\nadmin catalog list; omitted (0) elsewhere.",
+                    "type": "integer",
+                    "example": 162408
                 },
                 "visibility": {
                     "type": "string",

@@ -18,6 +18,25 @@ definitions:
     - season_number
     - video_id
     type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AdminContentStatsResponse:
+    properties:
+      by_category:
+        items:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CategoryCountResponse'
+        type: array
+      by_status:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      by_submission:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      total:
+        type: integer
+    type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AdminCreateUserRequest:
     properties:
       avatar_url:
@@ -276,6 +295,28 @@ definitions:
           type: string
         type: array
     type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkUpdateVideosRequest:
+    properties:
+      content_rating:
+        enum:
+        - G
+        - PG
+        - PG13
+        - R
+        - NC17
+        type: string
+      genre_ids:
+        items:
+          type: string
+        type: array
+      ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkVideoIDsRequest:
     properties:
       ids:
@@ -413,6 +454,13 @@ definitions:
         type: string
       video_id:
         example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    type: object
+  github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CategoryCountResponse:
+    properties:
+      count:
+        type: integer
+      genre_id:
         type: string
     type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.ChapterItem:
@@ -649,12 +697,33 @@ definitions:
     type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.CreateSeriesRequest:
     properties:
+      autoplay_next:
+        type: boolean
+      banner_key:
+        maxLength: 1000
+        type: string
+      binge_mode:
+        type: boolean
+      content_rating:
+        maxLength: 20
+        type: string
       cover_image_key:
         maxLength: 1000
         type: string
       creator:
         maxLength: 200
         minLength: 3
+        type: string
+      default_monetization:
+        items:
+          type: string
+        type: array
+      default_visibility:
+        enum:
+        - public
+        - unlisted
+        - followers_only
+        - private
         type: string
       description:
         maxLength: 5000
@@ -663,13 +732,37 @@ definitions:
         items:
           type: string
         type: array
+      hide_episode_count:
+        type: boolean
+      logline:
+        maxLength: 160
+        type: string
       minimum_plan_level:
         minimum: 0
         type: integer
+      origin_country:
+        maxLength: 100
+        type: string
+      poster_key:
+        maxLength: 1000
+        type: string
+      primary_language:
+        maxLength: 10
+        type: string
+      series_type:
+        enum:
+        - ongoing
+        - limited
+        - anthology
+        - documentary
+        type: string
       title:
         example: My Great Show
         maxLength: 500
         minLength: 1
+        type: string
+      title_logo_key:
+        maxLength: 1000
         type: string
     required:
     - title
@@ -1197,6 +1290,18 @@ definitions:
     type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.SeriesResponse:
     properties:
+      autoplay_next:
+        example: true
+        type: boolean
+      banner_key:
+        example: series/550e8400/banner.jpg
+        type: string
+      binge_mode:
+        example: true
+        type: boolean
+      content_rating:
+        example: TV-14
+        type: string
       cover_image_key:
         example: series/550e8400/cover.jpg
         type: string
@@ -1206,6 +1311,13 @@ definitions:
       creator:
         example: Studio ABC
         type: string
+      default_monetization:
+        items:
+          type: string
+        type: array
+      default_visibility:
+        example: public
+        type: string
       description:
         example: A compelling drama series...
         type: string
@@ -1213,12 +1325,30 @@ definitions:
         items:
           type: string
         type: array
+      hide_episode_count:
+        example: false
+        type: boolean
       id:
         example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      logline:
+        example: A neighborhood comes alive after dark.
         type: string
       minimum_plan_level:
         example: 1
         type: integer
+      origin_country:
+        example: United States
+        type: string
+      poster_key:
+        example: series/550e8400/poster.jpg
+        type: string
+      primary_language:
+        example: en
+        type: string
+      series_type:
+        example: ongoing
+        type: string
       slug:
         example: my-great-show-a3f8b2c1
         type: string
@@ -1227,6 +1357,9 @@ definitions:
         type: string
       title:
         example: My Great Show
+        type: string
+      title_logo_key:
+        example: series/550e8400/logo.png
         type: string
       updated_at:
         example: "2025-01-01T00:00:00Z"
@@ -1497,12 +1630,33 @@ definitions:
     type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateSeriesRequest:
     properties:
+      autoplay_next:
+        type: boolean
+      banner_key:
+        maxLength: 1000
+        type: string
+      binge_mode:
+        type: boolean
+      content_rating:
+        maxLength: 20
+        type: string
       cover_image_key:
         maxLength: 1000
         type: string
       creator:
         maxLength: 200
         minLength: 3
+        type: string
+      default_monetization:
+        items:
+          type: string
+        type: array
+      default_visibility:
+        enum:
+        - public
+        - unlisted
+        - followers_only
+        - private
         type: string
       description:
         maxLength: 5000
@@ -1511,12 +1665,36 @@ definitions:
         items:
           type: string
         type: array
+      hide_episode_count:
+        type: boolean
+      logline:
+        maxLength: 160
+        type: string
       minimum_plan_level:
         minimum: 0
         type: integer
+      origin_country:
+        maxLength: 100
+        type: string
+      poster_key:
+        maxLength: 1000
+        type: string
+      primary_language:
+        maxLength: 10
+        type: string
+      series_type:
+        enum:
+        - ongoing
+        - limited
+        - anthology
+        - documentary
+        type: string
       title:
         maxLength: 500
         minLength: 1
+        type: string
+      title_logo_key:
+        maxLength: 1000
         type: string
     type: object
   github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.UpdateSeriesWatchProgressRequest:
@@ -1738,6 +1916,12 @@ definitions:
       updated_at:
         example: "2025-01-01T00:00:00Z"
         type: string
+      views:
+        description: |-
+          Views is the all-time qualifying playback count. Populated only by the
+          admin catalog list; omitted (0) elsewhere.
+        example: 162408
+        type: integer
       visibility:
         example: public
         type: string
@@ -2886,6 +3070,23 @@ paths:
         in: query
         name: status
         type: string
+      - description: Filter by submission status
+        in: query
+        name: submission_status
+        type: string
+      - description: Filter by content rating
+        in: query
+        name: content_rating
+        type: string
+      - description: Search by title (substring match)
+        in: query
+        name: title
+        type: string
+      - description: Filter by genre UUID
+        format: uuid
+        in: query
+        name: genre_id
+        type: string
       produces:
       - application/json
       responses:
@@ -3257,6 +3458,52 @@ paths:
       summary: Bulk unarchive videos
       tags:
       - videos
+  /admin/videos/bulk-update:
+    post:
+      consumes:
+      - application/json
+      description: Reassign category and/or change rating for multiple videos in a
+        single request (admin only). Returns succeeded and failed entries.
+      parameters:
+      - description: Video IDs and fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkUpdateVideosRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.BulkResultResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Bulk update videos (admin)
+      tags:
+      - videos
   /admin/videos/purge-orphans:
     post:
       consumes:
@@ -3298,6 +3545,39 @@ paths:
       security:
       - BearerAuth: []
       summary: Purge orphaned video records and/or storage objects
+      tags:
+      - videos
+  /admin/videos/stats:
+    get:
+      description: 'Returns platform-wide catalog aggregates: video counts grouped
+        by status and submission status, plus a per-genre title count (admin only).'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_zenfulcode_zencial_internal_adapter_handler_v1_dto.AdminContentStatsResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_zenfulcode_zencial_internal_pkg_httputil.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Catalog stats (admin)
       tags:
       - videos
   /auth/login:

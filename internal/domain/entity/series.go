@@ -48,6 +48,7 @@ type Series struct {
 	Logline             string
 	PrimaryLanguage     string
 	OriginCountry       string
+	ContentRating       string
 	CoverImageKey       string
 	PosterKey           string
 	BannerKey           string

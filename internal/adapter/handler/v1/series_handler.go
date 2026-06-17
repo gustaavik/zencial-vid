@@ -285,13 +285,26 @@ func (h *SeriesHandler) Create(w http.ResponseWriter, r *http.Request) {
 	genreIDs, _ := parseUUIDs(req.GenreIDs)
 
 	out, appErr := h.service.Create(r.Context(), &seriesuc.CreateInput{
-		Title:            req.Title,
-		Description:      req.Description,
-		Creator:          req.Creator,
-		CoverImageKey:    req.CoverImageKey,
-		UploadedBy:       callerID,
-		GenreIDs:         genreIDs,
-		MinimumPlanLevel: req.MinimumPlanLevel,
+		Title:               req.Title,
+		Description:         req.Description,
+		Creator:             req.Creator,
+		SeriesType:          req.SeriesType,
+		Logline:             req.Logline,
+		PrimaryLanguage:     req.PrimaryLanguage,
+		OriginCountry:       req.OriginCountry,
+		ContentRating:       req.ContentRating,
+		CoverImageKey:       req.CoverImageKey,
+		PosterKey:           req.PosterKey,
+		BannerKey:           req.BannerKey,
+		TitleLogoKey:        req.TitleLogoKey,
+		UploadedBy:          callerID,
+		GenreIDs:            genreIDs,
+		MinimumPlanLevel:    req.MinimumPlanLevel,
+		AutoplayNext:        req.AutoplayNext,
+		BingeMode:           req.BingeMode,
+		HideEpisodeCount:    req.HideEpisodeCount,
+		DefaultVisibility:   req.DefaultVisibility,
+		DefaultMonetization: req.DefaultMonetization,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
@@ -349,15 +362,28 @@ func (h *SeriesHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	series, appErr := h.service.Update(r.Context(), &seriesuc.UpdateInput{
-		ID:               id,
-		CallerID:         callerID,
-		CallerRoles:      callerRoles,
-		Title:            req.Title,
-		Description:      req.Description,
-		Creator:          req.Creator,
-		CoverImageKey:    req.CoverImageKey,
-		GenreIDs:         genreIDs,
-		MinimumPlanLevel: req.MinimumPlanLevel,
+		ID:                  id,
+		CallerID:            callerID,
+		CallerRoles:         callerRoles,
+		Title:               req.Title,
+		Description:         req.Description,
+		Creator:             req.Creator,
+		SeriesType:          req.SeriesType,
+		Logline:             req.Logline,
+		PrimaryLanguage:     req.PrimaryLanguage,
+		OriginCountry:       req.OriginCountry,
+		ContentRating:       req.ContentRating,
+		CoverImageKey:       req.CoverImageKey,
+		PosterKey:           req.PosterKey,
+		BannerKey:           req.BannerKey,
+		TitleLogoKey:        req.TitleLogoKey,
+		GenreIDs:            genreIDs,
+		MinimumPlanLevel:    req.MinimumPlanLevel,
+		AutoplayNext:        req.AutoplayNext,
+		BingeMode:           req.BingeMode,
+		HideEpisodeCount:    req.HideEpisodeCount,
+		DefaultVisibility:   req.DefaultVisibility,
+		DefaultMonetization: req.DefaultMonetization,
 	})
 	if appErr != nil {
 		httputil.Error(w, appErr)
