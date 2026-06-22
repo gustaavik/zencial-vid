@@ -5,7 +5,7 @@ go 1.26.2
 require (
 	github.com/aws/aws-sdk-go-v2 v1.42.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.24
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.103.3
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.104.0
 	github.com/aws/smithy-go v1.27.2
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/go-chi/chi/v5 v5.3.0
@@ -35,7 +35,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
 	github.com/go-openapi/jsonpointer v0.23.1 // indirect
 	github.com/go-openapi/jsonreference v0.21.6 // indirect
-	github.com/go-openapi/spec v0.22.5 // indirect
+	github.com/go-openapi/spec v0.22.6 // indirect
 	github.com/go-openapi/swag/conv v0.26.1 // indirect
 	github.com/go-openapi/swag/jsonname v0.26.1 // indirect
 	github.com/go-openapi/swag/jsonutils v0.26.1 // indirect
