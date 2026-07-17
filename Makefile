@@ -66,7 +66,7 @@ clean:
 	rm -f coverage.out coverage.html
 
 ## update dependencies: Update Go module dependencies
-update-dependencies:
+update-deps:
 	go get -u ./...
 	go mod tidy
 
