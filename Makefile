@@ -101,3 +101,7 @@ docker-dev:
 ## docker-logs: View Docker Compose logs
 docker-logs:
 	docker compose -f deployments/docker/docker-compose.yml logs -f
+
+push-image:
+	docker build -f deployments/docker/Dockerfile -t ghcr.io/gustaavik/zencial-vid:latest . --build-arg BUILD_TIME=$(BUILD_TIME) --build-arg COMMIT=$(GIT_COMMIT)-dev --build-arg VERSION=$(VERSION)
+	docker push ghcr.io/gustaavik/zencial-vid:latest
